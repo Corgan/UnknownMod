@@ -96,7 +96,7 @@ namespace UnknownMod.Editor
         // ═══════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Read existing LineRenderer children of the roads container (built by ZoneLoader)
+        /// Read existing LineRenderer children of the roads container (built by MapBuilder)
         /// and populate the editor's data structures from them.
         /// </summary>
         public void ImportFromExistingLRs()

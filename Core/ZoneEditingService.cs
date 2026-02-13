@@ -6,6 +6,7 @@ using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnknownMod.Definitions;
+using UnknownMod.Runtime;
 
 namespace UnknownMod.Core
 {
@@ -141,7 +142,7 @@ namespace UnknownMod.Core
             var node = BuildNodeSO(nodeDef);
             if (Globals.Instance != null)
             {
-                var zoneData = Globals.Instance.GetZoneData(CurrentZone.ZoneId);
+                var zoneData = DataHelper.GetExistingZone(CurrentZone.ZoneId);
                 if (zoneData != null)
                     node.NodeZone = zoneData;
             }
@@ -452,7 +453,7 @@ namespace UnknownMod.Core
             try
             {
                 var node = BuildNodeSO(nodeDef);
-                var zoneData = Globals.Instance?.GetZoneData(CurrentZone.ZoneId);
+                var zoneData = DataHelper.GetExistingZone(CurrentZone.ZoneId);
                 if (zoneData != null) node.NodeZone = zoneData;
 
                 var connected = nodeDef.Connections

@@ -134,7 +134,7 @@ namespace UnknownMod.Editor
         /// <summary>
         /// Get the active sprite dictionary. Returns mod-project sprites when
         /// a mod project is active (Sprites tab), otherwise falls back to
-        /// ZoneLoader.CurrentZone.Sprites for zone-scoped editing.
+        /// ZoneEditingService.CurrentZone.Sprites for zone-scoped editing.
         /// </summary>
         private Dictionary<string, SpriteOverrideDef> GetSpriteDict()
         {
@@ -146,7 +146,7 @@ namespace UnknownMod.Editor
                 if (_mergedSprites == null) RebuildMergedSprites(proj);
                 return _mergedSprites;
             }
-            return ZoneLoader.CurrentZone?.Sprites;
+            return ZoneEditingService.CurrentZone?.Sprites;
         }
 
         private Dictionary<string, SpriteOverrideDef> _mergedSprites;
@@ -160,7 +160,7 @@ namespace UnknownMod.Editor
                 _mergedSprites[kvp.Key] = kvp.Value;
         }
 
-        /// <summary>Mark sprite data as modified. Saves to mod project if active, else ZoneLoader.</summary>
+        /// <summary>Mark sprite data as modified. Saves to mod project if active, else ZoneEditingService.</summary>
         private void OnSpriteModified()
         {
             var proj = ModManagerPanel.ActiveProject;
@@ -195,7 +195,7 @@ namespace UnknownMod.Editor
                 foreach (var kvp in proj.NpcPatches) merged[kvp.Key] = kvp.Value;
                 return merged;
             }
-            return ZoneLoader.CurrentZone?.Npcs;
+            return ZoneEditingService.CurrentZone?.Npcs;
         }
 
         /// <summary>Get a zone ID for texture paths. Uses mod project folder if active.</summary>
@@ -203,7 +203,7 @@ namespace UnknownMod.Editor
         {
             var proj = ModManagerPanel.ActiveProject;
             if (proj != null) return proj.ModId;
-            return ZoneLoader.CurrentZone?.ZoneId ?? "";
+            return ZoneEditingService.CurrentZone?.ZoneId ?? "";
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -863,7 +863,7 @@ namespace UnknownMod.Editor
             }
 
             // Legacy zone-scoped mode (no mod project active)
-            var zone = ZoneLoader.CurrentZone;
+            var zone = ZoneEditingService.CurrentZone;
             if (zone == null) { GUILayout.Label("No zone loaded."); return; }
 
             // ── Sprite definition selector ───────────────────────────
@@ -2106,8 +2106,11 @@ namespace UnknownMod.Editor
             {
                 foreach (var kvp in npcDict)
                 {
-                    if (kvp.Value.SpriteSource == spriteDefId && ZoneLoader.Npcs.TryGetValue(kvp.Key, out var data))
-                    { npcData = data; break; }
+                    if (kvp.Value.SpriteSource == spriteDefId)
+                    {
+                        var data = DataHelper.GetExistingNPC(kvp.Key);
+                        if (data != null) { npcData = data; break; }
+                    }
                 }
             }
             if (npcData == null && !string.IsNullOrEmpty(baseSprite))
@@ -2863,8 +2866,7 @@ namespace UnknownMod.Editor
         /// </summary>
         private void ImportBonesFrom(SpriteOverrideDef ovr, string sourceNpcId)
         {
-            NPCData srcNpc = ZoneLoader.Npcs.TryGetValue(sourceNpcId, out var ours)
-                ? ours : DataHelper.GetExistingNPC(sourceNpcId);
+            NPCData srcNpc = DataHelper.GetExistingNPC(sourceNpcId);
             if (srcNpc?.GameObjectAnimated == null)
             {
                 Plugin.Log.LogWarning($"[SpriteEditor] ImportBonesFrom: no prefab for '{sourceNpcId}'");
@@ -2908,8 +2910,7 @@ namespace UnknownMod.Editor
         /// </summary>
         public static GameObject CloneNpcBranch(string sourceNpcId, string sourceBoneName)
         {
-            NPCData npcData = ZoneLoader.Npcs.TryGetValue(sourceNpcId, out var ours)
-                ? ours : DataHelper.GetExistingNPC(sourceNpcId);
+            NPCData npcData = DataHelper.GetExistingNPC(sourceNpcId);
             if (npcData?.GameObjectAnimated == null)
             {
                 Plugin.Log.LogWarning($"[SpriteEditor] CloneNpcBranch: no prefab for NPC '{sourceNpcId}'");
@@ -2993,8 +2994,7 @@ namespace UnknownMod.Editor
             if (_graftSpriteCache.TryGetValue(sourceNpcId, out var cached))
                 return cached;
 
-            NPCData npcData = ZoneLoader.Npcs.TryGetValue(sourceNpcId, out var ours)
-                ? ours : DataHelper.GetExistingNPC(sourceNpcId);
+            NPCData npcData = DataHelper.GetExistingNPC(sourceNpcId);
 
             if (npcData?.GameObjectAnimated == null)
             {
@@ -3051,7 +3051,7 @@ namespace UnknownMod.Editor
             string imagePath = !string.IsNullOrEmpty(def.ImagePath) ? def.ImagePath : fallbackSheet;
             if (string.IsNullOrEmpty(imagePath)) return null;
 
-            string fullPath = Path.Combine(ZoneLoader.GetZoneFolder(zoneId), "textures", imagePath);
+            string fullPath = Path.Combine(ModRegistry.GetZoneFolder(zoneId), "textures", imagePath);
             var tex = LoadTexture(fullPath);
             if (tex == null) return null;
 
@@ -3105,17 +3105,17 @@ namespace UnknownMod.Editor
         /// </summary>
         public static void ApplyOverridesToNpcItem(NPCItem npcItem)
         {
-            if (ZoneLoader.CurrentZone == null) return;
+            if (ZoneEditingService.CurrentZone == null) return;
             if (npcItem?.NPC == null) return;
 
             string npcId = npcItem.NPC.GameName;
-            string zoneId = ZoneLoader.CurrentZone.ZoneId;
+            string zoneId = ZoneEditingService.CurrentZone.ZoneId;
 
             // Resolve sprite definition: NPC → NpcDef → SpriteSource → Sprites dict
             SpriteOverrideDef overrideDef = null;
-            string baseId = ZoneLoader.StripVariantSuffix(npcId);
-            if (ZoneLoader.CurrentZone.Npcs.TryGetValue(baseId, out var npcDef))
-                overrideDef = ZoneLoader.ResolveSpriteDefForNpc(ZoneLoader.CurrentZone, npcDef);
+            string baseId = ModRegistry.StripVariantSuffix(npcId);
+            if (ZoneEditingService.CurrentZone.Npcs.TryGetValue(baseId, out var npcDef))
+                overrideDef = ModRegistry.ResolveSpriteDefForNpc(ZoneEditingService.CurrentZone, npcDef);
 
             if (overrideDef == null) return;
 

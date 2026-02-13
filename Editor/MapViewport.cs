@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnknownMod.Definitions;
 using UnknownMod.Runtime;
+using UnknownMod.Core;
 
 namespace UnknownMod.Editor
 {
@@ -98,7 +99,7 @@ namespace UnknownMod.Editor
 
         public void DrawViewport(Rect vp)
         {
-            var zone = ZoneLoader.CurrentZone;
+            var zone = ZoneEditingService.CurrentZone;
             if (zone == null)
             {
                 DrawEmpty(vp, "No zone loaded.");
@@ -432,7 +433,7 @@ namespace UnknownMod.Editor
 
             nd.PosX = go.transform.localPosition.x;
             nd.PosY = go.transform.localPosition.y;
-            ZoneLoader.MarkDirty();
+            ZoneEditingService.MarkDirty();
             Plugin.Log.LogInfo($"[MapViewport] Node '{nodeId}' → ({nd.PosX:F1}, {nd.PosY:F1})");
         }
 
@@ -463,7 +464,7 @@ namespace UnknownMod.Editor
             rd.Waypoints.Clear();
             foreach (var cp in cps)
                 rd.Waypoints.Add(new float[] { cp.x - PreviewOrigin.x, cp.y - PreviewOrigin.y });
-            ZoneLoader.MarkDirty();
+            ZoneEditingService.MarkDirty();
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -524,7 +525,7 @@ namespace UnknownMod.Editor
             var rd = new RoadDef { FromNodeId = fromId, ToNodeId = toId };
             rd.Waypoints.Add(new float[] { mid.x - PreviewOrigin.x, mid.y - PreviewOrigin.y });
             zone.Roads[key] = rd;
-            ZoneLoader.MarkDirty();
+            ZoneEditingService.MarkDirty();
         }
 
         private void RemoveRoad(string key, ZoneDef zone)
@@ -536,17 +537,17 @@ namespace UnknownMod.Editor
             zone.Roads.Remove(key);
             if (fromId != null && zone.Nodes.TryGetValue(fromId, out var fromNode))
                 fromNode.Connections.Remove(toId);
-            ZoneLoader.MarkDirty();
+            ZoneEditingService.MarkDirty();
         }
 
-        // ═══════════════════════════════════════════════════════════════
+        // ═════════════════════════════════════════════════════════════════
         //  CP INSERT / DELETE
-        // ═══════════════════════════════════════════════════════════════
+        // ═════════════════════════════════════════════════════════════════
 
         private void InsertCPAfter(string roadKey, int afterIndex)
         {
             _roads.InsertCPAfter(roadKey, afterIndex);
-            CommitRoadCPs(roadKey, ZoneLoader.CurrentZone);
+            CommitRoadCPs(roadKey, ZoneEditingService.CurrentZone);
         }
 
         private void DeleteCP(string roadKey, int cpIndex, ZoneDef zone)
@@ -559,7 +560,7 @@ namespace UnknownMod.Editor
                 zone.Roads.Remove(roadKey);
                 if (fromId != null && zone.Nodes.TryGetValue(fromId, out var fromNode))
                     fromNode.Connections.Remove(toId);
-                ZoneLoader.MarkDirty();
+                ZoneEditingService.MarkDirty();
             }
             else
             {
@@ -573,7 +574,7 @@ namespace UnknownMod.Editor
 
         private void AddNode(float localX, float localY, ZoneDef zone)
         {
-            string nodeId = ZoneLoader.AddNode(localX, localY);
+            string nodeId = ZoneEditingService.AddNode(localX, localY);
             if (nodeId == null) return;
 
             CreateNodeDot(nodeId, localX, localY, zone);
@@ -603,7 +604,7 @@ namespace UnknownMod.Editor
                 _nodeGOs.Remove(nodeId);
             }
 
-            ZoneLoader.DeleteNode(nodeId);
+            ZoneEditingService.DeleteNode(nodeId);
             Plugin.Log.LogInfo($"[MapViewport] Deleted node '{nodeId}'");
         }
 
@@ -613,7 +614,7 @@ namespace UnknownMod.Editor
 
         public void DrawPanel()
         {
-            var zone = ZoneLoader.CurrentZone;
+            var zone = ZoneEditingService.CurrentZone;
             if (zone == null) { GUILayout.Label("No zone loaded."); return; }
 
             GUILayout.Label("<b>Map Controls</b>", EditorStyles.RichLabel);
@@ -663,7 +664,7 @@ namespace UnknownMod.Editor
 
             if (GUILayout.Button("Reflow Node IDs (BFS)", GUILayout.Height(28)))
             {
-                ZoneLoader.ReflowNodeIds();
+                ZoneEditingService.ReflowNodeIds();
                 _loadedZoneId = null; // forces rebuild
                 Plugin.Log.LogInfo("[MapViewport] Reflow complete — viewport will rebuild.");
             }
@@ -707,7 +708,7 @@ namespace UnknownMod.Editor
             Object.DontDestroyOnLoad(_previewRoot);
 
             // Background
-            var bgSprite = ZoneLoader.GetBackgroundSprite(zone.ZoneId);
+            var bgSprite = MapBuilder.GetBackgroundSprite(zone.ZoneId);
             if (bgSprite != null)
             {
                 _bgGO = new GameObject("Background");

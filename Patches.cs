@@ -5,6 +5,7 @@ using UnityEngine;
 using UnknownMod.Editor;
 using UnknownMod.Definitions;
 using UnknownMod.Runtime;
+using UnknownMod.Core;
 
 namespace UnknownMod
 {
@@ -16,18 +17,21 @@ namespace UnknownMod
     {
         /// <summary>
         /// After Globals.CreateGameContent() finishes loading vanilla data,
-        /// discover and register all modded zone content via ZoneLoader (JSON-driven).
+        /// discover and build all modded content via LoadOrderManager.
         /// </summary>
         [HarmonyPatch(typeof(Globals), "CreateGameContent")]
         [HarmonyPostfix]
         public static void CreateGameContent_Postfix()
         {
-            Plugin.Log.LogInfo("[Patches] Injecting modded zone content...");
+            Plugin.Log.LogInfo("[Patches] Injecting modded content...");
 
-            // ZoneLoader auto-discovers all zone subfolders in the data directory
-            ZoneLoader.LoadAll();
+            // Load all mods from disk in load-order sequence and build them
+            LoadOrderManager.LoadAndBuildAll();
 
-            Plugin.Log.LogInfo("[Patches] Modded zone content injection complete.");
+            // Ensure the persistent editor exists
+            ModRegistry.EnsureEditorExists();
+
+            Plugin.Log.LogInfo("[Patches] Modded content injection complete.");
         }
 
         /// <summary>
@@ -71,10 +75,10 @@ namespace UnknownMod
 
             string zoneId = nodeData.NodeZone.ZoneId;
 
-            if (!ZoneLoader.IsModdedZone(zoneId))
+            if (!ModRegistry.IsModdedZone(zoneId))
                 return true;
 
-            __result = ZoneLoader.BuildAndInjectMap(zoneId, MapManager.Instance.worldTransform);
+            __result = MapBuilder.BuildAndInjectMap(zoneId, MapManager.Instance.worldTransform);
             return false;
         }
 
@@ -153,9 +157,9 @@ namespace UnknownMod
         {
             try
             {
-                if (ZoneLoader.CurrentZone == null || __instance?.NPC == null)
+                if (ZoneEditingService.CurrentZone == null || __instance?.NPC == null)
                 {
-                    Plugin.Log.LogDebug($"[Patches] SpriteOverride skip: CurrentZone={ZoneLoader.CurrentZone != null}, NPC={__instance?.NPC != null}");
+                    Plugin.Log.LogDebug($"[Patches] SpriteOverride skip: CurrentZone={ZoneEditingService.CurrentZone != null}, NPC={__instance?.NPC != null}");
                     return;
                 }
 
@@ -163,13 +167,13 @@ namespace UnknownMod
 
                 // Resolve sprite definition: NPC → NpcDef.SpriteSource → Sprites dict
                 SpriteOverrideDef overrideDef = null;
-                string baseId = ZoneLoader.StripVariantSuffix(npcId);
-                if (ZoneLoader.CurrentZone.Npcs.TryGetValue(baseId, out var npcDef))
-                    overrideDef = ZoneLoader.ResolveSpriteDefForNpc(ZoneLoader.CurrentZone, npcDef);
+                string baseId = ModRegistry.StripVariantSuffix(npcId);
+                if (ZoneEditingService.CurrentZone.Npcs.TryGetValue(baseId, out var npcDef))
+                    overrideDef = ModRegistry.ResolveSpriteDefForNpc(ZoneEditingService.CurrentZone, npcDef);
 
                 if (overrideDef == null)
                 {
-                    Plugin.Log.LogDebug($"[Patches] SpriteOverride: no sprite def for '{npcId}' (sprites: {string.Join(", ", ZoneLoader.CurrentZone.Sprites.Keys)})");
+                    Plugin.Log.LogDebug($"[Patches] SpriteOverride: no sprite def for '{npcId}' (sprites: {string.Join(", ", ZoneEditingService.CurrentZone.Sprites.Keys)})");
                     return;
                 }
 

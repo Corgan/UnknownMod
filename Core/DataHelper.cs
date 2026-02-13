@@ -232,6 +232,15 @@ namespace UnknownMod.Core
             return null;
         }
 
+        public static ZoneData GetExistingZone(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, ZoneData>>("_ZoneDataSource").Value;
+            if (dict != null && dict.TryGetValue(id.ToLower(), out var zone))
+                return zone;
+            return null;
+        }
+
         /// <summary>Sorted list of all base-game Zone IDs.</summary>
         public static List<string> GetAllZoneIds()
         {

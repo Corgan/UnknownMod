@@ -486,8 +486,7 @@ namespace UnknownMod.Runtime
                 return;
             }
 
-            NPCData sourceNpc = ZoneLoader.Npcs.TryGetValue(sourceNpcId, out var ours)
-                ? ours : DataHelper.GetExistingNPC(sourceNpcId);
+            NPCData sourceNpc = DataHelper.GetExistingNPC(sourceNpcId);
             if (sourceNpc?.GameObjectAnimated == null)
             {
                 Plugin.Log.LogWarning($"[NpcPrefabBuilder] AnimationSource NPC '{sourceNpcId}' has no GameObjectAnimated");
@@ -554,8 +553,7 @@ namespace UnknownMod.Runtime
 
         private static bool TryGraftBoneSubtree(GameObject targetBone, string sourceNpcId, string sourceBoneName, string targetBoneName, Dictionary<string, Transform> targetBoneMap)
         {
-            NPCData npcData = ZoneLoader.Npcs.TryGetValue(sourceNpcId, out var ours)
-                ? ours : DataHelper.GetExistingNPC(sourceNpcId);
+            NPCData npcData = DataHelper.GetExistingNPC(sourceNpcId);
             if (npcData?.GameObjectAnimated == null) return false;
 
             var tempPrefab = Object.Instantiate(npcData.GameObjectAnimated);

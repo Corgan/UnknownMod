@@ -52,14 +52,14 @@ namespace UnknownMod.Editor.Tabs
                 return;
             }
 
-            // Ensure ZoneLoader.CurrentZone is set for sub-editors
+            // Ensure ZoneEditingService.CurrentZone is set for sub-editors
             if (isNew && proj.Zones.TryGetValue(SelectedZoneId, out var zoneDef))
             {
-                if (ZoneLoader.CurrentZone != zoneDef)
+                if (ZoneEditingService.CurrentZone != zoneDef)
                 {
-                    ZoneLoader.CurrentZone = zoneDef;
-                    if (!ZoneLoader.LoadedZones.ContainsKey(zoneDef.ZoneId))
-                        ZoneLoader.LoadedZones[zoneDef.ZoneId] = zoneDef;
+                    ZoneEditingService.CurrentZone = zoneDef;
+                    if (!ModRegistry.LoadedZones.ContainsKey(zoneDef.ZoneId))
+                        ModRegistry.LoadedZones[zoneDef.ZoneId] = zoneDef;
                 }
             }
 
@@ -202,9 +202,9 @@ namespace UnknownMod.Editor.Tabs
                 proj.Zones[newId] = def;
                 SelectedZoneId = newId;
 
-                // Register in ZoneLoader so sub-editors work
-                ZoneLoader.LoadedZones[newId] = def;
-                ZoneLoader.CurrentZone = def;
+                // Register in ModRegistry so sub-editors work
+                ModRegistry.LoadedZones[newId] = def;
+                ZoneEditingService.CurrentZone = def;
 
                 ModProjectLoader.SaveZone(proj, def);
                 proj.IsDirty = true;
@@ -223,7 +223,7 @@ namespace UnknownMod.Editor.Tabs
                     if (GUILayout.Button("Delete", EditorStyles.DangerButton, GUILayout.Width(60)))
                     {
                         proj.Zones.Remove(SelectedZoneId);
-                        ZoneLoader.LoadedZones.Remove(SelectedZoneId);
+                        ModRegistry.LoadedZones.Remove(SelectedZoneId);
                         DeleteZoneFolder(proj, SelectedZoneId, false);
                         SelectedZoneId = allIds.FirstOrDefault(k => k != SelectedZoneId);
                         proj.IsDirty = true;

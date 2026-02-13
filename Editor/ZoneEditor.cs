@@ -165,7 +165,7 @@ namespace UnknownMod.Editor
             if (!IsEditing) return;
 
             // Auto-save tick
-            ZoneLoader.TickAutoSave();
+            ZoneEditingService.TickAutoSave();
 
             // F8 = Force Save
             if (Input.GetKeyDown(KeyCode.F8))
@@ -202,16 +202,16 @@ namespace UnknownMod.Editor
 
         private void SaveZone()
         {
-            if (ZoneLoader.CurrentZone == null)
+            if (ZoneEditingService.CurrentZone == null)
             {
                 Plugin.Log.LogWarning("[ZoneEditor] No zone loaded to save.");
                 return;
             }
 
             // Sync map positions/roads back to DTO before saving
-            MapEdit?.SyncToDto(ZoneLoader.CurrentZone);
+            MapEdit?.SyncToDto(ZoneEditingService.CurrentZone);
 
-            ZoneLoader.SaveCurrentZone();
+            ZoneEditingService.SaveCurrentZone();
             Plugin.Log.LogInfo("[ZoneEditor] Zone saved successfully.");
         }
 
@@ -302,7 +302,7 @@ namespace UnknownMod.Editor
 
             // ── Header bar ───────────────────────────────────────────
             GUI.Box(headerRect, "", _boxStyle);
-            string dirtyMark = ZoneLoader.IsDirty ? " <color=yellow>●</color>" : "";
+            string dirtyMark = ZoneEditingService.IsDirty ? " <color=yellow>●</color>" : "";
             string modLabel = Tabs.ModManagerPanel.ActiveProject != null
                 ? $"  <color=#aaa>mod: {Tabs.ModManagerPanel.ActiveProject.ModId}</color>" : "";
             GUI.Label(new Rect(15, 14, 600, 25),
@@ -399,13 +399,13 @@ namespace UnknownMod.Editor
             switch (ZoneTab.ActiveSubTab)
             {
                 case ZoneTabEditor.SubTab.Node:
-                    if (SelectedNodeId != null) ZoneLoader.RebuildNode(SelectedNodeId);
+                    if (SelectedNodeId != null) ZoneEditingService.RebuildNode(SelectedNodeId);
                     break;
                 case ZoneTabEditor.SubTab.Event:
-                    if (SelectedEventId != null) ZoneLoader.RebuildEvent(SelectedEventId);
+                    if (SelectedEventId != null) ZoneEditingService.RebuildEvent(SelectedEventId);
                     break;
                 case ZoneTabEditor.SubTab.Encounter:
-                    if (SelectedCombatId != null) ZoneLoader.RebuildCombat(SelectedCombatId);
+                    if (SelectedCombatId != null) ZoneEditingService.RebuildCombat(SelectedCombatId);
                     break;
             }
         }

@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnknownMod.Definitions;
 using UnknownMod.Runtime;
+using UnknownMod.Core;
 
 namespace UnknownMod.Editor
 {
@@ -365,8 +366,8 @@ namespace UnknownMod.Editor
 
             if (GUILayout.Button("Reflow Node IDs (BFS)", GUILayout.Height(28)))
             {
-                ZoneLoader.ReflowNodeIds();
-                if (ZoneLoader.CurrentZone != null && ZoneEditor.Instance != null)
+                ZoneEditingService.ReflowNodeIds();
+                if (ZoneEditingService.CurrentZone != null && ZoneEditor.Instance != null)
                     Plugin.Log.LogInfo("[MapEditor] Run Reflow — reload zone to see updated IDs.");
             }
         }
@@ -458,7 +459,7 @@ namespace UnknownMod.Editor
         /// <summary>Add a new node at the given local position and instantiate its GameObject.</summary>
         private void AddNodeAtPosition(float localX, float localY)
         {
-            string nodeId = ZoneLoader.AddNode(localX, localY);
+            string nodeId = ZoneEditingService.AddNode(localX, localY);
             if (nodeId == null) return;
 
             // Instantiate a node GO from the template
@@ -489,7 +490,7 @@ namespace UnknownMod.Editor
             if (node == null) return;
 
             string nodeId = node.gameObject.name;
-            var zone = ZoneLoader.CurrentZone;
+            var zone = ZoneEditingService.CurrentZone;
             if (zone == null || !zone.Nodes.ContainsKey(nodeId)) return;
 
             // Don't allow deleting entrance (_0) or town (_1)
@@ -511,7 +512,7 @@ namespace UnknownMod.Editor
             Object.Destroy(node.gameObject);
 
             // Remove from zone data
-            ZoneLoader.DeleteNode(nodeId);
+            ZoneEditingService.DeleteNode(nodeId);
 
             Plugin.Log.LogInfo($"[MapEditor] Deleted node '{nodeId}'");
         }

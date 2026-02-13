@@ -26,7 +26,7 @@ namespace UnknownMod.Editor
 
         public void DrawPanel()
         {
-            var zone = ZoneLoader.CurrentZone;
+            var zone = ZoneEditingService.CurrentZone;
             if (zone == null) { GUILayout.Label("No zone loaded."); return; }
 
             // ── Entity selector ──────────────────────────────────
@@ -63,7 +63,7 @@ namespace UnknownMod.Editor
                 {
                     if (GUILayout.Button("+ Add Combat", GUILayout.Height(24)))
                     {
-                        string combatId = ZoneLoader.CreateCombatForNode(_parent.SelectedNodeId);
+                        string combatId = ZoneEditingService.CreateCombatForNode(_parent.SelectedNodeId);
                         if (combatId != null)
                             _parent.InspectCombat(combatId);
                     }
@@ -75,7 +75,7 @@ namespace UnknownMod.Editor
                     if (GUILayout.Button("\u2192 Edit", EditorStyles.LinkButton, GUILayout.Width(60)))
                         _parent.InspectCombat(nd.CombatId);
                     if (GUILayout.Button("X", EditorStyles.MiniButton, GUILayout.Width(22)))
-                        ZoneLoader.RemoveCombatFromNode(_parent.SelectedNodeId);
+                        ZoneEditingService.RemoveCombatFromNode(_parent.SelectedNodeId);
                     GUILayout.EndHorizontal();
 
                     nd.CombatTier = EditorFields.EnumField("Combat Tier", nd.CombatTier, "node_ctier");
@@ -90,7 +90,7 @@ namespace UnknownMod.Editor
                 {
                     if (GUILayout.Button("+ Add Event", GUILayout.Height(24)))
                     {
-                        string eventId = ZoneLoader.CreateEventForNode(_parent.SelectedNodeId);
+                        string eventId = ZoneEditingService.CreateEventForNode(_parent.SelectedNodeId);
                         if (eventId != null)
                             _parent.InspectEvent(eventId);
                     }
@@ -102,7 +102,7 @@ namespace UnknownMod.Editor
                     if (GUILayout.Button("\u2192 Edit", EditorStyles.LinkButton, GUILayout.Width(60)))
                         _parent.InspectEvent(nd.EventId);
                     if (GUILayout.Button("X", EditorStyles.MiniButton, GUILayout.Width(22)))
-                        ZoneLoader.RemoveEventFromNode(_parent.SelectedNodeId);
+                        ZoneEditingService.RemoveEventFromNode(_parent.SelectedNodeId);
                     GUILayout.EndHorizontal();
 
                     nd.EventPercent = EditorFields.IntField("Event %", nd.EventPercent);

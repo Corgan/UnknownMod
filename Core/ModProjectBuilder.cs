@@ -46,12 +46,19 @@ namespace UnknownMod.Core
             BuildNpcs(proj.NpcPatches);
 
             // ── Sprites ──────────────────────────────────────────────
-            // Sprites are applied at runtime by NpcPrefabBuilder; just register defs.
-            // No SO creation needed right now — the defs are stored in the project.
+            // Register sprite + NPC defs in ModRegistry for runtime resolution.
+            ModRegistry.RegisterModSprites(proj.Sprites, proj.SpritePatches);
+            ModRegistry.RegisterModNpcs(proj.Npcs, proj.NpcPatches);
 
             // ── Zones ────────────────────────────────────────────────
             foreach (var zone in proj.Zones.Values)
+            {
                 BuildZone(zone);
+                // Register in ModRegistry so IsModdedZone/MapBuilder/GetZoneFolder work
+                string zoneFolder = System.IO.Path.Combine(
+                    ModProjectLoader.ModFolder(proj.ModId), "zones", zone.ZoneId);
+                ModRegistry.RegisterModZone(zone, zoneFolder);
+            }
 
             // ── Zone patches ─────────────────────────────────────────
             foreach (var patch in proj.ZonePatches.Values)
@@ -102,6 +109,10 @@ namespace UnknownMod.Core
         /// </summary>
         public static void BuildAll(List<ModProject> mods)
         {
+            // Clear all registries before full rebuild
+            ModRegistry.ClearAll();
+            Runtime.MapBuilder.ClearCache();
+
             Plugin.Log.LogInfo($"[Builder] Building {mods.Count} mod(s) in load order...");
             foreach (var mod in mods)
             {
@@ -1415,9 +1426,9 @@ namespace UnknownMod.Core
 
         /// <summary>
         /// Build a complete new zone from a ZoneDef: creates all SOs and registers in Globals.
-        /// Mirrors ZoneLoader.BuildFromDef but uses the mod-project pipeline.
+        /// Builds all SOs for a zone and registers them in Globals.
         /// </summary>
-        private static void BuildZone(ZoneDef zone)
+        public static void BuildZone(ZoneDef zone)
         {
             try
             {

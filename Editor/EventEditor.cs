@@ -26,7 +26,7 @@ namespace UnknownMod.Editor
 
         public void DrawPanel()
         {
-            var zone = ZoneLoader.CurrentZone;
+            var zone = ZoneEditingService.CurrentZone;
             if (zone == null) { GUILayout.Label("No zone loaded."); return; }
 
             // ── Entity selector ──────────────────────────────────
