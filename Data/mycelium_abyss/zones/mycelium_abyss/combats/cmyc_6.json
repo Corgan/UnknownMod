@@ -1,0 +1,17 @@
+{
+  "CombatId": "cmyc_6",
+  "Description": "The cavern teems with varied fungal abominations.",
+  "NpcIds": [
+    "myc_blightcaller",
+    "myc_thrall",
+    "myc_spitter"
+  ],
+  "CombatTier": "T3",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

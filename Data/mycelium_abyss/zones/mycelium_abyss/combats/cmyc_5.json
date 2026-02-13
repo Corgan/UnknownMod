@@ -1,0 +1,17 @@
+{
+  "CombatId": "cmyc_5",
+  "Description": "A massive root-creature blocks the path, flanked by scuttling shadows.",
+  "NpcIds": [
+    "myc_blightcaller",
+    "myc_lurker",
+    "myc_lurker"
+  ],
+  "CombatTier": "T3",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

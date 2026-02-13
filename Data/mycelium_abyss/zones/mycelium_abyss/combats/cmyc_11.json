@@ -1,0 +1,18 @@
+{
+  "CombatId": "cmyc_11",
+  "Description": "Gelatinous creatures spit virulent acid from the shadows.",
+  "NpcIds": [
+    "myc_spitter",
+    "myc_spitter",
+    "myc_spitter",
+    "myc_lurker"
+  ],
+  "CombatTier": "T3",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

@@ -1,0 +1,26 @@
+{
+  "NodeId": "myc_15",
+  "NodeName": "Spore Shaft",
+  "Description": "",
+  "PosX": 2.1,
+  "PosY": -0.6,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "PoisonousAir",
+  "NodeRequirementId": "",
+  "CombatId": "",
+  "CombatTier": "T0",
+  "CombatPercent": 0,
+  "EventId": "e_myc_15",
+  "EventPercent": 100,
+  "NodeEventTier": "T0",
+  "Connections": [
+    "myc_20",
+    "myc_19"
+  ],
+  "ConnectionRequirements": []
+}

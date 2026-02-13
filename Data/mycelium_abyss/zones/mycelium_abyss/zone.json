@@ -1,0 +1,11 @@
+{
+  "ZoneId": "mycelium_abyss",
+  "ZoneName": "Mycelium Abyss",
+  "IdPrefix": "myc",
+  "ObeliskLow": false,
+  "ObeliskHigh": false,
+  "ObeliskFinal": false,
+  "DisableExperience": false,
+  "DisableMadness": false,
+  "BackgroundImage": "background.jpeg"
+}

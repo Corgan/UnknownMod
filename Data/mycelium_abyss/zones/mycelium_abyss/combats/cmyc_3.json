@@ -1,0 +1,17 @@
+{
+  "CombatId": "cmyc_3",
+  "Description": "A robed figure commands the fungal horde.",
+  "NpcIds": [
+    "myc_blightcaller",
+    "myc_shambler",
+    "myc_shambler"
+  ],
+  "CombatTier": "T3",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

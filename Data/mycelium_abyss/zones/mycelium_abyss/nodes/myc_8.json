@@ -1,0 +1,26 @@
+{
+  "NodeId": "myc_8",
+  "NodeName": "Fungal Overgrowth",
+  "Description": "",
+  "PosX": 0.9,
+  "PosY": 3.1,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "PoisonousAir",
+  "NodeRequirementId": "",
+  "CombatId": "cmyc_3",
+  "CombatTier": "T3",
+  "CombatPercent": 100,
+  "EventId": "",
+  "EventPercent": 0,
+  "NodeEventTier": "T0",
+  "Connections": [
+    "myc_12",
+    "myc_11"
+  ],
+  "ConnectionRequirements": []
+}

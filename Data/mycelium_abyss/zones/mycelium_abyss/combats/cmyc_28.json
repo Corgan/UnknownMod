@@ -1,0 +1,18 @@
+{
+  "CombatId": "cmyc_28",
+  "Description": "Combat at Test",
+  "NpcIds": [
+    "myc_blightcaller",
+    "myc_blightcaller",
+    "myc_blightcaller",
+    "myc_blightcaller"
+  ],
+  "CombatTier": "T3",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

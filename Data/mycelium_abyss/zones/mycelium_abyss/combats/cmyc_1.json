@@ -1,0 +1,17 @@
+{
+  "CombatId": "cmyc_1",
+  "Description": "Fungal scouts emerge from the cavern walls.",
+  "NpcIds": [
+    "myc_shambler",
+    "myc_shambler",
+    "myc_spitter"
+  ],
+  "CombatTier": "T3",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

@@ -1,0 +1,18 @@
+{
+  "CombatId": "cmyc_9",
+  "Description": "Every strain of the mycelia converges on your position.",
+  "NpcIds": [
+    "myc_golem",
+    "myc_blightcaller",
+    "myc_shambler",
+    "myc_spitter"
+  ],
+  "CombatTier": "T4",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

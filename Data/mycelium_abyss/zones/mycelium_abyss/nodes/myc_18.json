@@ -1,0 +1,25 @@
+{
+  "NodeId": "myc_18",
+  "NodeName": "Mycelium Bridge",
+  "Description": "",
+  "PosX": -2.6,
+  "PosY": -3.2,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "None",
+  "NodeRequirementId": "",
+  "CombatId": "cmyc_10",
+  "CombatTier": "T4",
+  "CombatPercent": 100,
+  "EventId": "",
+  "EventPercent": 0,
+  "NodeEventTier": "T0",
+  "Connections": [
+    "myc_24"
+  ],
+  "ConnectionRequirements": []
+}

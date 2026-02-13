@@ -1,0 +1,17 @@
+{
+  "CombatId": "cmyc_2",
+  "Description": "Skittering sounds precede a sudden ambush.",
+  "NpcIds": [
+    "myc_lurker",
+    "myc_lurker",
+    "myc_shambler"
+  ],
+  "CombatTier": "T3",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

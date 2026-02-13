@@ -1,0 +1,25 @@
+{
+  "NodeId": "myc_26",
+  "NodeName": "The Spore Rift",
+  "Description": "",
+  "PosX": 3.2,
+  "PosY": 0.0,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "DampCavern",
+  "NodeRequirementId": "",
+  "CombatId": "",
+  "CombatTier": "T0",
+  "CombatPercent": 0,
+  "EventId": "e_myc_26",
+  "EventPercent": 100,
+  "NodeEventTier": "T0",
+  "Connections": [
+    "myc_15"
+  ],
+  "ConnectionRequirements": []
+}

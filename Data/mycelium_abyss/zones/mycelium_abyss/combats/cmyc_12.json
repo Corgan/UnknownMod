@@ -1,0 +1,18 @@
+{
+  "CombatId": "cmyc_12",
+  "Description": "Berserkers and assassins swarm from every tunnel.",
+  "NpcIds": [
+    "myc_thrall",
+    "myc_thrall",
+    "myc_lurker",
+    "myc_lurker"
+  ],
+  "CombatTier": "T4",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

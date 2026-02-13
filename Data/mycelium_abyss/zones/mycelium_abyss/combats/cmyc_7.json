@@ -1,0 +1,17 @@
+{
+  "CombatId": "cmyc_7",
+  "Description": "Twin casters channel the hivemind's fury behind a living wall.",
+  "NpcIds": [
+    "myc_blightcaller",
+    "myc_blightcaller",
+    "myc_golem"
+  ],
+  "CombatTier": "T4",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

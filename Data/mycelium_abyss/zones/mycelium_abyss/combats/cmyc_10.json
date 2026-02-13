@@ -1,0 +1,16 @@
+{
+  "CombatId": "cmyc_10",
+  "Description": "Two colossal root-golems lumber out of the darkness.",
+  "NpcIds": [
+    "myc_golem",
+    "myc_golem"
+  ],
+  "CombatTier": "T4",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

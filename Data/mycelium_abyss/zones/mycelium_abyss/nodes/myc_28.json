@@ -1,0 +1,23 @@
+{
+  "NodeId": "myc_28",
+  "NodeName": "Test",
+  "Description": "",
+  "PosX": 1.45500207,
+  "PosY": -3.24,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "None",
+  "NodeRequirementId": "",
+  "CombatId": "cmyc_28",
+  "CombatTier": "T0",
+  "CombatPercent": -1,
+  "EventId": "",
+  "EventPercent": -1,
+  "NodeEventTier": "T0",
+  "Connections": [],
+  "ConnectionRequirements": []
+}

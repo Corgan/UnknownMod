@@ -1,0 +1,18 @@
+{
+  "CombatId": "cmyc_8",
+  "Description": "A horde of mindless warriors surges forward, sustained by dark magic.",
+  "NpcIds": [
+    "myc_thrall",
+    "myc_thrall",
+    "myc_thrall",
+    "myc_blightcaller"
+  ],
+  "CombatTier": "T4",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

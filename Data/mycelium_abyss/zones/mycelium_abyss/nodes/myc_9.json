@@ -1,0 +1,26 @@
+{
+  "NodeId": "myc_9",
+  "NodeName": "Clean Air Pocket",
+  "Description": "",
+  "PosX": -1.1,
+  "PosY": -0.3,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "None",
+  "NodeRequirementId": "",
+  "CombatId": "cmyc_1",
+  "CombatTier": "T3",
+  "CombatPercent": 30,
+  "EventId": "e_myc_9",
+  "EventPercent": 70,
+  "NodeEventTier": "T0",
+  "Connections": [
+    "myc_13",
+    "myc_14"
+  ],
+  "ConnectionRequirements": []
+}

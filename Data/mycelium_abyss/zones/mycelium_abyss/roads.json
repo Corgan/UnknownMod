@@ -1,0 +1,408 @@
+{
+  "myc_0-myc_1": {
+    "FromNodeId": "myc_0",
+    "ToNodeId": "myc_1",
+    "Waypoints": [
+      [
+        -5.32,
+        2.17
+      ]
+    ]
+  },
+  "myc_1-myc_3": {
+    "FromNodeId": "myc_1",
+    "ToNodeId": "myc_3",
+    "Waypoints": [
+      [
+        -4.12,
+        2.68
+      ]
+    ]
+  },
+  "myc_1-myc_2": {
+    "FromNodeId": "myc_1",
+    "ToNodeId": "myc_2",
+    "Waypoints": [
+      [
+        -4.3,
+        1.47
+      ]
+    ]
+  },
+  "myc_3-myc_6": {
+    "FromNodeId": "myc_3",
+    "ToNodeId": "myc_6",
+    "Waypoints": [
+      [
+        -1.62,
+        3.31
+      ]
+    ]
+  },
+  "myc_3-myc_5": {
+    "FromNodeId": "myc_3",
+    "ToNodeId": "myc_5",
+    "Waypoints": [
+      [
+        -2.595,
+        2.21999955
+      ],
+      [
+        -2.2,
+        1.45
+      ]
+    ]
+  },
+  "myc_4-myc_5": {
+    "FromNodeId": "myc_4",
+    "ToNodeId": "myc_5",
+    "Waypoints": [
+      [
+        -2.36,
+        0.88
+      ]
+    ]
+  },
+  "myc_2-myc_4": {
+    "FromNodeId": "myc_2",
+    "ToNodeId": "myc_4",
+    "Waypoints": [
+      [
+        -3.95,
+        0.59
+      ]
+    ]
+  },
+  "myc_6-myc_8": {
+    "FromNodeId": "myc_6",
+    "ToNodeId": "myc_8",
+    "Waypoints": [
+      [
+        0.24,
+        3.41
+      ]
+    ]
+  },
+  "myc_5-myc_7": {
+    "FromNodeId": "myc_5",
+    "ToNodeId": "myc_7",
+    "Waypoints": [
+      [
+        -0.84,
+        0.55
+      ]
+    ]
+  },
+  "myc_13-myc_17": {
+    "FromNodeId": "myc_13",
+    "ToNodeId": "myc_17",
+    "Waypoints": [
+      [
+        -4.14,
+        -2.31
+      ],
+      [
+        -4.6,
+        -2.16
+      ]
+    ]
+  },
+  "myc_8-myc_12": {
+    "FromNodeId": "myc_8",
+    "ToNodeId": "myc_12",
+    "Waypoints": [
+      [
+        1.68,
+        3.41
+      ]
+    ]
+  },
+  "myc_8-myc_11": {
+    "FromNodeId": "myc_8",
+    "ToNodeId": "myc_11",
+    "Waypoints": [
+      [
+        0.11,
+        2.59
+      ]
+    ]
+  },
+  "myc_12-myc_16": {
+    "FromNodeId": "myc_12",
+    "ToNodeId": "myc_16",
+    "Waypoints": [
+      [
+        3.9,
+        3.85
+      ],
+      [
+        5.18,
+        2.92
+      ]
+    ]
+  },
+  "myc_7-myc_9": {
+    "FromNodeId": "myc_7",
+    "ToNodeId": "myc_9",
+    "Waypoints": [
+      [
+        -0.04,
+        0.28
+      ]
+    ]
+  },
+  "myc_7-myc_10": {
+    "FromNodeId": "myc_7",
+    "ToNodeId": "myc_10",
+    "Waypoints": [
+      [
+        0.28,
+        0.43
+      ]
+    ]
+  },
+  "myc_9-myc_13": {
+    "FromNodeId": "myc_9",
+    "ToNodeId": "myc_13",
+    "Waypoints": [
+      [
+        -2.34,
+        -0.89
+      ]
+    ]
+  },
+  "myc_9-myc_14": {
+    "FromNodeId": "myc_9",
+    "ToNodeId": "myc_14",
+    "Waypoints": [
+      [
+        -0.55,
+        -0.7
+      ]
+    ]
+  },
+  "myc_17-myc_23": {
+    "FromNodeId": "myc_17",
+    "ToNodeId": "myc_23",
+    "Waypoints": [
+      [
+        -5.38,
+        -3.58
+      ]
+    ]
+  },
+  "myc_23-myc_18": {
+    "FromNodeId": "myc_23",
+    "ToNodeId": "myc_18",
+    "Waypoints": [
+      [
+        -3.4,
+        -2.93
+      ]
+    ]
+  },
+  "myc_11-myc_7": {
+    "FromNodeId": "myc_11",
+    "ToNodeId": "myc_7",
+    "Waypoints": [
+      [
+        0.0,
+        1.23
+      ]
+    ]
+  },
+  "myc_10-myc_15": {
+    "FromNodeId": "myc_10",
+    "ToNodeId": "myc_15",
+    "Waypoints": [
+      [
+        1.59,
+        -0.18
+      ]
+    ]
+  },
+  "myc_18-myc_24": {
+    "FromNodeId": "myc_18",
+    "ToNodeId": "myc_24",
+    "Waypoints": [
+      [
+        -0.98,
+        -2.61
+      ]
+    ]
+  },
+  "myc_21-myc_10": {
+    "FromNodeId": "myc_21",
+    "ToNodeId": "myc_10",
+    "Waypoints": [
+      [
+        2.54,
+        1.25
+      ]
+    ]
+  },
+  "myc_26-myc_15": {
+    "FromNodeId": "myc_26",
+    "ToNodeId": "myc_15",
+    "Waypoints": [
+      [
+        2.59,
+        -0.29
+      ]
+    ]
+  },
+  "myc_24-myc_25": {
+    "FromNodeId": "myc_24",
+    "ToNodeId": "myc_25",
+    "Waypoints": [
+      [
+        0.62,
+        -3.01
+      ]
+    ]
+  },
+  "myc_16-myc_21": {
+    "FromNodeId": "myc_16",
+    "ToNodeId": "myc_21",
+    "Waypoints": [
+      [
+        3.72,
+        2.25
+      ],
+      [
+        3.01,
+        2.2
+      ]
+    ]
+  },
+  "myc_16-myc_22": {
+    "FromNodeId": "myc_16",
+    "ToNodeId": "myc_22",
+    "Waypoints": [
+      [
+        4.71,
+        2.07
+      ],
+      [
+        4.68,
+        1.77
+      ],
+      [
+        5.13,
+        1.52
+      ]
+    ]
+  },
+  "myc_27-myc_20": {
+    "FromNodeId": "myc_27",
+    "ToNodeId": "myc_20",
+    "Waypoints": [
+      [
+        5.32,
+        -0.16
+      ],
+      [
+        5.14,
+        -0.45
+      ],
+      [
+        5.37,
+        -1.14
+      ]
+    ]
+  },
+  "myc_15-myc_20": {
+    "FromNodeId": "myc_15",
+    "ToNodeId": "myc_20",
+    "Waypoints": [
+      [
+        3.35,
+        -1.2
+      ]
+    ]
+  },
+  "myc_15-myc_19": {
+    "FromNodeId": "myc_15",
+    "ToNodeId": "myc_19",
+    "Waypoints": [
+      [
+        0.55,
+        -1.31
+      ]
+    ]
+  },
+  "myc_22-myc_26": {
+    "FromNodeId": "myc_22",
+    "ToNodeId": "myc_26",
+    "Waypoints": [
+      [
+        4.3,
+        0.55
+      ]
+    ]
+  },
+  "myc_22-myc_27": {
+    "FromNodeId": "myc_22",
+    "ToNodeId": "myc_27",
+    "Waypoints": [
+      [
+        6.09,
+        0.83
+      ]
+    ]
+  },
+  "myc_20-myc_25": {
+    "FromNodeId": "myc_20",
+    "ToNodeId": "myc_25",
+    "Waypoints": [
+      [
+        2.5,
+        -2.63
+      ]
+    ]
+  },
+  "myc_14-myc_18": {
+    "FromNodeId": "myc_14",
+    "ToNodeId": "myc_18",
+    "Waypoints": [
+      [
+        -1.87,
+        -2.03
+      ],
+      [
+        -3.39,
+        -2.93
+      ]
+    ]
+  },
+  "myc_14-myc_19": {
+    "FromNodeId": "myc_14",
+    "ToNodeId": "myc_19",
+    "Waypoints": [
+      [
+        0.55,
+        -1.31
+      ]
+    ]
+  },
+  "myc_19-myc_25": {
+    "FromNodeId": "myc_19",
+    "ToNodeId": "myc_25",
+    "Waypoints": [
+      [
+        1.08,
+        -1.89999974
+      ]
+    ]
+  },
+  "myc_25-myc_28": {
+    "FromNodeId": "myc_25",
+    "ToNodeId": "myc_28",
+    "Waypoints": [
+      [
+        1.38500082,
+        -2.8625
+      ]
+    ]
+  }
+}

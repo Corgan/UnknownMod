@@ -1,0 +1,25 @@
+{
+  "NodeId": "myc_5",
+  "NodeName": "Spore Cavern",
+  "Description": "",
+  "PosX": -1.8,
+  "PosY": 1.1,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "PoisonousAir",
+  "NodeRequirementId": "",
+  "CombatId": "",
+  "CombatTier": "T0",
+  "CombatPercent": 0,
+  "EventId": "e_myc_5",
+  "EventPercent": 100,
+  "NodeEventTier": "T0",
+  "Connections": [
+    "myc_7"
+  ],
+  "ConnectionRequirements": []
+}
