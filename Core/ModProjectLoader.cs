@@ -167,6 +167,7 @@ namespace UnknownMod.Core
         {
             string root = ModFolder(proj.ModId);
             Directory.CreateDirectory(root);
+            Directory.CreateDirectory(Path.Combine(root, "textures"));
 
             var meta = new
             {

@@ -11,9 +11,11 @@ namespace UnknownMod
     {
         private readonly Harmony harmony = new(PluginInfo.PLUGIN_GUID);
         internal static ManualLogSource Log;
+        internal static Plugin Instance { get; private set; }
 
         private void Awake()
         {
+            Instance = this;
             Log = Logger;
             Log.LogInfo($"{PluginInfo.PLUGIN_GUID} {PluginInfo.PLUGIN_VERSION} has loaded!");
 

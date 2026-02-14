@@ -14,7 +14,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class LootEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -26,7 +26,7 @@ namespace UnknownMod.Editor
         private bool _secRarity = true;
         private bool _secItems = true;
 
-        public LootEditor(ZoneEditor parent) => _parent = parent;
+        public LootEditor(ModEditor parent) => _parent = parent;
 
         public void DrawPanel()
         {

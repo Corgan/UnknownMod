@@ -14,7 +14,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class CardbackEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -28,7 +28,7 @@ namespace UnknownMod.Editor
         private bool _secRequirements = false;
         private bool _secVisual = false;
 
-        public CardbackEditor(ZoneEditor parent) => _parent = parent;
+        public CardbackEditor(ModEditor parent) => _parent = parent;
 
         public string SelectedCardbackId { get; set; }
 

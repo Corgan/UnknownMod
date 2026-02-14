@@ -9,7 +9,7 @@ namespace UnknownMod.Editor.Tabs
     /// </summary>
     public class ModManagerPanel
     {
-        private readonly ZoneEditor _editor;
+        private readonly ModEditor _editor;
         private Vector2 _loadOrderScroll;
         private string _newModId = "";
         private string _newModName = "";
@@ -22,7 +22,21 @@ namespace UnknownMod.Editor.Tabs
         // ── Active mod project ───────────────────────────────────────
         public static ModProject ActiveProject { get; private set; }
 
-        public ModManagerPanel(ZoneEditor editor) => _editor = editor;
+        public ModManagerPanel(ModEditor editor) => _editor = editor;
+
+        /// <summary>Per-frame tick (no-op for mod manager tab).</summary>
+        public void Tick() { }
+
+        /// <summary>Draw a viewport for the mod manager tab (blank, or mod logo).</summary>
+        public void DrawViewport(Rect rect)
+        {
+            EditorStyles.ViewportBackground(rect);
+            string modName = ActiveProject != null ? ActiveProject.ModName : null;
+            string label = !string.IsNullOrEmpty(modName)
+                ? $"<size=18><b>{modName}</b></size>\n<size=11><color=#666>Mod Manager</color></size>"
+                : "<color=#555>No mod loaded</color>";
+            EditorStyles.ViewportPlaceholder(rect, label);
+        }
 
         // ═══════════════════════════════════════════════════════════════
         //  DRAW

@@ -14,7 +14,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class PerkNodeEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -29,7 +29,7 @@ namespace UnknownMod.Editor
         private bool _secRefs = false;
         private bool _secConnected = false;
 
-        public PerkNodeEditor(ZoneEditor parent) => _parent = parent;
+        public PerkNodeEditor(ModEditor parent) => _parent = parent;
 
         public string SelectedPerkNodeId { get; set; }
 

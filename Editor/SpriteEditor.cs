@@ -17,7 +17,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class SpriteEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Preview ──────────────────────────────────────────────────
         private Camera _cam;
@@ -124,7 +124,7 @@ namespace UnknownMod.Editor
         private GUIStyle _centeredStyle, _noAnimStyle, _clipStyle, _timeStyle, _speedStyle;
         private GUIStyle _boneLabelStyle, _boneLabelSelStyle;
 
-        public SpriteEditor(ZoneEditor parent) => _parent = parent;
+        public SpriteEditor(ModEditor parent) => _parent = parent;
 
         // ── Mod-project integration ──────────────────────────────────
         private bool _showOverrideBrowser;
@@ -207,7 +207,7 @@ namespace UnknownMod.Editor
         }
 
         // ═══════════════════════════════════════════════════════════════
-        //  VIEWPORT (drawn on left side of screen by ZoneEditor)
+        //  VIEWPORT (drawn on left side of screen by ModEditor)
         // ═══════════════════════════════════════════════════════════════
 
         public void DrawViewport(Rect vp)
@@ -281,7 +281,7 @@ namespace UnknownMod.Editor
             }
 
             // Background + RT
-            if (_vpBgTex == null) _vpBgTex = ZoneEditor.MakeTex(2, 2, new Color(0.1f, 0.1f, 0.13f, 1f));
+            if (_vpBgTex == null) _vpBgTex = ModEditor.MakeTex(2, 2, new Color(0.1f, 0.1f, 0.13f, 1f));
             GUI.DrawTexture(vp, _vpBgTex);
 
             // Reserve space for timeline at the bottom
@@ -535,11 +535,11 @@ namespace UnknownMod.Editor
         private void DrawTimeline(Rect r)
         {
             // Dark background (cached)
-            if (_tlBgTex == null) _tlBgTex = ZoneEditor.MakeTex(2, 2, new Color(0.08f, 0.08f, 0.10f, 1f));
+            if (_tlBgTex == null) _tlBgTex = ModEditor.MakeTex(2, 2, new Color(0.08f, 0.08f, 0.10f, 1f));
             GUI.DrawTexture(r, _tlBgTex);
 
             // Top border line (cached)
-            if (_tlBorderTex == null) _tlBorderTex = ZoneEditor.MakeTex(2, 1, new Color(0.25f, 0.25f, 0.3f, 1f));
+            if (_tlBorderTex == null) _tlBorderTex = ModEditor.MakeTex(2, 1, new Color(0.25f, 0.25f, 0.3f, 1f));
             GUI.DrawTexture(new Rect(r.x, r.y, r.width, 1), _tlBorderTex);
 
             if (_previewAnimator == null || _clipNames == null || _clipNames.Length == 0)
@@ -616,21 +616,21 @@ namespace UnknownMod.Editor
             float trackH = 12f;
 
             // Track background (cached)
-            if (_tlTrackBgTex == null) _tlTrackBgTex = ZoneEditor.MakeTex(2, 2, new Color(0.15f, 0.15f, 0.18f, 1f));
+            if (_tlTrackBgTex == null) _tlTrackBgTex = ModEditor.MakeTex(2, 2, new Color(0.15f, 0.15f, 0.18f, 1f));
             GUI.DrawTexture(new Rect(trackX, trackY, trackW, trackH), _tlTrackBgTex);
 
             // Filled portion (progress)
             float fillW = trackW * Mathf.Clamp01(_timelineNormTime);
             if (fillW > 1f)
             {
-                if (_tlFillTex == null) _tlFillTex = ZoneEditor.MakeTex(2, 2, new Color(0.3f, 0.55f, 0.8f, 0.8f));
+                if (_tlFillTex == null) _tlFillTex = ModEditor.MakeTex(2, 2, new Color(0.3f, 0.55f, 0.8f, 0.8f));
                 GUI.DrawTexture(new Rect(trackX, trackY, fillW, trackH), _tlFillTex);
             }
 
             // Playhead (scrubber handle)
             float headX = trackX + fillW - 4f;
             float headW = 8f, headH = trackH + 4f;
-            if (_tlHeadTex == null) _tlHeadTex = ZoneEditor.MakeTex(2, 2, new Color(0.9f, 0.9f, 0.95f, 1f));
+            if (_tlHeadTex == null) _tlHeadTex = ModEditor.MakeTex(2, 2, new Color(0.9f, 0.9f, 0.95f, 1f));
             GUI.DrawTexture(new Rect(headX, trackY - 2, headW, headH), _tlHeadTex);
 
             // Keyframe diamonds on track (for current clip + selected bone)
@@ -639,8 +639,8 @@ namespace UnknownMod.Editor
                 tlSprites.TryGetValue(_previewNpcId, out var kfOvr) &&
                 kfOvr.AnimOverrides.TryGetValue(clipName, out var kfAnimOvr))
             {
-                if (_tlKfDiamondTex == null) _tlKfDiamondTex = ZoneEditor.MakeTex(2, 2, new Color(1f, 0.7f, 0.2f, 0.9f));
-                if (_tlKfDiamondSelTex == null) _tlKfDiamondSelTex = ZoneEditor.MakeTex(2, 2, new Color(0.3f, 0.9f, 1f, 1f));
+                if (_tlKfDiamondTex == null) _tlKfDiamondTex = ModEditor.MakeTex(2, 2, new Color(1f, 0.7f, 0.2f, 0.9f));
+                if (_tlKfDiamondSelTex == null) _tlKfDiamondSelTex = ModEditor.MakeTex(2, 2, new Color(0.3f, 0.9f, 1f, 1f));
 
                 foreach (var boneKf in kfAnimOvr.BoneKeyframes)
                 {
@@ -656,7 +656,7 @@ namespace UnknownMod.Editor
             }
 
             // Track border (cached)
-            if (_tlTrackBorderTex == null) _tlTrackBorderTex = ZoneEditor.MakeTex(2, 2, new Color(0.3f, 0.3f, 0.35f, 1f));
+            if (_tlTrackBorderTex == null) _tlTrackBorderTex = ModEditor.MakeTex(2, 2, new Color(0.3f, 0.3f, 0.35f, 1f));
             GUI.DrawTexture(new Rect(trackX, trackY, trackW, 1), _tlTrackBorderTex);
             GUI.DrawTexture(new Rect(trackX, trackY + trackH - 1, trackW, 1), _tlTrackBorderTex);
         }
@@ -1128,7 +1128,7 @@ namespace UnknownMod.Editor
                 bool hasCS = ovr.CustomSprites.Count > 0 || !string.IsNullOrEmpty(ovr.Spritesheet);
                 if (hasCS)
                 {
-                    GUILayout.Label("<color=#888>Place PNGs in: <b>textures/</b> under zone folder</color>", EditorStyles.RichLabel);
+                    GUILayout.Label("<color=#888>Place PNGs in: <b>textures/</b> under mod folder</color>", EditorStyles.RichLabel);
                     string prevSheet = ovr.Spritesheet;
                     ovr.Spritesheet = EditorFields.TextField("Spritesheet", ovr.Spritesheet);
                     if (ovr.Spritesheet != prevSheet)

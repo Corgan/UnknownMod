@@ -13,7 +13,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class EventEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
         private int _expandedReply = -1;
 
         // Per-reply section toggles (indexed by reply index)
@@ -22,7 +22,7 @@ namespace UnknownMod.Editor
         private bool[] _secSsc = new bool[16];
         private bool[] _secFlc = new bool[16];
 
-        public EventEditor(ZoneEditor parent) => _parent = parent;
+        public EventEditor(ModEditor parent) => _parent = parent;
 
         public void DrawPanel()
         {
@@ -56,6 +56,7 @@ namespace UnknownMod.Editor
             ed.EventTier = EditorFields.EnumField("Event Tier", ed.EventTier, "evt_tier");
             ed.ReplyRandom = EditorFields.IntField("Reply Random", ed.ReplyRandom);
             ed.RequirementId = EditorFields.IdDropdown("Requirement ID", ed.RequirementId, DataHelper.GetAllEventRequirementIds(), "evt_reqid");
+            ed.SpriteSource = EditorFields.IdDropdown("Sprite Source", ed.SpriteSource, DataHelper.GetAllEventIds(), "evt_sprsrc");
 
             EditorStyles.Separator();
             GUILayout.Label($"<b>Replies ({ed.Replies.Count})</b>", EditorStyles.RichLabel);
@@ -188,7 +189,9 @@ namespace UnknownMod.Editor
 
             // ── Requirements ─────────────────────────────────────
             o.RequirementUnlockId = EditorFields.IdDropdown("Req Unlock", o.RequirementUnlockId, DataHelper.GetAllEventRequirementIds(), $"o_requnlock_{k}");
+            o.RequirementUnlock2Id = EditorFields.IdDropdown("Req Unlock 2", o.RequirementUnlock2Id, DataHelper.GetAllEventRequirementIds(), $"o_requnlock2_{k}");
             o.RequirementLockId = EditorFields.IdDropdown("Req Lock", o.RequirementLockId, DataHelper.GetAllEventRequirementIds(), $"o_reqlock_{k}");
+            o.RequirementLock2Id = EditorFields.IdDropdown("Req Lock 2", o.RequirementLock2Id, DataHelper.GetAllEventRequirementIds(), $"o_reqlock2_{k}");
 
             // ── Loot / Shop ──────────────────────────────────────
             o.LootId = EditorFields.IdDropdown("Loot", o.LootId, lootIds, $"o_loot_{k}");

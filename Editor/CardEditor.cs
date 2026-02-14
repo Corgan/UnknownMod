@@ -15,7 +15,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class CardEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -49,7 +49,7 @@ namespace UnknownMod.Editor
         private bool _secPet = false;
         private bool _secUpgradeParams = false;
 
-        public CardEditor(ZoneEditor parent) => _parent = parent;
+        public CardEditor(ModEditor parent) => _parent = parent;
 
         public void DrawPanel()
         {
@@ -271,6 +271,7 @@ namespace UnknownMod.Editor
                 cd.Description = EditorFields.TextArea("Description", cd.Description);
                 cd.Fluff = EditorFields.TextField("Fluff", cd.Fluff);
                 cd.FluffPercent = EditorFields.FloatField("Fluff %", cd.FluffPercent);
+                cd.SpriteSource = EditorFields.IdDropdown("Sprite Source", cd.SpriteSource, DataHelper.GetAllCardIds(), "card_sprsrc");
                 cd.EnergyCost = EditorFields.IntField("Energy Cost", cd.EnergyCost);
                 cd.IsUpgraded = EditorFields.Toggle("Is Upgraded", cd.IsUpgraded);
                 if (cd.IsUpgraded)

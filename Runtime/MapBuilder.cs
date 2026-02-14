@@ -40,11 +40,12 @@ namespace UnknownMod.Runtime
             }
 
             string folder = ModRegistry.GetZoneFolder(zoneId);
-            string bgFile = Path.Combine(folder, zoneDef.BackgroundImage ?? "background.jpeg");
+            string bgName = zoneDef.BackgroundImage ?? "background.jpeg";
+            string bgFile = ResolveTexturePath(folder, bgName);
 
-            if (!File.Exists(bgFile))
+            if (bgFile == null)
             {
-                Plugin.Log.LogError($"[MapBuilder] Background image not found: {bgFile}");
+                Plugin.Log.LogError($"[MapBuilder] Background image not found: {bgName} (searched textures/ in mod root for {folder})");
                 return null;
             }
 
@@ -62,6 +63,34 @@ namespace UnknownMod.Runtime
 
             _backgroundSprites[zoneId] = sprite;
             return sprite;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  TEXTURE PATH RESOLUTION
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Resolve a texture filename to an absolute path on disk.
+        /// Looks in {modRoot}/textures/{filename} only.
+        /// Returns null if not found.
+        /// </summary>
+        public static string ResolveTexturePath(string folder, string filename)
+        {
+            if (string.IsNullOrEmpty(filename)) return null;
+
+            // If the filename is already an absolute path that exists, use it directly
+            if (Path.IsPathRooted(filename) && File.Exists(filename))
+                return filename;
+
+            // Mod-root textures/ folder: walk up from zone folder (zones/{zoneId}/) to mod root
+            string modRoot = Path.GetDirectoryName(Path.GetDirectoryName(folder));
+            if (modRoot != null)
+            {
+                string path = Path.Combine(modRoot, "textures", filename);
+                if (File.Exists(path)) return path;
+            }
+
+            return null;
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -138,8 +167,8 @@ namespace UnknownMod.Runtime
             roadsGO.transform.SetParent(root.transform, false);
             CreateMapRoads(roadsGO.transform, nodePositions, zoneDef);
 
-            // Attach MapEditor to the zone map root (ZoneEditor is persistent)
-            ZoneEditor.Instance?.AttachMapEditor(root);
+            // Attach MapEditor to the zone map root (ModEditor is persistent)
+            ModEditor.Instance?.AttachMapEditor(root);
 
             Plugin.Log.LogInfo($"[MapBuilder] Map built: {zoneId} ({nodePositions.Count} nodes).");
             return true;

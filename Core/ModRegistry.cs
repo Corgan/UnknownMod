@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Linq;
+using HarmonyLib;
 using UnityEngine;
 using UnknownMod.Definitions;
 using UnknownMod.Editor;
@@ -8,7 +10,8 @@ namespace UnknownMod.Core
 {
     /// <summary>
     /// Global runtime registry for all loaded mods.
-    /// Owns zone lookups, sprite resolution, and NPC def tracking.
+    /// Owns zone lookups, sprite resolution, NPC def tracking,
+    /// and Globals key tracking for clean teardown on rebuild.
     /// Editor-side mutation lives in <see cref="ZoneEditingService"/>.
     /// </summary>
     public static class ModRegistry
@@ -26,6 +29,14 @@ namespace UnknownMod.Core
 
         /// <summary>Global NPC definitions from all loaded mods. Keyed by NPC ID.</summary>
         public static readonly Dictionary<string, NpcDef> GlobalNpcs = new();
+
+        // ── NPC → Zone reverse index (for runtime sprite resolution) ─
+        /// <summary>Maps NPC base ID → ZoneDef that owns it. Built during zone registration.</summary>
+        private static readonly Dictionary<string, ZoneDef> _npcToZone = new();
+
+        // ── Globals key tracking (for clean teardown) ────────────────
+        /// <summary>Keys registered in each Globals dict field by mod builds. Used to remove stale entries on rebuild.</summary>
+        private static readonly Dictionary<string, HashSet<string>> _registeredKeys = new();
 
         // ═══════════════════════════════════════════════════════════════
         //  ZONE QUERIES
@@ -51,6 +62,11 @@ namespace UnknownMod.Core
         {
             LoadedZones[zoneDef.ZoneId] = zoneDef;
             ZoneFolderMap[zoneDef.ZoneId] = folderPath;
+
+            // Build NPC → Zone reverse index for runtime sprite resolution
+            foreach (var npcId in zoneDef.Npcs.Keys)
+                _npcToZone[npcId] = zoneDef;
+
             Plugin.Log.LogInfo($"[ModRegistry] Registered mod zone '{zoneDef.ZoneId}' at {folderPath}");
         }
 
@@ -85,16 +101,83 @@ namespace UnknownMod.Core
         }
 
         // ═══════════════════════════════════════════════════════════════
+        //  NPC → ZONE LOOKUP (runtime)
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Find the zone that owns a given NPC ID (accounting for variant suffixes).
+        /// Returns null if no loaded zone owns this NPC.
+        /// </summary>
+        public static ZoneDef FindZoneForNpc(string npcId)
+        {
+            if (string.IsNullOrEmpty(npcId)) return null;
+
+            // Try direct lookup first
+            if (_npcToZone.TryGetValue(npcId, out var zone)) return zone;
+
+            // Try stripping variant suffix
+            string baseId = StripVariantSuffix(npcId);
+            if (baseId != npcId && _npcToZone.TryGetValue(baseId, out zone)) return zone;
+
+            return null;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  GLOBALS KEY TRACKING
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Track a key registered in a Globals dict field for later cleanup.
+        /// Called by DataHelper.Register* methods.
+        /// </summary>
+        public static void TrackRegistration(string fieldName, string key)
+        {
+            if (!_registeredKeys.TryGetValue(fieldName, out var keys))
+            {
+                keys = new HashSet<string>();
+                _registeredKeys[fieldName] = keys;
+            }
+            keys.Add(key);
+        }
+
+        /// <summary>
+        /// Remove all mod-registered keys from Globals dictionaries.
+        /// Called during ClearAll before a full rebuild.
+        /// </summary>
+        private static void UnregisterFromGlobals()
+        {
+            if (Globals.Instance == null) return;
+
+            foreach (var kvp in _registeredKeys)
+            {
+                var fieldTraverse = Traverse.Create(Globals.Instance).Field(kvp.Key);
+                if (fieldTraverse?.GetValue() is System.Collections.IDictionary dict)
+                {
+                    foreach (var key in kvp.Value)
+                    {
+                        if (dict.Contains(key))
+                            dict.Remove(key);
+                    }
+                }
+            }
+
+            Plugin.Log.LogInfo($"[ModRegistry] Unregistered {_registeredKeys.Sum(k => k.Value.Count)} keys from Globals.");
+            _registeredKeys.Clear();
+        }
+
+        // ═══════════════════════════════════════════════════════════════
         //  CLEAR
         // ═══════════════════════════════════════════════════════════════
 
-        /// <summary>Clear all registries. Called before a full rebuild.</summary>
+        /// <summary>Clear all registries and remove stale entries from Globals. Called before a full rebuild.</summary>
         public static void ClearAll()
         {
+            UnregisterFromGlobals();
             LoadedZones.Clear();
             ZoneFolderMap.Clear();
             GlobalSprites.Clear();
             GlobalNpcs.Clear();
+            _npcToZone.Clear();
             NpcPrefabBuilder.ClearCache();
         }
 
@@ -103,15 +186,15 @@ namespace UnknownMod.Core
         // ═══════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Create the persistent ZoneEditor GameObject if it doesn't already exist.
+        /// Create the persistent ModEditor GameObject if it doesn't already exist.
         /// Called after mods are loaded so the editor is available from any scene.
         /// </summary>
         public static void EnsureEditorExists()
         {
-            if (ZoneEditor.Instance != null) return;
-            var go = new GameObject("[UnknownMod] ZoneEditor");
-            go.AddComponent<ZoneEditor>(); // Awake calls DontDestroyOnLoad
-            Plugin.Log.LogInfo("[ModRegistry] Created persistent ZoneEditor.");
+            if (ModEditor.Instance != null) return;
+            var go = new GameObject("[UnknownMod] ModEditor");
+            go.AddComponent<ModEditor>(); // Awake calls DontDestroyOnLoad
+            Plugin.Log.LogInfo("[ModRegistry] Created persistent ModEditor.");
         }
 
         // ═══════════════════════════════════════════════════════════════

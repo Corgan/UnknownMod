@@ -34,6 +34,42 @@ namespace UnknownMod.Editor
         public static GUIStyle MiniButton      { get { EnsureInit(); return _miniButton; } }
         public static GUIStyle CompactBox      { get { EnsureInit(); return _compactBox; } }
 
+        // ── Viewport helpers ─────────────────────────────────────
+
+        private static Texture2D _vpBgTex;
+        private static GUIStyle _vpLabelStyle;
+
+        /// <summary>
+        /// Draw a dark viewport placeholder box with a centered label.
+        /// Use for tabs that don't yet have a live preview renderer.
+        /// </summary>
+        public static void ViewportPlaceholder(Rect rect, string label)
+        {
+            if (_vpBgTex == null)
+                _vpBgTex = ModEditor.MakeTex(2, 2, new Color(0.08f, 0.08f, 0.10f, 0.95f));
+            if (_vpLabelStyle == null)
+                _vpLabelStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = 14,
+                    richText = true,
+                    normal = { textColor = new Color(0.45f, 0.45f, 0.50f) }
+                };
+            GUI.DrawTexture(rect, _vpBgTex);
+            GUI.Label(rect, label, _vpLabelStyle);
+        }
+
+        /// <summary>
+        /// Draw a dark viewport background (no label). Use as a base for
+        /// custom viewport rendering that overlays additional elements.
+        /// </summary>
+        public static void ViewportBackground(Rect rect)
+        {
+            if (_vpBgTex == null)
+                _vpBgTex = ModEditor.MakeTex(2, 2, new Color(0.08f, 0.08f, 0.10f, 0.95f));
+            GUI.DrawTexture(rect, _vpBgTex);
+        }
+
         private static void EnsureInit()
         {
             if (_initialized) return;
@@ -96,13 +132,13 @@ namespace UnknownMod.Editor
                 padding = new RectOffset(8, 8, 3, 3),
                 richText = true,
                 normal = { textColor = new Color(0.85f, 0.85f, 0.85f) },
-                hover = { textColor = Color.white, background = ZoneEditor.MakeTex(2, 2, new Color(0.3f, 0.3f, 0.4f, 1f)) }
+                hover = { textColor = Color.white, background = ModEditor.MakeTex(2, 2, new Color(0.3f, 0.3f, 0.4f, 1f)) }
             };
 
             _dropdownItemSelected = new GUIStyle(_dropdownItem)
             {
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.cyan, background = ZoneEditor.MakeTex(2, 2, new Color(0.15f, 0.25f, 0.35f, 1f)) }
+                normal = { textColor = Color.cyan, background = ModEditor.MakeTex(2, 2, new Color(0.15f, 0.25f, 0.35f, 1f)) }
             };
 
             _miniButton = new GUIStyle(GUI.skin.button)
@@ -116,7 +152,7 @@ namespace UnknownMod.Editor
             {
                 padding = new RectOffset(4, 4, 4, 4),
                 margin = new RectOffset(0, 0, 2, 2),
-                normal = { background = ZoneEditor.MakeTex(2, 2, new Color(0.14f, 0.14f, 0.17f, 1f)) }
+                normal = { background = ModEditor.MakeTex(2, 2, new Color(0.14f, 0.14f, 0.17f, 1f)) }
             };
         }
 
@@ -128,7 +164,7 @@ namespace UnknownMod.Editor
             GUILayout.Space(4);
             var rect = GUILayoutUtility.GetRect(1f, 1f, GUILayout.ExpandWidth(true));
             if (_separatorTex == null)
-                _separatorTex = ZoneEditor.MakeTex(1, 1, new Color(0.3f, 0.3f, 0.35f, 1f));
+                _separatorTex = ModEditor.MakeTex(1, 1, new Color(0.3f, 0.3f, 0.35f, 1f));
             GUI.DrawTexture(rect, _separatorTex);
             GUILayout.Space(4);
         }

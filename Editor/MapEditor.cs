@@ -10,7 +10,7 @@ namespace UnknownMod.Editor
     /// <summary>
     /// Interactive map editor for modded zones.
     /// Attach to the zone root GameObject.
-    /// Operates as a sub-component managed by ZoneEditor.
+    /// Operates as a sub-component managed by ModEditor.
     /// Road data and visuals are delegated to RoadEditor.
     ///
     /// In edit mode (all normal game interaction is blocked):
@@ -26,8 +26,8 @@ namespace UnknownMod.Editor
     /// </summary>
     public class MapEditor : MonoBehaviour
     {
-        // ── Public state (now driven by ZoneEditor) ──────────────────
-        public static bool IsEditing => ZoneEditor.IsEditing;
+        // ── Public state (now driven by ModEditor) ──────────────────
+        public static bool IsEditing => ModEditor.IsEditing;
 
         // ── Road data + visuals (delegated to RoadEditor) ────────────
         private RoadEditor _roads;
@@ -145,7 +145,7 @@ namespace UnknownMod.Editor
             if (!IsEditing) return;
 
             // Skip world-space input when mouse is over editor GUI
-            if (ZoneEditor.IsMouseOverUI)
+            if (ModEditor.IsMouseOverUI)
             {
                 // Still allow releasing a drag already in progress
                 if (Input.GetMouseButtonUp(0) && dragTarget != null)
@@ -248,8 +248,8 @@ namespace UnknownMod.Editor
             if (Input.GetMouseButtonDown(1))
             {
                 var (_, node) = HitTest();
-                if (node != null && ZoneEditor.Instance != null)
-                    ZoneEditor.Instance.InspectNode(node.gameObject.name);
+                if (node != null && ModEditor.Instance != null)
+                    ModEditor.Instance.InspectNode(node.gameObject.name);
             }
 
             // ── Escape: cancel connection mode ───────────────────────
@@ -264,7 +264,7 @@ namespace UnknownMod.Editor
         }
 
         // ═══════════════════════════════════════════════════════════════
-        //  EDIT MODE (driven by ZoneEditor)
+        //  EDIT MODE (driven by ModEditor)
         // ═══════════════════════════════════════════════════════════════
 
         public void SetEditMode(bool active)
@@ -333,7 +333,7 @@ namespace UnknownMod.Editor
         }
 
         // ═══════════════════════════════════════════════════════════════
-        //  MAP TAB PANEL (drawn inside ZoneEditor's IMGUI panel)
+        //  MAP TAB PANEL (drawn inside ModEditor's IMGUI panel)
         // ═══════════════════════════════════════════════════════════════
 
         public void DrawPanel()
@@ -367,7 +367,7 @@ namespace UnknownMod.Editor
             if (GUILayout.Button("Reflow Node IDs (BFS)", GUILayout.Height(28)))
             {
                 ZoneEditingService.ReflowNodeIds();
-                if (ZoneEditingService.CurrentZone != null && ZoneEditor.Instance != null)
+                if (ZoneEditingService.CurrentZone != null && ModEditor.Instance != null)
                     Plugin.Log.LogInfo("[MapEditor] Run Reflow — reload zone to see updated IDs.");
             }
         }

@@ -27,7 +27,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class MapViewport
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Viewport (camera + RT + zoom/pan) ────────────────────────
         private ViewportRenderer _vp;
@@ -86,7 +86,7 @@ namespace UnknownMod.Editor
         private static readonly Color RoadColor          = new(0f,   1f,    1f,    0.65f);
         private static readonly Color CPHandleColor      = new(1f,   0.9f,  0f,    0.9f);
 
-        public MapViewport(ZoneEditor parent)
+        public MapViewport(ModEditor parent)
         {
             _parent = parent;
             _vp = new ViewportRenderer(PreviewOrigin, 1280, 720, 5.4f,
@@ -94,7 +94,7 @@ namespace UnknownMod.Editor
         }
 
         // ═══════════════════════════════════════════════════════════════
-        //  VIEWPORT (drawn on left side of screen by ZoneEditor)
+        //  VIEWPORT (drawn on left side of screen by ModEditor)
         // ═══════════════════════════════════════════════════════════════
 
         public void DrawViewport(Rect vp)
@@ -109,6 +109,9 @@ namespace UnknownMod.Editor
             // Rebuild preview if zone changed or root was destroyed
             if (_loadedZoneId != zone.ZoneId || _previewRoot == null)
                 SpawnMap(zone);
+
+            // Ensure camera exists before checking (it's created lazily by Render)
+            _vp.EnsureCamera();
 
             if (_vp.Cam == null || _previewRoot == null)
             {
@@ -609,7 +612,7 @@ namespace UnknownMod.Editor
         }
 
         // ═══════════════════════════════════════════════════════════════
-        //  PANEL (right-side, drawn inside ZoneEditor's IMGUI area)
+        //  PANEL (right-side, drawn inside ModEditor's IMGUI area)
         // ═══════════════════════════════════════════════════════════════
 
         public void DrawPanel()
@@ -709,6 +712,9 @@ namespace UnknownMod.Editor
 
             // Background
             var bgSprite = MapBuilder.GetBackgroundSprite(zone.ZoneId);
+            // Fallback: use cached base-game background sprite for zone patches
+            if (bgSprite == null)
+                bgSprite = ZoneEditingService.GetBaseZoneBackground(zone.ZoneId);
             if (bgSprite != null)
             {
                 _bgGO = new GameObject("Background");

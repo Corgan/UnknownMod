@@ -15,7 +15,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class AuraCurseEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -52,7 +52,7 @@ namespace UnknownMod.Editor
         private bool _secMisc = false;
         private bool _secChargeBonus = false;
 
-        public AuraCurseEditor(ZoneEditor parent) => _parent = parent;
+        public AuraCurseEditor(ModEditor parent) => _parent = parent;
 
         public void DrawPanel()
         {

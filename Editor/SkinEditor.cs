@@ -14,7 +14,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class SkinEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -28,7 +28,7 @@ namespace UnknownMod.Editor
         private bool _secVisual = false;
         private bool _secScreen = false;
 
-        public SkinEditor(ZoneEditor parent) => _parent = parent;
+        public SkinEditor(ModEditor parent) => _parent = parent;
 
         public string SelectedSkinId { get; set; }
 

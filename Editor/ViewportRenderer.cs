@@ -128,7 +128,7 @@ namespace UnknownMod.Editor
         public static void DrawBackground(Rect vp)
         {
             if (_bgTex == null)
-                _bgTex = ZoneEditor.MakeTex(2, 2, new Color(0.08f, 0.08f, 0.1f, 1f));
+                _bgTex = ModEditor.MakeTex(2, 2, new Color(0.08f, 0.08f, 0.1f, 1f));
             GUI.DrawTexture(vp, _bgTex);
         }
 

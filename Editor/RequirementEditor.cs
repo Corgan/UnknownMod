@@ -14,7 +14,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class RequirementEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -28,7 +28,7 @@ namespace UnknownMod.Editor
         private bool _secZone = false;
         private bool _secCard = false;
 
-        public RequirementEditor(ZoneEditor parent) => _parent = parent;
+        public RequirementEditor(ModEditor parent) => _parent = parent;
 
         public string SelectedRequirementId { get; set; }
 

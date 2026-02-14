@@ -12,7 +12,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class EncounterEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // Collapsible section state
         private bool _secNpcs = true;
@@ -20,7 +20,7 @@ namespace UnknownMod.Editor
         private bool _secAdvanced = false;
         private bool _secUsedBy = false;
 
-        public EncounterEditor(ZoneEditor parent) => _parent = parent;
+        public EncounterEditor(ModEditor parent) => _parent = parent;
 
         public void DrawPanel()
         {

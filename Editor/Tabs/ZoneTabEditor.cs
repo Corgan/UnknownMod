@@ -4,6 +4,7 @@ using UnityEngine;
 using UnknownMod.Core;
 using UnknownMod.Definitions;
 using UnknownMod.Runtime;
+using UnknownMod.Editor;
 
 namespace UnknownMod.Editor.Tabs
 {
@@ -14,7 +15,7 @@ namespace UnknownMod.Editor.Tabs
     /// </summary>
     public class ZoneTabEditor
     {
-        private readonly ZoneEditor _editor;
+        private readonly ModEditor _editor;
         public enum SubTab { Map, Node, Event, Encounter, Road }
         public SubTab ActiveSubTab { get; set; } = SubTab.Map;
 
@@ -24,7 +25,13 @@ namespace UnknownMod.Editor.Tabs
         private Vector2 _patchBrowserScroll;
         private string _patchFilter = "";
 
-        public ZoneTabEditor(ZoneEditor editor) => _editor = editor;
+        public ZoneTabEditor(ModEditor editor) => _editor = editor;
+
+        /// <summary>Per-frame tick — handles zone auto-save timer.</summary>
+        public void Tick()
+        {
+            ZoneEditingService.TickAutoSave();
+        }
 
         public void DrawPanel()
         {
@@ -58,8 +65,18 @@ namespace UnknownMod.Editor.Tabs
                 if (ZoneEditingService.CurrentZone != zoneDef)
                 {
                     ZoneEditingService.CurrentZone = zoneDef;
+                    ZoneEditingService.CurrentPatch = null;
                     if (!ModRegistry.LoadedZones.ContainsKey(zoneDef.ZoneId))
                         ModRegistry.LoadedZones[zoneDef.ZoneId] = zoneDef;
+                }
+            }
+            else if (isPatch && proj.ZonePatches.TryGetValue(SelectedZoneId, out var patchDef))
+            {
+                var synth = ZoneEditingService.SynthesizeZoneDef(patchDef);
+                if (synth != null && ZoneEditingService.CurrentZone != synth)
+                {
+                    ZoneEditingService.CurrentZone = synth;
+                    ZoneEditingService.CurrentPatch = patchDef;
                 }
             }
 
@@ -84,23 +101,107 @@ namespace UnknownMod.Editor.Tabs
             }
         }
 
-        /// <summary>Returns true if the active sub-tab shows a viewport (Map).</summary>
-        public bool HasViewport => ActiveSubTab == SubTab.Map;
+        /// <summary>Returns true if the active sub-tab shows a viewport.</summary>
+        public bool HasViewport => true;
 
-        /// <summary>Draw the left-side viewport if this tab has one.</summary>
+        /// <summary>Draw the left-side viewport for the active sub-tab.</summary>
         public void DrawViewport(Rect rect)
         {
-            if (ActiveSubTab == SubTab.Map)
-                _editor.MapView?.DrawViewport(rect);
+            EnsureCurrentZone();
+
+            switch (ActiveSubTab)
+            {
+                case SubTab.Map:
+                case SubTab.Node:
+                case SubTab.Road:
+                    // Reuse the map viewport — Node/Road highlight via selection state
+                    _editor.MapView?.DrawViewport(rect);
+                    break;
+                case SubTab.Event:
+                    DrawEventPreview(rect);
+                    break;
+                case SubTab.Encounter:
+                    DrawEncounterPreview(rect);
+                    break;
+            }
+        }
+
+        // ── Viewport previews ────────────────────────────────────
+
+        private void DrawEventPreview(Rect rect)
+        {
+            string evtId = _editor.SelectedEventId;
+            EventDef def = null;
+
+            // Look up from zone def or patch
+            var zone = ZoneEditingService.CurrentZone;
+            if (zone != null && !string.IsNullOrEmpty(evtId))
+                zone.Events?.TryGetValue(evtId, out def);
+
+            ViewportPreview.DrawEvent(rect, evtId, def);
+        }
+
+        private void DrawEncounterPreview(Rect rect)
+        {
+            string combatId = _editor.SelectedCombatId;
+            CombatDef def = null;
+
+            var zone = ZoneEditingService.CurrentZone;
+            if (zone != null && !string.IsNullOrEmpty(combatId))
+                zone.Combats?.TryGetValue(combatId, out def);
+
+            ViewportPreview.DrawEncounter(rect, combatId, def);
+        }
+
+        /// <summary>Set CurrentZone from the selected zone. Called before viewport draw.</summary>
+        private void EnsureCurrentZone()
+        {
+            var proj = ModManagerPanel.ActiveProject;
+            if (proj == null) return;
+
+            // Auto-select first zone if nothing selected
+            if (string.IsNullOrEmpty(SelectedZoneId))
+            {
+                if (proj.Zones.Count > 0)
+                    SelectedZoneId = proj.Zones.Keys.First();
+                else if (proj.ZonePatches.Count > 0)
+                    SelectedZoneId = proj.ZonePatches.Keys.First();
+            }
+
+            if (string.IsNullOrEmpty(SelectedZoneId)) return;
+
+            // New (custom) zone
+            if (proj.Zones.TryGetValue(SelectedZoneId, out var zoneDef))
+            {
+                if (ZoneEditingService.CurrentZone != zoneDef)
+                {
+                    ZoneEditingService.CurrentZone = zoneDef;
+                    ZoneEditingService.CurrentPatch = null;
+                    if (!ModRegistry.LoadedZones.ContainsKey(zoneDef.ZoneId))
+                        ModRegistry.LoadedZones[zoneDef.ZoneId] = zoneDef;
+                }
+                return;
+            }
+
+            // Zone patch — synthesize a full ZoneDef from base + patch
+            if (proj.ZonePatches.TryGetValue(SelectedZoneId, out var patch))
+            {
+                var synth = ZoneEditingService.SynthesizeZoneDef(patch);
+                if (synth != null && ZoneEditingService.CurrentZone != synth)
+                {
+                    ZoneEditingService.CurrentZone = synth;
+                    ZoneEditingService.CurrentPatch = patch;
+                }
+            }
         }
 
         /// <summary>Handle GUI.changed for hot-reload + auto-save.</summary>
-        public bool HandleChanges()
+        public void HandleChanges()
         {
-            if (!GUI.changed) return false;
+            if (!GUI.changed) return;
 
             var proj = ModManagerPanel.ActiveProject;
-            if (proj == null) return false;
+            if (proj == null) return;
 
             bool changed = false;
             switch (ActiveSubTab)
@@ -116,26 +217,45 @@ namespace UnknownMod.Editor.Tabs
                     break;
             }
 
-            if (changed)
-            {
-                // Auto-save zone data
-                bool isNew = !string.IsNullOrEmpty(SelectedZoneId) && proj.Zones.ContainsKey(SelectedZoneId);
-                bool isPatch = !string.IsNullOrEmpty(SelectedZoneId) && proj.ZonePatches.ContainsKey(SelectedZoneId);
+            if (!changed) return;
 
-                if (isNew && proj.Zones.TryGetValue(SelectedZoneId, out var zone))
-                {
-                    ModProjectLoader.SaveZone(proj, zone);
-                    proj.IsDirty = true;
-                    proj.LastChangeTime = Time.realtimeSinceStartup;
-                }
-                else if (isPatch && proj.ZonePatches.TryGetValue(SelectedZoneId, out var patch))
-                {
-                    SaveZonePatch(proj, patch);
-                    proj.IsDirty = true;
-                    proj.LastChangeTime = Time.realtimeSinceStartup;
-                }
+            // Auto-save zone data
+            bool isNew = !string.IsNullOrEmpty(SelectedZoneId) && proj.Zones.ContainsKey(SelectedZoneId);
+            bool isPatch = !string.IsNullOrEmpty(SelectedZoneId) && proj.ZonePatches.ContainsKey(SelectedZoneId);
+
+            if (isNew && proj.Zones.TryGetValue(SelectedZoneId, out var zone))
+            {
+                ModProjectLoader.SaveZone(proj, zone);
+                proj.IsDirty = true;
+                proj.LastChangeTime = Time.realtimeSinceStartup;
             }
-            return changed;
+            else if (isPatch && proj.ZonePatches.TryGetValue(SelectedZoneId, out var patch))
+            {
+                SaveZonePatch(proj, patch);
+                ZoneEditingService.InvalidateSynthesizedZone(patch.TargetZoneId);
+                proj.IsDirty = true;
+                proj.LastChangeTime = Time.realtimeSinceStartup;
+            }
+
+            // Hot-reload affected SOs
+            HotReload();
+        }
+
+        private void HotReload()
+        {
+            ModEditor.EntityPreview?.Invalidate();
+            switch (ActiveSubTab)
+            {
+                case SubTab.Node:
+                    if (_editor.SelectedNodeId != null) ZoneEditingService.RebuildNode(_editor.SelectedNodeId);
+                    break;
+                case SubTab.Event:
+                    if (_editor.SelectedEventId != null) ZoneEditingService.RebuildEvent(_editor.SelectedEventId);
+                    break;
+                case SubTab.Encounter:
+                    if (_editor.SelectedCombatId != null) ZoneEditingService.RebuildCombat(_editor.SelectedCombatId);
+                    break;
+            }
         }
 
         // ═══════════════════════════════════════════════════════════════

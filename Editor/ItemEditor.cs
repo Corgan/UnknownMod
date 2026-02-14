@@ -15,7 +15,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class ItemEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -45,7 +45,7 @@ namespace UnknownMod.Editor
         private bool _secCustomAC = false;
         private bool _secFx = false;
 
-        public ItemEditor(ZoneEditor parent) => _parent = parent;
+        public ItemEditor(ModEditor parent) => _parent = parent;
 
         public void DrawPanel()
         {
@@ -244,6 +244,7 @@ namespace UnknownMod.Editor
             {
                 d.Id = EditorFields.TextField("ID", d.Id);
                 d.Name = EditorFields.TextField("Name", d.Name);
+                d.SpriteSource = EditorFields.IdDropdown("Sprite Source", d.SpriteSource, DataHelper.GetAllCardIds(), "item_sprsrc");
                 d.CardType = EditorFields.EnumField("Card Type", d.CardType, "item_ctype");
                 d.Rarity = EditorFields.EnumField("Rarity", d.Rarity, "item_rarity");
             }

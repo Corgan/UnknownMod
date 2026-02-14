@@ -14,7 +14,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class TraitEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -35,7 +35,7 @@ namespace UnknownMod.Editor
         private bool _secDmgPercent = false;
         private bool _secMisc = false;
 
-        public TraitEditor(ZoneEditor parent) => _parent = parent;
+        public TraitEditor(ModEditor parent) => _parent = parent;
 
         public string SelectedTraitId { get; set; }
 

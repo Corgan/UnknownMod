@@ -5,6 +5,7 @@ using System.Linq;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnknownMod.Definitions;
 using UnknownMod.Runtime;
 
@@ -19,6 +20,13 @@ namespace UnknownMod.Core
     {
         // ── Current zone DTO (source of truth for editor) ────────────
         public static ZoneDef CurrentZone { get; set; }
+
+        /// <summary>
+        /// When editing a zone patch, this holds the underlying ZonePatchDef.
+        /// Mutations to CurrentZone (the synthesized zone) are synced back here.
+        /// Null when editing a new (custom) zone.
+        /// </summary>
+        public static ZonePatchDef CurrentPatch { get; set; }
 
         // ── Dirty / auto-save state ──────────────────────────────────
         private static bool _dirty;
@@ -37,6 +45,7 @@ namespace UnknownMod.Core
             if (Time.unscaledTime - _lastDirtyTime < AutoSaveDelay) return;
             _dirty = false;
             SaveCurrentZone();
+            HotReloadToGame();
         }
 
         public static bool IsDirty => _dirty;
@@ -55,14 +64,86 @@ namespace UnknownMod.Core
         public static void SaveCurrentZone()
         {
             if (CurrentZone == null) return;
+
+            // If editing a zone patch, sync changes back to the patch def
+            if (CurrentPatch != null)
+            {
+                SyncSynthesizedToPatch();
+                return;
+            }
+
             string folder = ModRegistry.GetZoneFolder(CurrentZone.ZoneId);
             SaveToFolder(CurrentZone, folder);
             Plugin.Log.LogInfo($"[ZoneEditing] Saved zone to: {folder}");
         }
 
+        /// <summary>
+        /// Sync mutations from the synthesized CurrentZone back into CurrentPatch.
+        /// Only patch-owned nodes (those in the patch's Nodes dict or newly added ones
+        /// with the patch prefix) are persisted.
+        /// </summary>
+        private static void SyncSynthesizedToPatch()
+        {
+            if (CurrentPatch == null || CurrentZone == null) return;
+
+            string zoneId = CurrentPatch.TargetZoneId;
+            var basePositions = _positionCache.ContainsKey(zoneId) ? _positionCache[zoneId] : null;
+
+            // Nodes: sync any node that is:
+            //   (a) already in the patch (existing patch additions/modifications), or
+            //   (b) NOT in the base position cache (newly added during this session)
+            foreach (var kvp in CurrentZone.Nodes)
+            {
+                if (CurrentPatch.Nodes.ContainsKey(kvp.Key))
+                {
+                    // Update existing patch node
+                    CurrentPatch.Nodes[kvp.Key] = kvp.Value;
+                }
+                else if (basePositions != null && !basePositions.ContainsKey(kvp.Key))
+                {
+                    // New node not in the base zone — add to patch
+                    CurrentPatch.Nodes[kvp.Key] = kvp.Value;
+                }
+            }
+
+            // Roads: sync roads that involve at least one patch node
+            foreach (var kvp in CurrentZone.Roads)
+            {
+                if (CurrentPatch.Roads.ContainsKey(kvp.Key))
+                    CurrentPatch.Roads[kvp.Key] = kvp.Value;
+                else if (CurrentPatch.Nodes.ContainsKey(kvp.Value.FromNodeId) ||
+                         CurrentPatch.Nodes.ContainsKey(kvp.Value.ToNodeId))
+                    CurrentPatch.Roads[kvp.Key] = kvp.Value;
+            }
+
+            // Events/encounters: sync any that exist in the patch
+            foreach (var kvp in CurrentZone.Events)
+            {
+                if (CurrentPatch.Events.ContainsKey(kvp.Key))
+                    CurrentPatch.Events[kvp.Key] = kvp.Value;
+            }
+            foreach (var kvp in CurrentZone.Combats)
+            {
+                if (CurrentPatch.Encounters.ContainsKey(kvp.Key))
+                    CurrentPatch.Encounters[kvp.Key] = kvp.Value;
+            }
+
+            // Update NextNodeNumber
+            string prefix = CurrentPatch.DetectedPrefix;
+            int maxNum = CurrentPatch.NextNodeNumber;
+            foreach (var nodeId in CurrentPatch.Nodes.Keys)
+            {
+                if (nodeId.StartsWith(prefix) && int.TryParse(nodeId.Substring(prefix.Length), out int n))
+                    maxNum = Math.Max(maxNum, n + 1);
+            }
+            CurrentPatch.NextNodeNumber = maxNum;
+
+            Plugin.Log.LogInfo($"[ZoneEditing] Synced patch '{CurrentPatch.TargetZoneId}': {CurrentPatch.Nodes.Count} nodes, {CurrentPatch.Roads.Count} roads");
+        }
+
         private static void SaveToFolder(ZoneDef def, string folder)
         {
-            foreach (string sub in new[] { "", "nodes", "combats", "events", "npcs", "cards", "items", "loot", "sprites", "textures" })
+            foreach (string sub in new[] { "", "nodes", "combats", "events", "npcs", "cards", "items", "loot", "sprites" })
                 Directory.CreateDirectory(Path.Combine(folder, sub));
 
             var meta = new
@@ -113,30 +194,127 @@ namespace UnknownMod.Core
         }
 
         // ═══════════════════════════════════════════════════════════════
+        //  HOT RELOAD TO GAME
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Push live editor changes into the running game: re-build SOs in Globals
+        /// and optionally rebuild the Map scene graph. Call after save completes.
+        /// </summary>
+        public static void HotReloadToGame()
+        {
+            if (CurrentZone == null)
+            {
+                Plugin.Log.LogWarning("[HotReload] No zone loaded — nothing to reload.");
+                return;
+            }
+
+            string zoneId = CurrentZone.ZoneId;
+            bool isPatch = CurrentPatch != null;
+            Plugin.Log.LogInfo($"[HotReload] Reloading zone '{zoneId}' (patch={isPatch})...");
+
+            // ── 1. Rebuild SOs in Globals ────────────────────────────
+            try
+            {
+                if (isPatch)
+                {
+                    // Re-apply the patch (creates/overwrites NodeData, CombatData, EventData in Globals)
+                    ModProjectBuilder.ApplyZonePatchPublic(CurrentPatch);
+                }
+                else
+                {
+                    // Full zone rebuild
+                    ModProjectBuilder.BuildZone(CurrentZone);
+                }
+                Plugin.Log.LogInfo("[HotReload] Globals dictionaries updated.");
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogError($"[HotReload] Failed to rebuild SOs: {ex.Message}");
+                Plugin.Log.LogError(ex.StackTrace);
+                return;
+            }
+
+            // ── 2. Rebuild map visuals if on Map scene ───────────────
+            var mapMgr = MapManager.Instance;
+            if (mapMgr != null && mapMgr.worldTransform != null)
+            {
+                // Destroy existing zone root if present
+                for (int i = mapMgr.worldTransform.childCount - 1; i >= 0; i--)
+                {
+                    var child = mapMgr.worldTransform.GetChild(i);
+                    if (child.gameObject.name == zoneId)
+                    {
+                        UnityEngine.Object.Destroy(child.gameObject);
+                        Plugin.Log.LogInfo($"[HotReload] Destroyed old map for '{zoneId}'.");
+                        break;
+                    }
+                }
+
+                // Rebuild the visual map
+                if (Runtime.MapBuilder.BuildAndInjectMap(zoneId, mapMgr.worldTransform))
+                    Plugin.Log.LogInfo($"[HotReload] Map rebuilt for '{zoneId}'.");
+            }
+
+            // ── 3. Combat notice ─────────────────────────────────────
+            if (MatchManager.Instance != null)
+                Plugin.Log.LogWarning("[HotReload] In combat — changes will take effect after restarting the encounter.");
+
+            Plugin.Log.LogInfo("[HotReload] Done.");
+        }
+
+        // ═══════════════════════════════════════════════════════════════
         //  NODE ADD / DELETE
         // ═══════════════════════════════════════════════════════════════
 
         public static string AddNode(float posX, float posY)
         {
             if (CurrentZone == null) return null;
-            string prefix = CurrentZone.IdPrefix;
-            if (string.IsNullOrEmpty(prefix))
-            {
-                Plugin.Log.LogError("[ZoneEditing] Cannot add node: zone has no IdPrefix.");
-                return null;
-            }
 
-            int nextNum = 0;
-            foreach (var id in CurrentZone.Nodes.Keys)
+            string prefix;
+            int nextNum;
+
+            // In patch mode, use the patch's prefix and tracked NextNodeNumber
+            if (CurrentPatch != null)
             {
-                if (id.StartsWith(prefix + "_") && int.TryParse(id.Substring(prefix.Length + 1), out int num))
-                    nextNum = Math.Max(nextNum, num + 1);
+                prefix = CurrentPatch.DetectedPrefix.TrimEnd('_');
+                nextNum = CurrentPatch.NextNodeNumber;
+
+                // Also scan CurrentZone to avoid collisions with base nodes
+                foreach (var id in CurrentZone.Nodes.Keys)
+                {
+                    if (id.StartsWith(prefix + "_") && int.TryParse(id.Substring(prefix.Length + 1), out int num))
+                        nextNum = Math.Max(nextNum, num + 1);
+                }
+            }
+            else
+            {
+                prefix = CurrentZone.IdPrefix;
+                if (string.IsNullOrEmpty(prefix))
+                {
+                    Plugin.Log.LogError("[ZoneEditing] Cannot add node: zone has no IdPrefix.");
+                    return null;
+                }
+
+                nextNum = 0;
+                foreach (var id in CurrentZone.Nodes.Keys)
+                {
+                    if (id.StartsWith(prefix + "_") && int.TryParse(id.Substring(prefix.Length + 1), out int num))
+                        nextNum = Math.Max(nextNum, num + 1);
+                }
             }
 
             string nodeId = $"{prefix}_{nextNum}";
             var nodeDef = new NodeDef { NodeId = nodeId, NodeName = $"New Node {nextNum}", PosX = posX, PosY = posY };
 
             CurrentZone.Nodes[nodeId] = nodeDef;
+
+            // In patch mode, also add to the patch def directly
+            if (CurrentPatch != null)
+            {
+                CurrentPatch.Nodes[nodeId] = nodeDef;
+                CurrentPatch.NextNodeNumber = nextNum + 1;
+            }
 
             // Build SO and register in Globals
             var node = BuildNodeSO(nodeDef);
@@ -156,6 +334,13 @@ namespace UnknownMod.Core
         public static void DeleteNode(string nodeId)
         {
             if (CurrentZone == null || !CurrentZone.Nodes.TryGetValue(nodeId, out var nodeDef)) return;
+
+            // In patch mode, only allow deleting patch-added nodes (not base-game nodes)
+            if (CurrentPatch != null && !CurrentPatch.Nodes.ContainsKey(nodeId))
+            {
+                Plugin.Log.LogWarning($"[ZoneEditing] Cannot delete base-game node '{nodeId}' from a zone patch.");
+                return;
+            }
 
             if (!string.IsNullOrEmpty(nodeDef.CombatId) && CurrentZone.Combats.ContainsKey(nodeDef.CombatId))
             {
@@ -181,6 +366,17 @@ namespace UnknownMod.Core
                 otherNode.Connections.Remove(nodeId);
 
             CurrentZone.Nodes.Remove(nodeId);
+
+            // Also remove from patch def if in patch mode
+            if (CurrentPatch != null)
+            {
+                CurrentPatch.Nodes.Remove(nodeId);
+                var patchRoadsToRemove = CurrentPatch.Roads.Keys
+                    .Where(k => k.StartsWith(nodeId + "-") || k.EndsWith("-" + nodeId))
+                    .ToList();
+                foreach (var key in patchRoadsToRemove)
+                    CurrentPatch.Roads.Remove(key);
+            }
 
             MarkDirty();
             Plugin.Log.LogInfo($"[ZoneEditing] Deleted node '{nodeId}'");
@@ -432,6 +628,9 @@ namespace UnknownMod.Core
                         Traverse.Create(evt).Field("requirement").SetValue(req);
                 }
 
+                if (!string.IsNullOrEmpty(eventDef.SpriteSource))
+                    DataHelper.CopyEventVisuals(evt, eventDef.SpriteSource);
+
                 DataHelper.RegisterEvent(evt);
 
                 // Update node→event references
@@ -681,6 +880,20 @@ namespace UnknownMod.Core
                 effectCaster: d.EffectCaster, effectTarget: d.EffectTarget,
                 energyCost: d.EnergyCost);
             DataHelper.ApplyCardExtras(card, d);
+
+            // Copy card art sprite from an existing card
+            if (!string.IsNullOrEmpty(d.SpriteSource))
+                DataHelper.CopyCardVisuals(card, d.SpriteSource);
+
+            // Auto-generate description from card mechanics
+            try { card.SetDescriptionNew(forceDescription: true); }
+            catch
+            {
+                // If SetDescriptionNew fails (e.g. Texts not ready), fall back to manual description
+                if (!string.IsNullOrEmpty(d.Description))
+                    Traverse.Create(card).Field("descriptionNormalized").SetValue(d.Description);
+            }
+
             return card;
         }
 
@@ -716,7 +929,28 @@ namespace UnknownMod.Core
             node.ExistsSku = "";
             node.SourceNodeName = "";
             node.NodesConnected = new NodeData[0];
-            node.NodesConnectedRequirement = new NodesConnectedRequirement[0];
+
+            // Conditional connection requirements
+            if (d.ConnectionRequirements != null && d.ConnectionRequirements.Count > 0)
+            {
+                var reqs = new NodesConnectedRequirement[d.ConnectionRequirements.Count];
+                for (int i = 0; i < d.ConnectionRequirements.Count; i++)
+                {
+                    var cr = d.ConnectionRequirements[i];
+                    reqs[i] = new NodesConnectedRequirement();
+                    if (!string.IsNullOrEmpty(cr.TargetNodeId))
+                        reqs[i].NodeData = DataHelper.GetExistingNode(cr.TargetNodeId);
+                    if (!string.IsNullOrEmpty(cr.RequirementId))
+                        reqs[i].ConectionRequeriment = DataHelper.GetEventRequirement(cr.RequirementId);
+                    if (!string.IsNullOrEmpty(cr.IfNotNodeId))
+                        reqs[i].ConectionIfNotNode = DataHelper.GetExistingNode(cr.IfNotNodeId);
+                }
+                node.NodesConnectedRequirement = reqs;
+            }
+            else
+            {
+                node.NodesConnectedRequirement = new NodesConnectedRequirement[0];
+            }
 
             // Node requirement
             if (!string.IsNullOrEmpty(d.NodeRequirementId))
@@ -810,5 +1044,766 @@ namespace UnknownMod.Core
             }
             return result.ToArray();
         }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  ZONE PATCH SYNTHESIS — build a full ZoneDef from base + patch
+        // ═══════════════════════════════════════════════════════════════
+
+        // Cache: zoneId → { nodeId → (posX, posY) }
+        private static readonly Dictionary<string, Dictionary<string, Vector2>> _positionCache = new();
+        // Cache: zoneId → { roadKey → waypoints[] }
+        private static readonly Dictionary<string, Dictionary<string, List<float[]>>> _roadCache = new();
+        // Cache: synthesized ZoneDefs so we don't rebuild every frame
+        private static readonly Dictionary<string, ZoneDef> _synthesizedCache = new();
+        // Cache: base-game zone background sprites
+        private static readonly Dictionary<string, Sprite> _baseZoneBgCache = new();
+        // Negative cache: zones we've already tried and failed to cache
+        private static readonly HashSet<string> _cacheFailures = new();
+        // Additive scene load state
+        private static bool _sceneLoadRequested;
+        private static bool _sceneLoadFailed;
+        /// <summary>Flag checked by Harmony patches to suppress MapManager/SceneStatic during additive load.</summary>
+        internal static bool SuppressSceneLoad;
+
+        /// <summary>
+        /// Synthesize a full ZoneDef from a base-game zone + a ZonePatchDef overlay.
+        /// Returns the synthesized zone, or null if base data isn't available yet
+        /// (e.g. MapManager hasn't loaded).
+        /// </summary>
+        public static ZoneDef SynthesizeZoneDef(ZonePatchDef patch)
+        {
+            if (patch == null) return null;
+            string zoneId = patch.TargetZoneId;
+
+            // Return cached synthesis if patch hasn't changed
+            if (_synthesizedCache.TryGetValue(zoneId, out var cached))
+                return cached;
+
+            // Ensure position/road cache is populated for this zone
+            if (!_positionCache.ContainsKey(zoneId))
+            {
+                // Don't re-attempt if we already failed (avoids per-frame perf hit)
+                if (_cacheFailures.Contains(zoneId))
+                    return null;
+
+                if (!CacheBaseZoneData(zoneId))
+                {
+                    _cacheFailures.Add(zoneId);
+                    Plugin.Log.LogWarning($"[ZoneEditing] Cannot synthesize '{zoneId}': base zone data not available. Visit the map screen first.");
+                    return null;
+                }
+            }
+
+            var positions = _positionCache[zoneId];
+            var baseRoads = _roadCache.ContainsKey(zoneId) ? _roadCache[zoneId] : new Dictionary<string, List<float[]>>();
+
+            // Get base zone metadata from Globals
+            var zoneData = DataHelper.GetExistingZone(zoneId);
+
+            var synth = new ZoneDef
+            {
+                ZoneId = zoneId,
+                ZoneName = zoneData?.ZoneName ?? zoneId,
+                IdPrefix = patch.DetectedPrefix.TrimEnd('_'),
+                BackgroundImage = "", // base zones use prefab backgrounds, not file images
+            };
+
+            // ── Populate base-game nodes from Globals + position cache ──
+            var nodeDict = Traverse.Create(Globals.Instance)
+                .Field<Dictionary<string, NodeData>>("_NodeDataSource").Value;
+
+            if (nodeDict != null)
+            {
+                foreach (var kvp in nodeDict)
+                {
+                    var nd = kvp.Value;
+                    if (nd?.NodeZone == null) continue;
+                    if (!nd.NodeZone.ZoneId.Equals(zoneId, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    string nodeId = nd.NodeId;
+
+                    // Skip nodes that the patch will override
+                    if (patch.Nodes.ContainsKey(nodeId)) continue;
+
+                    var nodeDef = new NodeDef
+                    {
+                        NodeId = nodeId,
+                        NodeName = nd.NodeName ?? "",
+                        Description = nd.Description ?? "",
+                        TravelDestination = nd.TravelDestination,
+                        GoToTown = nd.GoToTown,
+                        ExistsPercent = nd.ExistsPercent,
+                        DisableCorruption = nd.DisableCorruption,
+                        DisableRandom = nd.DisableRandom,
+                        NodeGround = nd.NodeGround,
+                        VisibleIfNotRequirement = nd.VisibleIfNotRequirement,
+                    };
+
+                    // Position from cache
+                    if (positions.TryGetValue(nodeId, out var pos))
+                    {
+                        nodeDef.PosX = pos.x;
+                        nodeDef.PosY = pos.y;
+                    }
+
+                    // Connections
+                    if (nd.NodesConnected != null)
+                    {
+                        foreach (var conn in nd.NodesConnected)
+                        {
+                            if (conn != null && !string.IsNullOrEmpty(conn.NodeId))
+                                nodeDef.Connections.Add(conn.NodeId);
+                        }
+                    }
+
+                    // Combat
+                    if (nd.NodeCombat != null && nd.NodeCombat.Length > 0 && nd.NodeCombat[0] != null)
+                    {
+                        nodeDef.CombatId = nd.NodeCombat[0].CombatId;
+                        nodeDef.CombatPercent = nd.CombatPercent;
+                    }
+
+                    // Event
+                    if (nd.NodeEvent != null && nd.NodeEvent.Length > 0 && nd.NodeEvent[0] != null)
+                    {
+                        nodeDef.EventId = nd.NodeEvent[0].EventId;
+                        nodeDef.EventPercent = nd.EventPercent;
+                    }
+
+                    synth.Nodes[nodeId] = nodeDef;
+                }
+            }
+
+            // ── Merge in patch nodes ────────────────────────────────────
+            foreach (var kvp in patch.Nodes)
+                synth.Nodes[kvp.Key] = kvp.Value;
+
+            // ── Populate base-game roads from cache ─────────────────────
+            foreach (var kvp in baseRoads)
+            {
+                string key = kvp.Key;
+                int dash = key.IndexOf('-');
+                if (dash < 0) continue;
+                string fromId = key.Substring(0, dash);
+                string toId = key.Substring(dash + 1);
+                synth.Roads[key] = new RoadDef
+                {
+                    FromNodeId = fromId,
+                    ToNodeId = toId,
+                    Waypoints = new List<float[]>(kvp.Value),
+                };
+            }
+
+            // ── Merge in patch roads ────────────────────────────────────
+            foreach (var kvp in patch.Roads)
+                synth.Roads[kvp.Key] = kvp.Value;
+
+            // ═══════════════════════════════════════════════════════════
+            //  SYNTHESIZE BASE-GAME EVENTS, COMBATS, NPCS, LOOT
+            // ═══════════════════════════════════════════════════════════
+
+            // ── Events: snapshot from Globals ────────────────────────────
+            var eventDict = Traverse.Create(Globals.Instance)
+                .Field<Dictionary<string, EventData>>("_Events").Value;
+            if (eventDict != null)
+            {
+                // Collect event IDs referenced by zone nodes
+                var referencedEventIds = new HashSet<string>();
+                foreach (var nd in synth.Nodes.Values)
+                {
+                    if (!string.IsNullOrEmpty(nd.EventId))
+                        referencedEventIds.Add(nd.EventId.ToLower());
+                }
+
+                foreach (var evtId in referencedEventIds)
+                {
+                    if (patch.Events.ContainsKey(evtId)) continue; // patch overrides
+                    if (!eventDict.TryGetValue(evtId, out var evt) || evt == null) continue;
+
+                    synth.Events[evt.EventId] = SnapshotEventDef(evt);
+                }
+            }
+
+            // ── Combats: snapshot from Globals ──────────────────────────
+            var combatDict = Traverse.Create(Globals.Instance)
+                .Field<Dictionary<string, CombatData>>("_CombatDataSource").Value;
+            if (combatDict != null)
+            {
+                var referencedCombatIds = new HashSet<string>();
+                foreach (var nd in synth.Nodes.Values)
+                {
+                    if (!string.IsNullOrEmpty(nd.CombatId))
+                        referencedCombatIds.Add(nd.CombatId.Replace(" ", "").ToLower());
+                }
+                // Also gather combats referenced by event reply outcomes
+                foreach (var evtDef in synth.Events.Values)
+                {
+                    foreach (var r in evtDef.Replies)
+                    {
+                        AddCombatRef(referencedCombatIds, r.Ss?.CombatId);
+                        AddCombatRef(referencedCombatIds, r.Fl?.CombatId);
+                        AddCombatRef(referencedCombatIds, r.Ssc?.CombatId);
+                        AddCombatRef(referencedCombatIds, r.Flc?.CombatId);
+                    }
+                }
+
+                foreach (var cId in referencedCombatIds)
+                {
+                    if (patch.Encounters.ContainsKey(cId)) continue;
+                    if (!combatDict.TryGetValue(cId, out var combat) || combat == null) continue;
+
+                    synth.Combats[combat.CombatId] = SnapshotCombatDef(combat);
+                }
+            }
+
+            // ── Merge in patch additions (override base) ────────────────
+            foreach (var kvp in patch.Encounters)
+                synth.Combats[kvp.Key] = kvp.Value;
+            foreach (var kvp in patch.Events)
+                synth.Events[kvp.Key] = kvp.Value;
+
+            _synthesizedCache[zoneId] = synth;
+            Plugin.Log.LogInfo($"[ZoneEditing] Synthesized ZoneDef for '{zoneId}': {synth.Nodes.Count} nodes, {synth.Roads.Count} roads, {synth.Events.Count} events, {synth.Combats.Count} combats");
+            return synth;
+        }
+
+        /// <summary>Invalidate the synthesized cache for a zone (call when patch changes).</summary>
+        public static void InvalidateSynthesizedZone(string zoneId)
+        {
+            _synthesizedCache.Remove(zoneId);
+        }
+
+        /// <summary>
+        /// Cache base-game node positions and road waypoints by scanning the MapManager's
+        /// worldTransform hierarchy. Returns false if MapManager is not available.
+        /// </summary>
+        private static bool CacheBaseZoneData(string zoneId)
+        {
+            // Try MapManager.Instance.worldTransform
+            var mapMgr = MapManager.Instance;
+            if (mapMgr != null && mapMgr.worldTransform != null)
+            {
+                foreach (Transform zoneT in mapMgr.worldTransform)
+                {
+                    if (!zoneT.gameObject.name.Equals(zoneId, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    CacheZoneFromTransform(zoneId, zoneT);
+                    return true;
+                }
+            }
+
+            // Try mapList prefabs (serialized zone prefabs, available even before map loads)
+            if (mapMgr != null && mapMgr.mapList != null)
+            {
+                foreach (var prefab in mapMgr.mapList)
+                {
+                    if (prefab == null) continue;
+                    if (!prefab.name.Equals(zoneId, StringComparison.OrdinalIgnoreCase)) continue;
+
+                    CacheZoneFromTransform(zoneId, prefab.transform);
+                    return true;
+                }
+            }
+
+            // ── Synchronous additive scene load: load the Map scene to access
+            // MapManager's serialized mapList, extract zone data, then unload.
+            // Harmony patches suppress MapManager.Awake/Start and SceneStatic.LoadByName.
+            if (!_sceneLoadRequested && !_sceneLoadFailed)
+            {
+                _sceneLoadRequested = true;
+                SuppressSceneLoad = true;
+
+                try
+                {
+                    Plugin.Log.LogInfo("[ZoneEditing] Loading Map scene (additive, sync) for base zone data...");
+                    SceneManager.LoadScene("Map", LoadSceneMode.Additive);
+
+                    var mapScene = SceneManager.GetSceneByName("Map");
+                    int scanned = 0;
+
+                    if (mapScene.IsValid() && mapScene.isLoaded)
+                    {
+                        var rootObjects = mapScene.GetRootGameObjects();
+
+                        // Deactivate all roots to prevent Start/OnEnable on other components
+                        foreach (var root in rootObjects)
+                            root.SetActive(false);
+
+                        Plugin.Log.LogInfo($"[ZoneEditing] Map scene loaded: {rootObjects.Length} root objects (all deactivated)");
+
+                        // Find MapManager and scan its mapList + worldTransform
+                        foreach (var root in rootObjects)
+                        {
+                            var mm = root.GetComponentInChildren<MapManager>(true);
+                            if (mm == null) continue;
+
+                            Plugin.Log.LogInfo($"[ZoneEditing]   Found MapManager, mapList={mm.mapList?.Count ?? 0}");
+
+                            if (mm.mapList != null)
+                            {
+                                foreach (var prefab in mm.mapList)
+                                {
+                                    if (prefab == null) continue;
+                                    string id = prefab.name;
+                                    if (_positionCache.ContainsKey(id)) continue;
+
+                                    var nodesChild = prefab.transform.Find("Nodes");
+                                    if (nodesChild == null || nodesChild.childCount == 0) continue;
+
+                                    CacheZoneFromTransform(id, prefab.transform);
+                                    scanned++;
+                                }
+                            }
+
+                            if (mm.worldTransform != null)
+                            {
+                                foreach (Transform child in mm.worldTransform)
+                                {
+                                    string id = child.gameObject.name;
+                                    if (_positionCache.ContainsKey(id)) continue;
+
+                                    var nodesChild = child.Find("Nodes");
+                                    if (nodesChild == null || nodesChild.childCount == 0) continue;
+
+                                    CacheZoneFromTransform(id, child);
+                                    scanned++;
+                                }
+                            }
+
+                            break;
+                        }
+
+                        // Fallback: scan root objects directly
+                        if (scanned == 0)
+                        {
+                            Plugin.Log.LogInfo("[ZoneEditing]   MapManager scan found nothing, scanning root objects...");
+                            foreach (var root in rootObjects)
+                            {
+                                var nodesChild = root.transform.Find("Nodes");
+                                if (nodesChild == null || nodesChild.childCount == 0) continue;
+
+                                string id = root.name;
+                                if (_positionCache.ContainsKey(id)) continue;
+
+                                CacheZoneFromTransform(id, root.transform);
+                                scanned++;
+                            }
+                        }
+
+                        // Unload the Map scene
+                        SceneManager.UnloadSceneAsync(mapScene);
+                    }
+                    else
+                    {
+                        Plugin.Log.LogWarning("[ZoneEditing] Map scene did not load correctly.");
+                    }
+
+                    if (scanned > 0)
+                        Plugin.Log.LogInfo($"[ZoneEditing] Cached {scanned} base zone(s) from Map scene.");
+                    else
+                    {
+                        Plugin.Log.LogWarning("[ZoneEditing] Map scene load found 0 zone prefabs.");
+                        _sceneLoadFailed = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.LogError($"[ZoneEditing] Map scene load failed: {ex.Message}");
+                    _sceneLoadFailed = true;
+                }
+                finally
+                {
+                    SuppressSceneLoad = false;
+                }
+
+                // The target zone should now be cached
+                if (_positionCache.ContainsKey(zoneId))
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>Extract node positions and road waypoints from a zone Transform hierarchy.</summary>
+        private static void CacheZoneFromTransform(string zoneId, Transform zoneT)
+        {
+            var nodePositions = new Dictionary<string, Vector2>();
+            var roads = new Dictionary<string, List<float[]>>();
+
+            // ── Background sprite ────────────────────────────────────
+            var bgT = zoneT.Find("Background");
+            if (bgT != null)
+            {
+                var sr = bgT.GetComponent<SpriteRenderer>();
+                if (sr != null && sr.sprite != null)
+                    _baseZoneBgCache[zoneId] = sr.sprite;
+            }
+            // Also check for a direct SpriteRenderer on children named with the zone
+            if (!_baseZoneBgCache.ContainsKey(zoneId))
+            {
+                foreach (Transform child in zoneT)
+                {
+                    if (child.name == "Nodes" || child.name == "Roads") continue;
+                    var sr = child.GetComponent<SpriteRenderer>();
+                    if (sr != null && sr.sprite != null)
+                    {
+                        _baseZoneBgCache[zoneId] = sr.sprite;
+                        break;
+                    }
+                }
+            }
+
+            // ── Nodes ────────────────────────────────────────────────
+            var nodesT = zoneT.Find("Nodes");
+            if (nodesT != null)
+            {
+                foreach (Transform nodeT in nodesT)
+                {
+                    string nodeId = nodeT.gameObject.name.ToLower();
+                    var lp = nodeT.localPosition;
+                    nodePositions[nodeId] = new Vector2(lp.x, lp.y);
+                }
+            }
+
+            // ── Roads ────────────────────────────────────────────────
+            var roadsT = zoneT.Find("Roads");
+            if (roadsT != null)
+            {
+                foreach (Transform roadT in roadsT)
+                {
+                    var lr = roadT.GetComponent<LineRenderer>();
+                    if (lr == null || lr.positionCount < 2) continue;
+
+                    string key = roadT.gameObject.name;
+                    var waypoints = new List<float[]>();
+
+                    // Skip first and last points (those are the node positions)
+                    for (int i = 1; i < lr.positionCount - 1; i++)
+                    {
+                        Vector3 p = lr.GetPosition(i);
+                        waypoints.Add(new float[] { p.x, p.y });
+                    }
+
+                    roads[key] = waypoints;
+                }
+            }
+
+            _positionCache[zoneId] = nodePositions;
+            _roadCache[zoneId] = roads;
+
+            Plugin.Log.LogInfo($"[ZoneEditing] Cached base zone '{zoneId}': {nodePositions.Count} node positions, {roads.Count} roads");
+        }
+
+        /// <summary>
+        /// Pre-cache ALL base-game zones from MapManager. Call this when MapManager becomes
+        /// available to ensure synthesis works even after leaving the map scene.
+        /// </summary>
+        public static void CacheAllBaseZones()
+        {
+            var mapMgr = MapManager.Instance;
+            if (mapMgr == null || mapMgr.worldTransform == null) return;
+
+            int cached = 0;
+            foreach (Transform zoneT in mapMgr.worldTransform)
+            {
+                string zoneId = zoneT.gameObject.name;
+                if (_positionCache.ContainsKey(zoneId)) continue;
+
+                CacheZoneFromTransform(zoneId, zoneT);
+                cached++;
+            }
+
+            // Also scan mapList prefabs
+            if (mapMgr.mapList != null)
+            {
+                foreach (var prefab in mapMgr.mapList)
+                {
+                    if (prefab == null) continue;
+                    string zoneId = prefab.name;
+                    if (_positionCache.ContainsKey(zoneId)) continue;
+
+                    CacheZoneFromTransform(zoneId, prefab.transform);
+                    cached++;
+                }
+            }
+
+            if (cached > 0)
+                Plugin.Log.LogInfo($"[ZoneEditing] Pre-cached {cached} base zone(s) from MapManager.");
+        }
+
+        /// <summary>Get the cached background sprite for a base-game zone (from MapManager prefab).</summary>
+        public static Sprite GetBaseZoneBackground(string zoneId)
+        {
+            _baseZoneBgCache.TryGetValue(zoneId, out var sprite);
+            return sprite;
+        }
+
+        /// <summary>Clear all synthesis caches. Call during full rebuild.</summary>
+        public static void ClearSynthesisCache()
+        {
+            _positionCache.Clear();
+            _roadCache.Clear();
+            _synthesizedCache.Clear();
+            _baseZoneBgCache.Clear();
+            _cacheFailures.Clear();
+            _sceneLoadRequested = false;
+            _sceneLoadFailed = false;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  SNAPSHOT HELPERS — convert game SOs into lightweight defs
+        // ═══════════════════════════════════════════════════════════════
+
+        private static void AddCombatRef(HashSet<string> set, string id)
+        {
+            if (!string.IsNullOrEmpty(id))
+                set.Add(id.Replace(" ", "").ToLower());
+        }
+
+        /// <summary>Snapshot a CombatData SO into a CombatDef.</summary>
+        private static CombatDef SnapshotCombatDef(CombatData c)
+        {
+            var d = new CombatDef
+            {
+                CombatId = c.CombatId ?? "",
+                Description = c.Description ?? "",
+                CombatTier = c.CombatTier,
+                Background = c.CombatBackground,
+                NpcRemoveInMadness0Index = c.NpcRemoveInMadness0Index,
+                HealHeroes = c.HealHeroes,
+                IsRift = c.IsRift,
+            };
+
+            if (c.NPCList != null)
+            {
+                foreach (var npc in c.NPCList)
+                {
+                    if (npc != null)
+                        d.NpcIds.Add(npc.Id ?? "");
+                }
+            }
+
+            d.NpcToSummonOnKilledId = c.NpcToSummonOnNpcKilled != null ? c.NpcToSummonOnNpcKilled.Id ?? "" : "";
+            d.EventDataId = c.EventData != null ? c.EventData.EventId ?? "" : "";
+
+            if (c.CombatEffect != null)
+            {
+                foreach (var eff in c.CombatEffect)
+                {
+                    d.CombatEffects.Add(new CombatEffectDef
+                    {
+                        AuraCurse = eff.AuraCurse != null ? eff.AuraCurse.name ?? "" : "",
+                        Charges = eff.AuraCurseCharges,
+                        Target = eff.AuraCurseTarget,
+                    });
+                }
+            }
+
+            return d;
+        }
+
+        /// <summary>Snapshot an EventData SO into an EventDef.</summary>
+        private static EventDef SnapshotEventDef(EventData e)
+        {
+            var d = new EventDef
+            {
+                EventId = e.EventId ?? "",
+                EventName = e.EventName ?? "",
+                Description = e.Description ?? "",
+                DescriptionAction = e.DescriptionAction ?? "",
+                EventTier = e.EventTier,
+                ReplyRandom = e.ReplyRandom,
+            };
+
+            if (e.Requirement != null)
+                d.RequirementId = e.Requirement.RequirementId ?? "";
+
+            if (e.Replys != null)
+            {
+                foreach (var reply in e.Replys)
+                {
+                    if (reply == null) continue;
+                    d.Replies.Add(SnapshotReplyDef(reply));
+                }
+            }
+            return d;
+        }
+
+        private static ReplyDef SnapshotReplyDef(EventReplyData r)
+        {
+            var d = new ReplyDef
+            {
+                ReplyText = r.ReplyText ?? "",
+                Action = r.ReplyActionText,
+                GoldCost = r.GoldCost,
+                DustCost = r.DustCost,
+            };
+
+            if (r.Requirement != null) d.RequirementId = r.Requirement.RequirementId ?? "";
+            if (r.RequirementBlocked != null) d.RequirementBlockedId = r.RequirementBlocked.RequirementId ?? "";
+
+            d.HasRoll = r.SsRoll;
+            d.RollDC = r.SsRollNumber;
+            d.RollCrit = r.SsRollNumberCritical;
+            d.RollCritFail = r.SsRollNumberCriticalFail;
+            d.RollMode = r.SsRollMode;
+            d.RollTarget = r.SsRollTarget;
+            d.RollCard = r.SsRollCard;
+
+            d.Ss = SnapshotOutcomeSs(r);
+            d.Fl = SnapshotOutcomeFl(r);
+            d.Ssc = SnapshotOutcomeSsc(r);
+            d.Flc = SnapshotOutcomeFlc(r);
+
+            return d;
+        }
+
+        private static OutcomeDef SnapshotOutcomeSs(EventReplyData r)
+        {
+            var d = new OutcomeDef();
+            d.Text = r.SsRewardText ?? "";
+            d.HealPercent = r.SsRewardHealthPercent;
+            d.HealFlat = r.SsRewardHealthFlat;
+            d.Gold = r.SsGoldReward;
+            d.Dust = r.SsDustReward;
+            d.Supply = r.SsSupplyReward;
+            d.XP = r.SsExperienceReward;
+            d.CombatId = r.SsCombat != null ? r.SsCombat.CombatId ?? "" : "";
+            d.EventId = r.SsEvent != null ? r.SsEvent.EventId ?? "" : "";
+            d.NodeTravelId = r.SsNodeTravel != null ? r.SsNodeTravel.NodeId ?? "" : "";
+            d.RequirementUnlockId = r.SsRequirementUnlock != null ? r.SsRequirementUnlock.RequirementId ?? "" : "";
+            d.RequirementUnlock2Id = r.SsRequirementUnlock2 != null ? r.SsRequirementUnlock2.RequirementId ?? "" : "";
+            d.RequirementLockId = r.SsRequirementLock != null ? r.SsRequirementLock.RequirementId ?? "" : "";
+            d.RequirementLock2Id = r.SsRequirementLock2 != null ? r.SsRequirementLock2.RequirementId ?? "" : "";
+            d.LootId = r.SsLootList != null ? r.SsLootList.Id ?? "" : "";
+            d.ShopId = r.SsShopList != null ? r.SsShopList.Id ?? "" : "";
+            d.AddItemId = r.SsAddItem != null ? r.SsAddItem.Id ?? "" : "";
+            d.AddCard1Id = r.SsAddCard1 != null ? r.SsAddCard1.Id ?? "" : "";
+            d.AddCard2Id = r.SsAddCard2 != null ? r.SsAddCard2.Id ?? "" : "";
+            d.AddCard3Id = r.SsAddCard3 != null ? r.SsAddCard3.Id ?? "" : "";
+            d.RewardTier = r.SsRewardTier != null ? r.SsRewardTier.name ?? "" : "";
+            d.Discount = r.SsDiscount;
+            d.MaxQuantity = r.SsMaxQuantity;
+            d.HealerUI = r.SsHealerUI;
+            d.UpgradeUI = r.SsUpgradeUI;
+            d.CraftUI = r.SsCraftUI;
+            d.MerchantUI = r.SsMerchantUI;
+            d.CorruptionUI = r.SsCorruptionUI;
+            d.UpgradeRandomCard = r.SsUpgradeRandomCard;
+            d.FinishGame = r.SsFinishGame;
+            d.FinishObeliskMap = r.SsFinishObeliskMap;
+            return d;
+        }
+
+        private static OutcomeDef SnapshotOutcomeFl(EventReplyData r)
+        {
+            var d = new OutcomeDef();
+            d.Text = r.FlRewardText ?? "";
+            d.HealPercent = r.FlRewardHealthPercent;
+            d.HealFlat = r.FlRewardHealthFlat;
+            d.Gold = r.FlGoldReward;
+            d.Dust = r.FlDustReward;
+            d.Supply = r.FlSupplyReward;
+            d.XP = r.FlExperienceReward;
+            d.CombatId = r.FlCombat != null ? r.FlCombat.CombatId ?? "" : "";
+            d.EventId = r.FlEvent != null ? r.FlEvent.EventId ?? "" : "";
+            d.NodeTravelId = r.FlNodeTravel != null ? r.FlNodeTravel.NodeId ?? "" : "";
+            d.RequirementUnlockId = r.FlRequirementUnlock != null ? r.FlRequirementUnlock.RequirementId ?? "" : "";
+            d.RequirementUnlock2Id = r.FlRequirementUnlock2 != null ? r.FlRequirementUnlock2.RequirementId ?? "" : "";
+            d.RequirementLockId = r.FlRequirementLock != null ? r.FlRequirementLock.RequirementId ?? "" : "";
+            // Fl has no RequirementLock2
+            d.LootId = r.FlLootList != null ? r.FlLootList.Id ?? "" : "";
+            d.ShopId = r.FlShopList != null ? r.FlShopList.Id ?? "" : "";
+            d.AddItemId = r.FlAddItem != null ? r.FlAddItem.Id ?? "" : "";
+            d.AddCard1Id = r.FlAddCard1 != null ? r.FlAddCard1.Id ?? "" : "";
+            d.AddCard2Id = r.FlAddCard2 != null ? r.FlAddCard2.Id ?? "" : "";
+            d.AddCard3Id = r.FlAddCard3 != null ? r.FlAddCard3.Id ?? "" : "";
+            d.RewardTier = r.FlRewardTier != null ? r.FlRewardTier.name ?? "" : "";
+            d.Discount = r.FlDiscount;
+            d.MaxQuantity = r.FlMaxQuantity;
+            d.HealerUI = r.FlHealerUI;
+            d.UpgradeUI = r.FlUpgradeUI;
+            d.CraftUI = r.FlCraftUI;
+            d.MerchantUI = r.FlMerchantUI;
+            d.CorruptionUI = r.FlCorruptionUI;
+            d.UpgradeRandomCard = r.FlUpgradeRandomCard;
+            // Fl has no FinishGame / FinishObeliskMap
+            return d;
+        }
+
+        private static OutcomeDef SnapshotOutcomeSsc(EventReplyData r)
+        {
+            var d = new OutcomeDef();
+            d.Text = r.SscRewardText ?? "";
+            d.HealPercent = r.SscRewardHealthPercent;
+            d.HealFlat = r.SscRewardHealthFlat;
+            d.Gold = r.SscGoldReward;
+            d.Dust = r.SscDustReward;
+            d.Supply = r.SscSupplyReward;
+            d.XP = r.SscExperienceReward;
+            d.CombatId = r.SscCombat != null ? r.SscCombat.CombatId ?? "" : "";
+            d.EventId = r.SscEvent != null ? r.SscEvent.EventId ?? "" : "";
+            d.NodeTravelId = r.SscNodeTravel != null ? r.SscNodeTravel.NodeId ?? "" : "";
+            d.RequirementUnlockId = r.SscRequirementUnlock != null ? r.SscRequirementUnlock.RequirementId ?? "" : "";
+            d.RequirementUnlock2Id = r.SscRequirementUnlock2 != null ? r.SscRequirementUnlock2.RequirementId ?? "" : "";
+            d.RequirementLockId = r.SscRequirementLock != null ? r.SscRequirementLock.RequirementId ?? "" : "";
+            // Ssc has no RequirementLock2
+            d.LootId = r.SscLootList != null ? r.SscLootList.Id ?? "" : "";
+            d.ShopId = r.SscShopList != null ? r.SscShopList.Id ?? "" : "";
+            d.AddItemId = r.SscAddItem != null ? r.SscAddItem.Id ?? "" : "";
+            d.AddCard1Id = r.SscAddCard1 != null ? r.SscAddCard1.Id ?? "" : "";
+            d.AddCard2Id = r.SscAddCard2 != null ? r.SscAddCard2.Id ?? "" : "";
+            d.AddCard3Id = r.SscAddCard3 != null ? r.SscAddCard3.Id ?? "" : "";
+            d.RewardTier = r.SscRewardTier != null ? r.SscRewardTier.name ?? "" : "";
+            d.Discount = r.SscDiscount;
+            d.MaxQuantity = r.SscMaxQuantity;
+            d.HealerUI = r.SscHealerUI;
+            d.UpgradeUI = r.SscUpgradeUI;
+            d.CraftUI = r.SscCraftUI;
+            d.MerchantUI = r.SscMerchantUI;
+            d.CorruptionUI = r.SscCorruptionUI;
+            d.UpgradeRandomCard = r.SscUpgradeRandomCard;
+            d.FinishGame = r.SscFinishGame;
+            // Ssc has no FinishObeliskMap
+            return d;
+        }
+
+        private static OutcomeDef SnapshotOutcomeFlc(EventReplyData r)
+        {
+            var d = new OutcomeDef();
+            d.Text = r.FlcRewardText ?? "";
+            d.HealPercent = r.FlcRewardHealthPercent;
+            d.HealFlat = r.FlcRewardHealthFlat;
+            d.Gold = r.FlcGoldReward;
+            d.Dust = r.FlcDustReward;
+            d.Supply = r.FlcSupplyReward;
+            d.XP = r.FlcExperienceReward;
+            d.CombatId = r.FlcCombat != null ? r.FlcCombat.CombatId ?? "" : "";
+            d.EventId = r.FlcEvent != null ? r.FlcEvent.EventId ?? "" : "";
+            d.NodeTravelId = r.FlcNodeTravel != null ? r.FlcNodeTravel.NodeId ?? "" : "";
+            d.RequirementUnlockId = r.FlcRequirementUnlock != null ? r.FlcRequirementUnlock.RequirementId ?? "" : "";
+            d.RequirementUnlock2Id = r.FlcRequirementUnlock2 != null ? r.FlcRequirementUnlock2.RequirementId ?? "" : "";
+            d.RequirementLockId = r.FlcRequirementLock != null ? r.FlcRequirementLock.RequirementId ?? "" : "";
+            // Flc has no RequirementLock2
+            d.LootId = r.FlcLootList != null ? r.FlcLootList.Id ?? "" : "";
+            d.ShopId = r.FlcShopList != null ? r.FlcShopList.Id ?? "" : "";
+            d.AddItemId = r.FlcAddItem != null ? r.FlcAddItem.Id ?? "" : "";
+            d.AddCard1Id = r.FlcAddCard1 != null ? r.FlcAddCard1.Id ?? "" : "";
+            d.AddCard2Id = r.FlcAddCard2 != null ? r.FlcAddCard2.Id ?? "" : "";
+            d.AddCard3Id = r.FlcAddCard3 != null ? r.FlcAddCard3.Id ?? "" : "";
+            d.RewardTier = r.FlcRewardTier != null ? r.FlcRewardTier.name ?? "" : "";
+            d.Discount = r.FlcDiscount;
+            d.MaxQuantity = r.FlcMaxQuantity;
+            d.HealerUI = r.FlcHealerUI;
+            d.UpgradeUI = r.FlcUpgradeUI;
+            d.CraftUI = r.FlcCraftUI;
+            d.MerchantUI = r.FlcMerchantUI;
+            d.CorruptionUI = r.FlcCorruptionUI;
+            d.UpgradeRandomCard = r.FlcUpgradeRandomCard;
+            // Flc has no FinishGame / FinishObeliskMap
+            return d;
+        }
+
     }
 }

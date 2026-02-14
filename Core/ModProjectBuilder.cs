@@ -364,6 +364,45 @@ namespace UnknownMod.Core
             ac.Taunt = d.Taunt;
             ac.SkipsNextTurn = d.SkipsNextTurn;
 
+            // AC Bonus Data (charge bonuses)
+            if (d.ACBonusData != null && d.ACBonusData.Count > 0)
+            {
+                var list = new List<AuraCurseData.AuraCurseChargesBonus>();
+                foreach (var b in d.ACBonusData)
+                {
+                    var bonus = new AuraCurseData.AuraCurseChargesBonus();
+                    bonus.requiredChargesForBonus = b.RequiredChargesForBonus;
+                    bonus.bonusType = b.BonusType;
+                    bonus.bonusCharges = b.ChargesBonus;
+                    if (!string.IsNullOrEmpty(b.AuraCurseId))
+                        bonus.acData = DataHelper.GetAuraCurse(b.AuraCurseId);
+                    list.Add(bonus);
+                }
+                ac.ACBonusData = list;
+            }
+
+            // Aura Damage Conditional Bonuses
+            if (d.AuraDamageConditionalBonuses != null && d.AuraDamageConditionalBonuses.Count > 0)
+            {
+                var arr = new AuraCurseData.AuraDamageBonus[d.AuraDamageConditionalBonuses.Count];
+                for (int i = 0; i < d.AuraDamageConditionalBonuses.Count; i++)
+                {
+                    var b = d.AuraDamageConditionalBonuses[i];
+                    arr[i] = new AuraCurseData.AuraDamageBonus
+                    {
+                        AuraDamageType = b.DamageType,
+                        AuraDamageIncreasedTotal = b.FlatBonus,
+                        AuraDamageIncreasedPerStack = b.FlatBonusPerStack,
+                        AuraDamageIncreasedPercent = b.PercentBonus,
+                        AuraDamageIncreasedPercentPerStack = b.PercentBonusPerStack,
+                        AuraDamageIncreasedPercentPerStackPerEnergy = b.PercentBonusPerStackPerEnergy
+                    };
+                    if (!string.IsNullOrEmpty(b.BasedOnACId))
+                        arr[i].AuraDamageBasedOnAC = DataHelper.GetAuraCurse(b.BasedOnACId);
+                }
+                ac.AuraDamageConditionalBonuses = arr;
+            }
+
             return ac;
         }
 
@@ -566,6 +605,39 @@ namespace UnknownMod.Core
             d.Stealth = ac.Stealth;
             d.Taunt = ac.Taunt;
             d.SkipsNextTurn = ac.SkipsNextTurn;
+
+            // AC Bonus Data
+            if (ac.ACBonusData != null && ac.ACBonusData.Count > 0)
+            {
+                foreach (var b in ac.ACBonusData)
+                {
+                    d.ACBonusData.Add(new AuraCurseChargesBonusDef
+                    {
+                        AuraCurseId = b.acData != null ? GetACId(b.acData) : "",
+                        ChargesBonus = b.bonusCharges,
+                        RequiredChargesForBonus = b.requiredChargesForBonus,
+                        BonusType = b.bonusType
+                    });
+                }
+            }
+
+            // Aura Damage Conditional Bonuses
+            if (ac.AuraDamageConditionalBonuses != null && ac.AuraDamageConditionalBonuses.Length > 0)
+            {
+                foreach (var b in ac.AuraDamageConditionalBonuses)
+                {
+                    d.AuraDamageConditionalBonuses.Add(new AuraDamageBonusDef
+                    {
+                        DamageType = b.AuraDamageType,
+                        BasedOnACId = b.AuraDamageBasedOnAC != null ? GetACId(b.AuraDamageBasedOnAC) : "",
+                        FlatBonus = b.AuraDamageIncreasedTotal,
+                        FlatBonusPerStack = b.AuraDamageIncreasedPerStack,
+                        PercentBonus = b.AuraDamageIncreasedPercent,
+                        PercentBonusPerStack = b.AuraDamageIncreasedPercentPerStack,
+                        PercentBonusPerStackPerEnergy = b.AuraDamageIncreasedPercentPerStackPerEnergy
+                    });
+                }
+            }
 
             return d;
         }
@@ -957,6 +1029,14 @@ namespace UnknownMod.Core
             t.Field("preDescriptionArgs").SetValue(new string[0]);
             t.Field("descriptionArgs").SetValue(new string[0]);
             t.Field("postDescriptionArgs").SetValue(new string[0]);
+
+            // Copy card art sprite from an existing card
+            if (!string.IsNullOrEmpty(d.SpriteSource))
+                DataHelper.CopyCardVisuals(card, d.SpriteSource);
+
+            // Auto-generate description from card stats
+            try { card.SetDescriptionNew(forceDescription: true); }
+            catch { /* Texts not ready — description will be empty until next rebuild */ }
 
             return card;
         }
@@ -1578,6 +1658,8 @@ namespace UnknownMod.Core
                         var req = DataHelper.GetEventRequirement(d.RequirementId);
                         if (req != null) Traverse.Create(evt).Field("requirement").SetValue(req);
                     }
+                    if (!string.IsNullOrEmpty(d.SpriteSource))
+                        DataHelper.CopyEventVisuals(evt, d.SpriteSource);
                     events[d.EventId] = evt;
                     DataHelper.RegisterEvent(evt);
                 }
@@ -1635,6 +1717,9 @@ namespace UnknownMod.Core
         /// Apply a zone patch: create new SOs for patch entities and inject them
         /// into the existing base-game zone registered in Globals.
         /// </summary>
+        /// <summary>Public entry point for hot-reload to re-apply a zone patch at runtime.</summary>
+        public static void ApplyZonePatchPublic(ZonePatchDef patch) => ApplyZonePatch(patch);
+
         private static void ApplyZonePatch(ZonePatchDef patch)
         {
             try
@@ -1686,6 +1771,8 @@ namespace UnknownMod.Core
                         var req = DataHelper.GetEventRequirement(d.RequirementId);
                         if (req != null) Traverse.Create(evt).Field("requirement").SetValue(req);
                     }
+                    if (!string.IsNullOrEmpty(d.SpriteSource))
+                        DataHelper.CopyEventVisuals(evt, d.SpriteSource);
                     newEvents[d.EventId] = evt;
                     DataHelper.RegisterEvent(evt);
                 }
@@ -1807,7 +1894,28 @@ namespace UnknownMod.Core
             node.ExistsSku = "";
             node.SourceNodeName = "";
             node.NodesConnected = new NodeData[0];
-            node.NodesConnectedRequirement = new NodesConnectedRequirement[0];
+
+            // Conditional connection requirements
+            if (d.ConnectionRequirements != null && d.ConnectionRequirements.Count > 0)
+            {
+                var reqs = new NodesConnectedRequirement[d.ConnectionRequirements.Count];
+                for (int i = 0; i < d.ConnectionRequirements.Count; i++)
+                {
+                    var cr = d.ConnectionRequirements[i];
+                    reqs[i] = new NodesConnectedRequirement();
+                    if (!string.IsNullOrEmpty(cr.TargetNodeId))
+                        reqs[i].NodeData = DataHelper.GetExistingNode(cr.TargetNodeId);
+                    if (!string.IsNullOrEmpty(cr.RequirementId))
+                        reqs[i].ConectionRequeriment = DataHelper.GetEventRequirement(cr.RequirementId);
+                    if (!string.IsNullOrEmpty(cr.IfNotNodeId))
+                        reqs[i].ConectionIfNotNode = DataHelper.GetExistingNode(cr.IfNotNodeId);
+                }
+                node.NodesConnectedRequirement = reqs;
+            }
+            else
+            {
+                node.NodesConnectedRequirement = new NodesConnectedRequirement[0];
+            }
 
             if (!string.IsNullOrEmpty(d.NodeRequirementId))
                 node.NodeRequirement = DataHelper.GetEventRequirement(d.NodeRequirementId);

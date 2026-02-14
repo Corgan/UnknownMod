@@ -14,7 +14,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class NpcEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
         private int _expandedAiCard = -1;
 
         // ── Override browser state ───────────────────────────────
@@ -34,7 +34,7 @@ namespace UnknownMod.Editor
         private bool _secImmunities = false;
         private bool _secAiCards = true;
 
-        public NpcEditor(ZoneEditor parent) => _parent = parent;
+        public NpcEditor(ModEditor parent) => _parent = parent;
 
         public void DrawPanel()
         {

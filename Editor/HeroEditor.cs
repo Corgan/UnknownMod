@@ -14,7 +14,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class HeroEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -35,7 +35,7 @@ namespace UnknownMod.Editor
         private bool _secTraits = false;
         private bool _secPacks = false;
 
-        public HeroEditor(ZoneEditor parent) => _parent = parent;
+        public HeroEditor(ModEditor parent) => _parent = parent;
 
         public string SelectedHeroId { get; set; }
 

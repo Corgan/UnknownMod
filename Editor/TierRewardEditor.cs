@@ -15,7 +15,7 @@ namespace UnknownMod.Editor
     /// </summary>
     public class TierRewardEditor
     {
-        private readonly ZoneEditor _parent;
+        private readonly ModEditor _parent;
 
         // ── Override browser state ───────────────────────────────
         private bool _showOverrideBrowser;
@@ -27,7 +27,7 @@ namespace UnknownMod.Editor
         private bool _secIdentity = true;
         private bool _secRewards = true;
 
-        public TierRewardEditor(ZoneEditor parent) => _parent = parent;
+        public TierRewardEditor(ModEditor parent) => _parent = parent;
 
         public string SelectedTierRewardId { get; set; }
 

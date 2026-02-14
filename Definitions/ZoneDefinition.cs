@@ -163,6 +163,9 @@ namespace UnknownMod.Definitions
         public string Description = "";
         public string DescriptionAction = "";
 
+        /// <summary>Base-game event ID to borrow book/decor/map sprites from.</summary>
+        public string SpriteSource = "";
+
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CombatTier EventTier = Enums.CombatTier.T0;
 
@@ -188,7 +191,9 @@ namespace UnknownMod.Definitions
         public string EventId = "";
         public string NodeTravelId = "";
         public string RequirementUnlockId = "";
+        public string RequirementUnlock2Id = "";
         public string RequirementLockId = "";
+        public string RequirementLock2Id = "";
         public string LootId = "";
         public string ShopId = "";
         public string AddItemId = "";
@@ -330,7 +335,9 @@ namespace UnknownMod.Definitions
             o.EventId = (string)jo[$"{p}EventId"] ?? "";
             o.NodeTravelId = (string)jo[$"{p}NodeTravelId"] ?? "";
             o.RequirementUnlockId = (string)jo[$"{p}RequirementUnlockId"] ?? "";
+            o.RequirementUnlock2Id = (string)jo[$"{p}RequirementUnlock2Id"] ?? "";
             o.RequirementLockId = (string)jo[$"{p}RequirementLockId"] ?? "";
+            o.RequirementLock2Id = (string)jo[$"{p}RequirementLock2Id"] ?? "";
             o.LootId = (string)jo[$"{p}LootId"] ?? "";
             o.ShopId = (string)jo[$"{p}ShopId"] ?? "";
             o.AddItemId = (string)jo[$"{p}AddItemId"] ?? "";
@@ -361,7 +368,9 @@ namespace UnknownMod.Definitions
             writer.WritePropertyName($"{p}EventId"); writer.WriteValue(o.EventId);
             writer.WritePropertyName($"{p}NodeTravelId"); writer.WriteValue(o.NodeTravelId);
             writer.WritePropertyName($"{p}RequirementUnlockId"); writer.WriteValue(o.RequirementUnlockId);
+            writer.WritePropertyName($"{p}RequirementUnlock2Id"); writer.WriteValue(o.RequirementUnlock2Id);
             writer.WritePropertyName($"{p}RequirementLockId"); writer.WriteValue(o.RequirementLockId);
+            writer.WritePropertyName($"{p}RequirementLock2Id"); writer.WriteValue(o.RequirementLock2Id);
             writer.WritePropertyName($"{p}LootId"); writer.WriteValue(o.LootId);
             writer.WritePropertyName($"{p}ShopId"); writer.WriteValue(o.ShopId);
             writer.WritePropertyName($"{p}AddItemId"); writer.WriteValue(o.AddItemId);
@@ -494,6 +503,8 @@ namespace UnknownMod.Definitions
         public float FluffPercent = 0f;
         public bool IsUpgraded = false;
         public string BaseCardId = "";
+        /// <summary>Base-game card ID to copy the card art sprite from.</summary>
+        public string SpriteSource = "";
 
         // ── Card Classification ──────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
@@ -813,6 +824,8 @@ namespace UnknownMod.Definitions
         // ── Identity ─────────────────────────────────────────────
         public string Id = "";
         public string Name = "";
+        /// <summary>Base-game card ID to copy the item card art sprite from.</summary>
+        public string SpriteSource = "";
 
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardType CardType = Enums.CardType.Weapon;

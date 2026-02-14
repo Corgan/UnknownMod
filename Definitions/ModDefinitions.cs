@@ -237,6 +237,11 @@ namespace UnknownMod.Definitions
     {
         public string AuraCurseId = "";          // AC ID reference
         public int ChargesBonus = 0;
+        public int RequiredChargesForBonus = 0;
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public AuraCurseData.AuraCurseChargesBonus.BonusAmountType BonusType =
+            AuraCurseData.AuraCurseChargesBonus.BonusAmountType.flatBonus;
     }
 
     [Serializable]
@@ -244,10 +249,12 @@ namespace UnknownMod.Definitions
     {
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.DamageType DamageType = Enums.DamageType.None;
+        public string BasedOnACId = "";  // AC ID — maps to AuraDamageBasedOnAC
         public int FlatBonus = 0;
         public float FlatBonusPerStack = 0f;
         public int PercentBonus = 0;
         public float PercentBonusPerStack = 0f;
+        public float PercentBonusPerStackPerEnergy = 0f;
     }
 
     // ───────────────────────────────────────────────────────────────
