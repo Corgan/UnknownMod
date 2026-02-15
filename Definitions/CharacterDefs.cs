@@ -10,10 +10,11 @@ namespace UnknownMod.Definitions
     // ───────────────────────────────────────────────────────────────
 
     [Serializable]
-    public class TraitDef
+    public class TraitDef : IModEntity
     {
         // ── Identity ─────────────────────────────────────────────
         public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
         public string TraitName = "";
         public string Description = "";
 
@@ -95,10 +96,11 @@ namespace UnknownMod.Definitions
     // ───────────────────────────────────────────────────────────────
 
     [Serializable]
-    public class SkinDef
+    public class SkinDef : IModEntity
     {
         // ── Identity ─────────────────────────────────────────────
         public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
         public string SkinName = "";
         public string SkinSubclass = "";       // SubClassData ID
 
@@ -123,10 +125,11 @@ namespace UnknownMod.Definitions
     // ───────────────────────────────────────────────────────────────
 
     [Serializable]
-    public class PerkDef
+    public class PerkDef : IModEntity
     {
         // ── Identity ─────────────────────────────────────────────
         public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
         public string CustomDescription = "";
 
         // ── Classification ───────────────────────────────────────
@@ -172,10 +175,11 @@ namespace UnknownMod.Definitions
     // ───────────────────────────────────────────────────────────────
 
     [Serializable]
-    public class PerkNodeDef
+    public class PerkNodeDef : IModEntity
     {
         // ── Identity ─────────────────────────────────────────────
         public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
 
         // ── Layout ───────────────────────────────────────────────
         public int Type = 0;
@@ -193,6 +197,6 @@ namespace UnknownMod.Definitions
         // ── References ───────────────────────────────────────────
         public string Perk = "";              // PerkData ID
         public string PerkRequired = "";      // PerkNodeData ID
-        public List<string> PerksConnected = new List<string>(); // PerkNodeData IDs
+        public List<string> PerksConnected = new(); // PerkNodeData IDs
     }
 }

@@ -52,7 +52,7 @@ namespace UnknownMod.Editor.Tabs
 
         private void DrawPerkPreview(Rect rect)
         {
-            string id = _editor.PerkEdit?.SelectedPerkId;
+            string id = _editor.PerkEdit?.SelectedId;
             PerkDef def = null;
             var proj = ModManagerPanel.ActiveProject;
             if (proj != null && !string.IsNullOrEmpty(id))
@@ -65,7 +65,7 @@ namespace UnknownMod.Editor.Tabs
 
         private void DrawPerkNodePreview(Rect rect)
         {
-            string id = _editor.PerkNodeEdit?.SelectedPerkNodeId;
+            string id = _editor.PerkNodeEdit?.SelectedId;
             PerkNodeDef def = null;
             var proj = ModManagerPanel.ActiveProject;
             if (proj != null && !string.IsNullOrEmpty(id))
@@ -78,7 +78,7 @@ namespace UnknownMod.Editor.Tabs
 
         private void DrawCardbackPreview(Rect rect)
         {
-            string id = _editor.CardbackEdit?.SelectedCardbackId;
+            string id = _editor.CardbackEdit?.SelectedId;
             CardbackDef def = null;
             var proj = ModManagerPanel.ActiveProject;
             if (proj != null && !string.IsNullOrEmpty(id))
@@ -91,7 +91,7 @@ namespace UnknownMod.Editor.Tabs
 
         private void DrawTierRewardPreview(Rect rect)
         {
-            string id = _editor.TierRewardEdit?.SelectedTierRewardId;
+            string id = _editor.TierRewardEdit?.SelectedId;
             TierRewardDef def = null;
             var proj = ModManagerPanel.ActiveProject;
             if (proj != null && !string.IsNullOrEmpty(id))
@@ -176,11 +176,11 @@ namespace UnknownMod.Editor.Tabs
             switch (ActiveSubTab)
             {
                 case SubTab.Perks:
-                    if (_editor.PerkEdit?.SelectedPerkId != null)
+                    if (_editor.PerkEdit?.SelectedId != null)
                     {
                         PerkDef perkDef = null;
-                        if (!proj.Perks.TryGetValue(_editor.PerkEdit.SelectedPerkId, out perkDef))
-                            proj.PerkPatches.TryGetValue(_editor.PerkEdit.SelectedPerkId, out perkDef);
+                        if (!proj.Perks.TryGetValue(_editor.PerkEdit.SelectedId, out perkDef))
+                            proj.PerkPatches.TryGetValue(_editor.PerkEdit.SelectedId, out perkDef);
                         if (perkDef != null)
                         {
                             try { var p = DataHelper.MakePerk(perkDef); DataHelper.RegisterPerk(p); }
@@ -189,11 +189,11 @@ namespace UnknownMod.Editor.Tabs
                     }
                     break;
                 case SubTab.PerkNodes:
-                    if (_editor.PerkNodeEdit?.SelectedPerkNodeId != null)
+                    if (_editor.PerkNodeEdit?.SelectedId != null)
                     {
                         PerkNodeDef pnDef = null;
-                        if (!proj.PerkNodes.TryGetValue(_editor.PerkNodeEdit.SelectedPerkNodeId, out pnDef))
-                            proj.PerkNodePatches.TryGetValue(_editor.PerkNodeEdit.SelectedPerkNodeId, out pnDef);
+                        if (!proj.PerkNodes.TryGetValue(_editor.PerkNodeEdit.SelectedId, out pnDef))
+                            proj.PerkNodePatches.TryGetValue(_editor.PerkNodeEdit.SelectedId, out pnDef);
                         if (pnDef != null)
                         {
                             try { var pn = DataHelper.MakePerkNode(pnDef); DataHelper.RegisterPerkNode(pn); }
@@ -202,11 +202,11 @@ namespace UnknownMod.Editor.Tabs
                     }
                     break;
                 case SubTab.Requirements:
-                    if (_editor.RequirementEdit?.SelectedRequirementId != null)
+                    if (_editor.RequirementEdit?.SelectedId != null)
                     {
                         RequirementDef rDef = null;
-                        if (!proj.Requirements.TryGetValue(_editor.RequirementEdit.SelectedRequirementId, out rDef))
-                            proj.RequirementPatches.TryGetValue(_editor.RequirementEdit.SelectedRequirementId, out rDef);
+                        if (!proj.Requirements.TryGetValue(_editor.RequirementEdit.SelectedId, out rDef))
+                            proj.RequirementPatches.TryGetValue(_editor.RequirementEdit.SelectedId, out rDef);
                         if (rDef != null)
                         {
                             try { var req = DataHelper.MakeRequirement(rDef); DataHelper.RegisterRequirement(req); }
@@ -215,11 +215,11 @@ namespace UnknownMod.Editor.Tabs
                     }
                     break;
                 case SubTab.Cardbacks:
-                    if (_editor.CardbackEdit?.SelectedCardbackId != null)
+                    if (_editor.CardbackEdit?.SelectedId != null)
                     {
                         CardbackDef cbDef = null;
-                        if (!proj.Cardbacks.TryGetValue(_editor.CardbackEdit.SelectedCardbackId, out cbDef))
-                            proj.CardbackPatches.TryGetValue(_editor.CardbackEdit.SelectedCardbackId, out cbDef);
+                        if (!proj.Cardbacks.TryGetValue(_editor.CardbackEdit.SelectedId, out cbDef))
+                            proj.CardbackPatches.TryGetValue(_editor.CardbackEdit.SelectedId, out cbDef);
                         if (cbDef != null)
                         {
                             try { var cb = DataHelper.MakeCardback(cbDef); DataHelper.RegisterCardback(cb); }
@@ -228,11 +228,11 @@ namespace UnknownMod.Editor.Tabs
                     }
                     break;
                 case SubTab.TierRewards:
-                    if (_editor.TierRewardEdit?.SelectedTierRewardId != null)
+                    if (_editor.TierRewardEdit?.SelectedId != null)
                     {
                         TierRewardDef trDef = null;
-                        if (!proj.TierRewards.TryGetValue(_editor.TierRewardEdit.SelectedTierRewardId, out trDef))
-                            proj.TierRewardPatches.TryGetValue(_editor.TierRewardEdit.SelectedTierRewardId, out trDef);
+                        if (!proj.TierRewards.TryGetValue(_editor.TierRewardEdit.SelectedId, out trDef))
+                            proj.TierRewardPatches.TryGetValue(_editor.TierRewardEdit.SelectedId, out trDef);
                         if (trDef != null)
                         {
                             try { var tr = DataHelper.MakeTierReward(trDef); DataHelper.RegisterTierReward(tr); }
@@ -241,11 +241,11 @@ namespace UnknownMod.Editor.Tabs
                     }
                     break;
                 case SubTab.Packs:
-                    if (_editor.PackEdit?.SelectedPackId != null)
+                    if (_editor.PackEdit?.SelectedId != null)
                     {
                         PackDef packDef = null;
-                        if (!proj.Packs.TryGetValue(_editor.PackEdit.SelectedPackId, out packDef))
-                            proj.PackPatches.TryGetValue(_editor.PackEdit.SelectedPackId, out packDef);
+                        if (!proj.Packs.TryGetValue(_editor.PackEdit.SelectedId, out packDef))
+                            proj.PackPatches.TryGetValue(_editor.PackEdit.SelectedId, out packDef);
                         if (packDef != null)
                         {
                             try { var p = DataHelper.MakePack(packDef); DataHelper.RegisterPack(p); }

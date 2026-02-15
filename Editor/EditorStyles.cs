@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnknownMod.Core;
 
 namespace UnknownMod.Editor
 {
@@ -469,6 +470,28 @@ namespace UnknownMod.Editor
             if (GUILayout.Button($"{icon}  {title}", EditorStyles.SectionHeader))
                 expanded = !expanded;
             return expanded;
+        }
+
+        // ── Shared Helpers ───────────────────────────────────────
+
+        /// <summary>Capitalize the first letter of a string.</summary>
+        public static string Capitalize(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            return char.ToUpper(s[0]) + s.Substring(1);
+        }
+
+        /// <summary>
+        /// Build a combined card ID list from the active mod project + base game.
+        /// Used by editors that need a card-reference dropdown.
+        /// </summary>
+        public static List<string> BuildCardIdList(ModProject proj)
+        {
+            var cardIds = new List<string>();
+            cardIds.AddRange(proj.Cards.Keys.OrderBy(k => k));
+            cardIds.AddRange(proj.CardPatches.Keys.OrderBy(k => k));
+            cardIds.AddRange(DataHelper.GetAllCardIds());
+            return cardIds.Distinct().ToList();
         }
     }
 }

@@ -12,6 +12,125 @@ namespace UnknownMod.Core
     public static partial class ModProjectBuilder
     {
         // ═══════════════════════════════════════════════════════════════
+        //  GENERIC BUILD HELPER
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Iterate a dictionary of defs, create ScriptableObjects, and register them.
+        /// Replaces all the identical per-type Build* wrappers.
+        /// </summary>
+        private static void BuildDict<TDef, TSO>(
+            Dictionary<string, TDef> defs,
+            Func<TDef, TSO> make,
+            Action<TSO> register,
+            string label,
+            Action<TDef, TSO> afterBuild = null)
+            where TDef : IModEntity
+        {
+            foreach (var kvp in defs)
+            {
+                try
+                {
+                    var so = make(kvp.Value);
+                    register(so);
+                    afterBuild?.Invoke(kvp.Value, so);
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.LogWarning($"[Builder] Failed to build {label} '{kvp.Key}': {ex.Message}");
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  NAMED BUILD PIPELINE
+        // ═══════════════════════════════════════════════════════════════
+
+        private struct BuildStep
+        {
+            public string Name;
+            public Action<ModProject> Execute;
+        }
+
+        /// <summary>
+        /// Ordered build steps. AuraCurses first (referenced by cards/items/etc.),
+        /// then the rest in dependency order.
+        /// </summary>
+        private static readonly BuildStep[] Pipeline =
+        {
+            new() { Name = "AuraCurses", Execute = p => {
+                BuildDict(p.AuraCurses,      MakeAuraCurse, RegisterAuraCurse, "AuraCurse");
+                BuildDict(p.AuraCursePatches, MakeAuraCurse, RegisterAuraCurse, "AuraCurse");
+            }},
+            new() { Name = "Cards", Execute = p => {
+                BuildDict(p.Cards,       MakeFullCard, DataHelper.RegisterCard, "Card");
+                BuildDict(p.CardPatches, MakeFullCard, DataHelper.RegisterCard, "Card");
+            }},
+            new() { Name = "Items", Execute = p => {
+                BuildDict(p.Items,       DataHelper.MakeFullItem, DataHelper.RegisterItem, "Item",
+                    (d, item) => DataHelper.RegisterCard(DataHelper.MakeItemCard(d, item)));
+                BuildDict(p.ItemPatches, DataHelper.MakeFullItem, DataHelper.RegisterItem, "Item",
+                    (d, item) => DataHelper.RegisterCard(DataHelper.MakeItemCard(d, item)));
+            }},
+            new() { Name = "Loot", Execute = p => {
+                BuildDict(p.Loot,        DataHelper.MakeLoot, DataHelper.RegisterLoot, "Loot");
+                BuildDict(p.LootPatches, DataHelper.MakeLoot, DataHelper.RegisterLoot, "Loot");
+            }},
+            new() { Name = "NPCs", Execute = p => {
+                BuildDict(p.Npcs,       DataHelper.MakeFullNpc, DataHelper.RegisterNPC, "NPC");
+                BuildDict(p.NpcPatches, DataHelper.MakeFullNpc, DataHelper.RegisterNPC, "NPC");
+            }},
+            new() { Name = "Heroes", Execute = p => {
+                BuildDict(p.Heroes,      DataHelper.MakeFullHero, DataHelper.RegisterHero, "Hero");
+                BuildDict(p.HeroPatches, DataHelper.MakeFullHero, DataHelper.RegisterHero, "Hero");
+            }},
+            new() { Name = "Traits", Execute = p => {
+                BuildDict(p.Traits,      DataHelper.MakeTrait, DataHelper.RegisterTrait, "Trait");
+                BuildDict(p.TraitPatches, DataHelper.MakeTrait, DataHelper.RegisterTrait, "Trait");
+            }},
+            new() { Name = "Skins", Execute = p => {
+                BuildDict(p.Skins,       DataHelper.MakeSkin, DataHelper.RegisterSkin, "Skin");
+                BuildDict(p.SkinPatches, DataHelper.MakeSkin, DataHelper.RegisterSkin, "Skin");
+            }},
+            new() { Name = "Perks", Execute = p => {
+                BuildDict(p.Perks,       DataHelper.MakePerk, DataHelper.RegisterPerk, "Perk");
+                BuildDict(p.PerkPatches, DataHelper.MakePerk, DataHelper.RegisterPerk, "Perk");
+            }},
+            new() { Name = "PerkNodes", Execute = p => {
+                BuildDict(p.PerkNodes,       DataHelper.MakePerkNode, DataHelper.RegisterPerkNode, "PerkNode");
+                BuildDict(p.PerkNodePatches, DataHelper.MakePerkNode, DataHelper.RegisterPerkNode, "PerkNode");
+            }},
+            new() { Name = "Requirements", Execute = p => {
+                BuildDict(p.Requirements,       DataHelper.MakeRequirement, DataHelper.RegisterRequirement, "Requirement");
+                BuildDict(p.RequirementPatches, DataHelper.MakeRequirement, DataHelper.RegisterRequirement, "Requirement");
+            }},
+            new() { Name = "Cardbacks", Execute = p => {
+                BuildDict(p.Cardbacks,       DataHelper.MakeCardback, DataHelper.RegisterCardback, "Cardback");
+                BuildDict(p.CardbackPatches, DataHelper.MakeCardback, DataHelper.RegisterCardback, "Cardback");
+            }},
+            new() { Name = "TierRewards", Execute = p => {
+                BuildDict(p.TierRewards,       DataHelper.MakeTierReward, DataHelper.RegisterTierReward, "TierReward");
+                BuildDict(p.TierRewardPatches, DataHelper.MakeTierReward, DataHelper.RegisterTierReward, "TierReward");
+            }},
+            new() { Name = "Packs", Execute = p => {
+                BuildDict(p.Packs,       DataHelper.MakePack, DataHelper.RegisterPack, "Pack");
+                BuildDict(p.PackPatches, DataHelper.MakePack, DataHelper.RegisterPack, "Pack");
+            }},
+            new() { Name = "CardPlayerPacks", Execute = p => {
+                BuildDict(p.CardPlayerPacks,       DataHelper.MakeCardPlayerPack, DataHelper.RegisterCardPlayerPack, "CardPlayerPack");
+                BuildDict(p.CardPlayerPackPatches, DataHelper.MakeCardPlayerPack, DataHelper.RegisterCardPlayerPack, "CardPlayerPack");
+            }},
+            new() { Name = "CardPlayerPairsPacks", Execute = p => {
+                BuildDict(p.CardPlayerPairsPacks,       DataHelper.MakeCardPlayerPairsPack, DataHelper.RegisterCardPlayerPairsPack, "CardPlayerPairsPack");
+                BuildDict(p.CardPlayerPairsPackPatches, DataHelper.MakeCardPlayerPairsPack, DataHelper.RegisterCardPlayerPairsPack, "CardPlayerPairsPack");
+            }},
+            new() { Name = "HeroData", Execute = p => {
+                BuildDict(p.HeroDataEntries, DataHelper.MakeHeroData, DataHelper.RegisterHeroData, "HeroData");
+                BuildDict(p.HeroDataPatches, DataHelper.MakeHeroData, DataHelper.RegisterHeroData, "HeroData");
+            }},
+        };
+
+        // ═══════════════════════════════════════════════════════════════
         //  BUILD A SINGLE MOD
         // ═══════════════════════════════════════════════════════════════
 
@@ -23,92 +142,35 @@ namespace UnknownMod.Core
         {
             Plugin.Log.LogInfo($"[Builder] Building mod '{proj.ModId}'...");
 
-            // ── AuraCurse (build first — referenced by cards, items, etc.) ──
-            BuildAuraCurses(proj.AuraCurses, isNew: true);
-            BuildAuraCurses(proj.AuraCursePatches, isNew: false);
+            // ── Run the standard build pipeline ──────────────────
+            foreach (var step in Pipeline)
+            {
+                try
+                {
+                    step.Execute(proj);
+                }
+                catch (Exception ex)
+                {
+                    Plugin.Log.LogError($"[Builder] Pipeline step '{step.Name}' failed: {ex.Message}");
+                }
+            }
 
-            // ── Cards ────────────────────────────────────────────────
-            BuildCards(proj.Cards, isNew: true);
-            BuildCards(proj.CardPatches, isNew: false);
-
-            // ── Items ────────────────────────────────────────────────
-            BuildItems(proj.Items);
-            BuildItems(proj.ItemPatches);
-
-            // ── Loot ─────────────────────────────────────────────────
-            BuildLoot(proj.Loot);
-            BuildLoot(proj.LootPatches);
-
-            // ── NPCs ─────────────────────────────────────────────────
-            BuildNpcs(proj.Npcs);
-            BuildNpcs(proj.NpcPatches);
-
-            // ── Sprites ──────────────────────────────────────────────
-            // Register sprite + NPC defs in ModRegistry for runtime resolution.
+            // ── Special handling: Sprites + NPC registry ─────────
             ModRegistry.RegisterModSprites(proj.Sprites, proj.SpritePatches);
             ModRegistry.RegisterModNpcs(proj.Npcs, proj.NpcPatches);
 
-            // ── Zones ────────────────────────────────────────────────
+            // ── Special handling: Zones ───────────────────────────
             foreach (var zone in proj.Zones.Values)
             {
                 BuildZone(zone);
-                // Register in ModRegistry so IsModdedZone/MapBuilder/GetZoneFolder work
                 string zoneFolder = System.IO.Path.Combine(
                     ModProjectLoader.ModFolder(proj.ModId), "zones", zone.ZoneId);
                 ModRegistry.RegisterModZone(zone, zoneFolder);
             }
 
-            // ── Zone patches ─────────────────────────────────────────
+            // ── Special handling: Zone patches ────────────────────
             foreach (var patch in proj.ZonePatches.Values)
                 ApplyZonePatch(patch);
-
-            // ── Heroes ────────────────────────────────────────────────
-            BuildHeroes(proj.Heroes);
-            BuildHeroes(proj.HeroPatches);
-
-            // ── Traits ────────────────────────────────────────────────
-            BuildTraits(proj.Traits);
-            BuildTraits(proj.TraitPatches);
-
-            // ── Skins ─────────────────────────────────────────────────
-            BuildSkins(proj.Skins);
-            BuildSkins(proj.SkinPatches);
-
-            // ── Perks ─────────────────────────────────────────────────
-            BuildPerks(proj.Perks);
-            BuildPerks(proj.PerkPatches);
-
-            // ── PerkNodes ─────────────────────────────────────────────
-            BuildPerkNodes(proj.PerkNodes);
-            BuildPerkNodes(proj.PerkNodePatches);
-
-            // ── Requirements ─────────────────────────────────────────
-            BuildRequirements(proj.Requirements);
-            BuildRequirements(proj.RequirementPatches);
-
-            // ── Cardbacks ──────────────────────────────────────────────
-            BuildCardbacks(proj.Cardbacks);
-            BuildCardbacks(proj.CardbackPatches);
-
-            // ── TierRewards ───────────────────────────────────────────
-            BuildTierRewards(proj.TierRewards);
-            BuildTierRewards(proj.TierRewardPatches);
-
-            // ── Packs ─────────────────────────────────────────────────
-            BuildPacks(proj.Packs);
-            BuildPacks(proj.PackPatches);
-
-            // ── CardPlayerPacks ───────────────────────────────────────
-            BuildCardPlayerPacks(proj.CardPlayerPacks);
-            BuildCardPlayerPacks(proj.CardPlayerPackPatches);
-
-            // ── CardPlayerPairsPacks ──────────────────────────────────
-            BuildCardPlayerPairsPacks(proj.CardPlayerPairsPacks);
-            BuildCardPlayerPairsPacks(proj.CardPlayerPairsPackPatches);
-
-            // ── HeroData ──────────────────────────────────────────────
-            BuildHeroDataEntries(proj.HeroDataEntries);
-            BuildHeroDataEntries(proj.HeroDataPatches);
 
             Plugin.Log.LogInfo($"[Builder] Mod '{proj.ModId}' built successfully.");
         }
@@ -143,15 +205,5 @@ namespace UnknownMod.Core
             Plugin.Log.LogInfo("[Builder] All mods built.");
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        //  HELPERS
-        // ═══════════════════════════════════════════════════════════════
-
-        /// <summary>Extract the ID string from an AuraCurseData reference (null-safe).</summary>
-        private static string GetACId(AuraCurseData ac)
-        {
-            if (ac == null) return "";
-            return Traverse.Create(ac).Field<string>("id").Value ?? "";
-        }
     }
 }

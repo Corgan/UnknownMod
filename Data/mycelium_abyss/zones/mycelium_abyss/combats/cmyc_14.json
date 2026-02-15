@@ -1,0 +1,17 @@
+{
+  "CombatId": "cmyc_boss",
+  "Description": "The Mycelarch - heart of the hivemind - awaits at the network's core.",
+  "NpcIds": [
+    "myc_mycelarch",
+    "myc_shambler",
+    "myc_shambler"
+  ],
+  "CombatTier": "T5",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

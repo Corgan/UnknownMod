@@ -26,10 +26,10 @@ namespace UnknownMod.Core
     ///   3. External tool reads the .res file and deletes it.
     ///
     /// Endpoints:
-    ///   /ping             â†’ health check
-    ///   /run              â†’ compile & execute arbitrary C# code at runtime
-    ///   /hierarchy        â†’ detailed transform hierarchy dump with component info
-    ///   /zone-prefab      â†’ dump a MapManager zone prefab hierarchy
+    ///   /ping              health check
+    ///   /run               compile & execute arbitrary C# code at runtime
+    ///   /hierarchy         detailed transform hierarchy dump with component info
+    ///   /zone-prefab       dump a MapManager zone prefab hierarchy
     /// </summary>
     public static class RuntimeInspector
     {
@@ -136,10 +136,6 @@ namespace UnknownMod.Core
             try { File.Delete(cmdFilePath); } catch { }
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        //  REQUEST ROUTER
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-
         private static JObject _currentBody;
 
         private static string HandleRequest(string path, Dictionary<string, string> qs, JObject body = null)
@@ -174,10 +170,6 @@ namespace UnknownMod.Core
         private static string Json(object obj)
             => JsonConvert.SerializeObject(obj, Formatting.Indented,
                 new JsonSerializerSettings { ReferenceLoopHandling = ReferenceLoopHandling.Ignore });
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        //  ENDPOINT HANDLERS
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         private static string HandleHierarchy(string name, string sceneName, int depth)
         {
@@ -254,10 +246,6 @@ namespace UnknownMod.Core
 
             return Json(new { error = $"Zone prefab '{name}' not found in MapManager" });
         }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        //  RUN â€” runtime C# code execution
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         private static int _runCounter;
 
@@ -410,10 +398,6 @@ public class {className}
                 return Json(new { error = ex.GetType().Name, message = ex.Message, stack = ex.StackTrace });
             }
         }
-
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        //  HELPERS
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
         private static Transform FindFirst(Transform t, string lower)
         {

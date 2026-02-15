@@ -1,20 +1,20 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using UnityEngine;
 
 namespace UnknownMod.Definitions
 {
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
     //  NODE
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
 
     [Serializable]
-    public class NodeDef
+    public class NodeDef : IModEntity
     {
         public string NodeId = "";
+        [JsonIgnore] public string EntityId { get => NodeId; set => NodeId = value; }
         public string NodeName = "";
         public string Description = "";
         public float PosX = 0f;
@@ -35,7 +35,7 @@ namespace UnknownMod.Definitions
         /// <summary>EventRequirement ID that must be met to enter this node.</summary>
         public string NodeRequirementId = "";
 
-        // â”€â”€ Combat assignment (mirrors NodeData.NodeCombat[]) â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Combat assignment (mirrors NodeData.NodeCombat[]) ────────
         /// <summary>Combat IDs assigned to this node (game uses CombatData[]).</summary>
         public List<string> CombatIds = new();
         public bool ShouldSerializeCombatIds() => CombatIds.Count > 0;
@@ -61,7 +61,7 @@ namespace UnknownMod.Definitions
         public Enums.CombatTier CombatTier = Enums.CombatTier.T0;
         public int CombatPercent = -1;
 
-        // â”€â”€ Event assignment (mirrors NodeData.NodeEvent[]) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Event assignment (mirrors NodeData.NodeEvent[]) ──────────
         /// <summary>Event IDs assigned to this node (game uses EventData[]).</summary>
         public List<string> EventIds = new();
         public bool ShouldSerializeEventIds() => EventIds.Count > 0;
@@ -96,7 +96,7 @@ namespace UnknownMod.Definitions
         public List<int> NodeEventPercent = new();
         public bool ShouldSerializeNodeEventPercent() => NodeEventPercent.Count > 0;
 
-        // Connections â€” list of target node IDs
+        // Connections — list of target node IDs
         public List<string> Connections = new();
 
         // Conditional connections
@@ -109,13 +109,13 @@ namespace UnknownMod.Definitions
         public bool ShouldSerializeMapPieces() => MapPieces.Count > 0;
     }
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
     //  MAP PIECE (node-attached background/overlay sprite)
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
 
     /// <summary>
     /// A large sprite attached as a child of a node (named "mapPiece" in the game).
-    /// Inherits the node's requirement-gated visibility â€” when the node is shown/hidden,
+    /// Inherits the node's requirement-gated visibility — when the node is shown/hidden,
     /// the map piece follows. Used for background overlays (e.g. Dreadnought upper deck),
     /// room reveals, rift icons, etc.
     /// </summary>
@@ -153,9 +153,9 @@ namespace UnknownMod.Definitions
         public bool FlipY = false;
     }
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
     //  NODE CONNECTION REQUIREMENT
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
 
     [Serializable]
     public class NodeConnectionReqDef
@@ -164,21 +164,4 @@ namespace UnknownMod.Definitions
         public string RequirementId = "";
         public string IfNotNodeId = "";
     }
-
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    //  COMBAT ENCOUNTER
-
-
-    [Serializable]
-    public class RoadDef
-    {
-        public string FromNodeId = "";
-        public string ToNodeId = "";
-        public List<float[]> Waypoints = new();
-    }
-
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    //  SPRITE DEFINITION (reusable visual template for NPCs)
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 }

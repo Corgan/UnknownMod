@@ -1,16 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using UnityEngine;
 
 namespace UnknownMod.Definitions
 {
 
     [Serializable]
-    public class CardDef
+    public class CardDef : IModEntity
     {
         public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
         public string Name = "";
         public string Description = "";
         public string Fluff = "";
@@ -20,7 +20,7 @@ namespace UnknownMod.Definitions
         /// <summary>Base-game card ID to copy the card art sprite from.</summary>
         public string SpriteSource = "";
 
-        // â”€â”€ Card Classification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Card Classification ──────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardUpgraded CardUpgraded = Enums.CardUpgraded.No;
         [JsonConverter(typeof(StringEnumConverter))]
@@ -34,7 +34,7 @@ namespace UnknownMod.Definitions
         public int CardNumber = 0;
         public int MaxInDeck = 0;
 
-        // â”€â”€ Cost / Economy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Cost / Economy ───────────────────────────────────────
         public int EnergyCost = 0;
         public int EnergyCostOriginal = 0;
         public int EnergyCostForShow = 0;
@@ -43,7 +43,7 @@ namespace UnknownMod.Definitions
         public bool EnergyReductionToZeroPermanent = false;
         public bool EnergyReductionToZeroTemporal = false;
 
-        // â”€â”€ Flags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Flags ────────────────────────────────────────────────
         public bool Playable = false;
         public bool Visible = false;
         public bool ShowInTome = false;
@@ -60,7 +60,7 @@ namespace UnknownMod.Definitions
         public bool OnlyInWeekly = false;
         public string Sku = "";
 
-        // â”€â”€ Upgrade Paths â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Upgrade Paths ────────────────────────────────────────
         public string UpgradesTo1 = "";
         public string UpgradesTo2 = "";
         public string UpgradedFrom = "";
@@ -71,7 +71,7 @@ namespace UnknownMod.Definitions
         public string RelatedCard2 = "";
         public string RelatedCard3 = "";
 
-        // â”€â”€ Damage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Damage ───────────────────────────────────────────────
         public int Damage = 0;
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.DamageType DamageType = Enums.DamageType.None;
@@ -88,7 +88,7 @@ namespace UnknownMod.Definitions
         public int DamageSelf = 0;
         public int DamageSelf2 = 0;
 
-        // â”€â”€ Curses (applied to target) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Curses (applied to target) ───────────────────────────
         public string Curse = "";
         public int CurseCharges = 0;
         public int CurseChargesSides = 0;
@@ -97,7 +97,7 @@ namespace UnknownMod.Definitions
         public string Curse3 = "";
         public int Curse3Charges = 0;
 
-        // â”€â”€ Auras (applied to target) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Auras (applied to target) ────────────────────────────
         public string Aura = "";
         public int AuraCharges = 0;
         public string Aura2 = "";
@@ -105,7 +105,7 @@ namespace UnknownMod.Definitions
         public string Aura3 = "";
         public int Aura3Charges = 0;
 
-        // â”€â”€ Self auras/curses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Self auras/curses ────────────────────────────────────
         public string AuraSelf = "";
         public int AuraSelfCharges = 0;
         public string AuraSelf2 = "";
@@ -119,7 +119,7 @@ namespace UnknownMod.Definitions
         public string CurseSelf3 = "";
         public int CurseSelf3Charges = 0;
 
-        // â”€â”€ Heal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Heal ─────────────────────────────────────────────────
         public int Heal = 0;
         public int HealSides = 0;
         public int HealSelf = 0;
@@ -133,7 +133,7 @@ namespace UnknownMod.Definitions
         public string HealAuraCurseName3 = "";
         public string HealAuraCurseName4 = "";
 
-        // â”€â”€ Aura/curse manipulation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Aura/curse manipulation ──────────────────────────────
         public int TransferCurses = 0;
         public int StealAuras = 0;
         public int ReduceCurses = 0;
@@ -141,7 +141,7 @@ namespace UnknownMod.Definitions
         public int IncreaseCurses = 0;
         public int IncreaseAuras = 0;
 
-        // â”€â”€ Targeting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Targeting ────────────────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardTargetSide TargetSide = Enums.CardTargetSide.Enemy;
         [JsonConverter(typeof(StringEnumConverter))]
@@ -149,7 +149,7 @@ namespace UnknownMod.Definitions
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardTargetPosition TargetPos = Enums.CardTargetPosition.Anywhere;
 
-        // â”€â”€ Effect Repeat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Effect Repeat ────────────────────────────────────────
         public int EffectRepeat = 1;
         public float EffectRepeatDelay = 0f;
         public int EffectRepeatEnergyBonus = 0;
@@ -158,7 +158,7 @@ namespace UnknownMod.Definitions
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.EffectRepeatTarget EffectRepeatTarget = Enums.EffectRepeatTarget.NoRepeat;
 
-        // â”€â”€ Misc Mechanics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Misc Mechanics ───────────────────────────────────────
         public bool MoveToCenter = false;
         public int SelfHealthLoss = 0;
         public int PushTarget = 0;
@@ -172,7 +172,7 @@ namespace UnknownMod.Definitions
         public string EffectRequired = "";
         public float SelfKillHiddenSeconds = 0f;
 
-        // â”€â”€ Discard Options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Discard Options ──────────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardType DiscardCardType = Enums.CardType.None;
         [JsonProperty(ItemConverterType = typeof(StringEnumConverter))]
@@ -181,7 +181,7 @@ namespace UnknownMod.Definitions
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardPlace DiscardCardPlace = Enums.CardPlace.Discard;
 
-        // â”€â”€ Add Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Add Card ─────────────────────────────────────────────
         public int AddCard = 0;
         public string AddCardId = "";
         [JsonConverter(typeof(StringEnumConverter))]
@@ -201,12 +201,12 @@ namespace UnknownMod.Definitions
         public bool AddVanishToDeck = false;
         public List<string> AddCardList = new();  // card IDs
 
-        // â”€â”€ Look (Scry) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Look (Scry) ─────────────────────────────────────────
         public int LookCards = 0;
         public int LookCardsDiscardUpTo = 0;
         public int LookCardsVanishUpTo = 0;
 
-        // â”€â”€ Summon â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Summon ───────────────────────────────────────────────
         public string SummonUnitId = "";
         public int SummonNum = 0;
         public string SummonAura = "";       // AC ID
@@ -218,14 +218,14 @@ namespace UnknownMod.Definitions
         public bool Evolve = false;
         public bool Metamorph = false;
 
-        // â”€â”€ AC Energy Bonus â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── AC Energy Bonus ──────────────────────────────────────
         public string AcEnergyBonus = "";    // AC ID
         public int AcEnergyBonusQuantity = 0;
         public string AcEnergyBonus2 = "";   // AC ID
         public int AcEnergyBonus2Quantity = 0;
         public bool ChooseOneOfAvailableAuras = false;
 
-        // â”€â”€ Special Value System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Special Value System ─────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardSpecialValue SpecialValueGlobal = Enums.CardSpecialValue.None;
         public float SpecialValueModifierGlobal = 0f;
@@ -239,7 +239,7 @@ namespace UnknownMod.Definitions
         public float SpecialValueModifier2 = 0f;
         public string SpecialAuraCurseName2 = "";       // AC ID
 
-        // â”€â”€ Special Value Scaling Flags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Special Value Scaling Flags ──────────────────────────
         public bool DamageSpecialValueGlobal = false;
         public bool DamageSpecialValue1 = false;
         public bool DamageSpecialValue2 = false;
@@ -258,7 +258,7 @@ namespace UnknownMod.Definitions
         public bool EnergyRechargeSpecialValueGlobal = false;
         public bool DrawCardSpecialValueGlobal = false;
 
-        // â”€â”€ Aura/Curse Charges Special Value Flags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Aura/Curse Charges Special Value Flags ───────────────
         public bool AuraChargesSpecialValueGlobal = false;
         public bool AuraChargesSpecialValue1 = false;
         public bool AuraChargesSpecialValue2 = false;
@@ -278,7 +278,7 @@ namespace UnknownMod.Definitions
         public bool CurseCharges3SpecialValue1 = false;
         public bool CurseCharges3SpecialValue2 = false;
 
-        // â”€â”€ FX / Effects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── FX / Effects ─────────────────────────────────────────
         public string EffectCaster = "";
         public string EffectTarget = "";
         public string EffectPreAction = "";
@@ -292,7 +292,7 @@ namespace UnknownMod.Definitions
         public Enums.EffectTrailAngle EffectTrailAngle = Enums.EffectTrailAngle.Horizontal;
         public float EffectPostTargetDelay = 0f;
 
-        // â”€â”€ Pet System â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Pet System ───────────────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.ActivePets PetActivation = Enums.ActivePets.None;
         [JsonConverter(typeof(StringEnumConverter))]
@@ -308,7 +308,7 @@ namespace UnknownMod.Definitions
         public bool PetTemporalMoveToBack = false;
         public float PetTemporalFadeOutDelay = 0f;
 
-        // â”€â”€ Pet Visuals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Pet Visuals ──────────────────────────────────────────
         public bool PetFront = true;
         public bool PetInvert = true;
         public float PetOffsetX = 0f;
@@ -316,30 +316,10 @@ namespace UnknownMod.Definitions
         public float PetSizeX = 1f;
         public float PetSizeY = 1f;
 
-        // â”€â”€ Upgrade params (for auto-generated A variants) â”€â”€â”€â”€â”€â”€â”€
+        // ── Upgrade params (for auto-generated A variants) ───────
         public float UpgDamageMult = 1.3f;
         public int UpgBonusCurseCharges = 1;
         public int UpgBonusAuraCharges = 1;
         public int UpgBonusHeal = 3;
     }
-
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    //  ITEM (equipment / reward)
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    //  SPECIAL VALUE (mirrors game SpecialValues struct)
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    [Serializable]
-    public class SpecialValueDef
-    {
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.SpecialValueModifierName Name = Enums.SpecialValueModifierName.RuneCharges;
-        public bool Use = false;
-        public float Multiplier = 0f;
-    }
-
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    //  ITEM
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 }

@@ -1,16 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using UnityEngine;
 
 namespace UnknownMod.Definitions
 {
     [Serializable]
-    public class ItemDef
+    public class ItemDef : IModEntity
     {
-        // â”€â”€ Identity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Identity ─────────────────────────────────────────────
         public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
         public string Name = "";
         /// <summary>Base-game card ID to copy the item card art sprite from.</summary>
         public string SpriteSource = "";
@@ -21,7 +21,7 @@ namespace UnknownMod.Definitions
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardRarity Rarity = Enums.CardRarity.Common;
 
-        // â”€â”€ Activation / Requisite â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Activation / Requisite ───────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.EventActivation Activation = Enums.EventActivation.None;
         public bool ActivationOnlyOnHeroes = false;
@@ -50,7 +50,7 @@ namespace UnknownMod.Definitions
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.ActivePets PetActivation = Enums.ActivePets.None;
 
-        // â”€â”€ Damage Bonuses (passive stat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Damage Bonuses (passive stat) ────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.DamageType DamageFlatBonus = Enums.DamageType.None;
         public int DamageFlatBonusValue = 0;
@@ -75,7 +75,7 @@ namespace UnknownMod.Definitions
         public Enums.DamageType DamagePercentBonus3 = Enums.DamageType.None;
         public float DamagePercentBonusValue3 = 0f;
 
-        // â”€â”€ Resist Bonuses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Resist Bonuses ───────────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.DamageType ResistModified1 = Enums.DamageType.None;
         public int ResistModifiedValue1 = 0;
@@ -88,7 +88,7 @@ namespace UnknownMod.Definitions
         public Enums.DamageType ResistModified3 = Enums.DamageType.None;
         public int ResistModifiedValue3 = 0;
 
-        // â”€â”€ Character Stat Mods â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Character Stat Mods ──────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CharacterStat CharacterStatModified = Enums.CharacterStat.None;
         public int CharacterStatModifiedValue = 0;
@@ -103,7 +103,7 @@ namespace UnknownMod.Definitions
 
         public int MaxHealth = 0;
 
-        // â”€â”€ Heal Bonuses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Heal Bonuses ─────────────────────────────────────────
         public int HealFlatBonus = 0;
         public float HealPercentBonus = 0f;
         public int HealReceivedFlatBonus = 0;
@@ -116,12 +116,12 @@ namespace UnknownMod.Definitions
         public bool HealSelfTeamPerDamageDonePercent = false;
         public int HealBasedOnAuraCurse = 0;
 
-        // â”€â”€ Energy / Draw â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Energy / Draw ────────────────────────────────────────
         public int EnergyQuantity = 0;
         public int DrawCards = 0;
         public bool DrawMultiplyByEnergyUsed = false;
 
-        // â”€â”€ On-activation AuraCurse (target) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── On-activation AuraCurse (target) ─────────────────────
         public string AuracurseGain1 = "";
         public int AuracurseGainValue1 = 0;
         public SpecialValueDef AuracurseGain1SpecialValue;
@@ -138,7 +138,7 @@ namespace UnknownMod.Definitions
         public bool Acg3MultiplyByEnergyUsed = false;
         public bool ChooseOneACToGain = false;
 
-        // â”€â”€ On-activation AuraCurse (self) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── On-activation AuraCurse (self) ───────────────────────
         public string AuracurseGainSelf1 = "";
         public int AuracurseGainSelfValue1 = 0;
         public string AuracurseGainSelf2 = "";
@@ -146,7 +146,7 @@ namespace UnknownMod.Definitions
         public string AuracurseGainSelf3 = "";
         public int AuracurseGainSelfValue3 = 0;
 
-        // â”€â”€ AC Dispel / Purge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── AC Dispel / Purge ────────────────────────────────────
         public string AuracurseHeal1 = "";    // AC ID to dispel/purge
         public string AuracurseHeal2 = "";
         public string AuracurseHeal3 = "";
@@ -159,18 +159,18 @@ namespace UnknownMod.Definitions
         public int ChanceToDispelSelf = 0;
         public int ChanceToDispelNumSelf = 0;
 
-        // â”€â”€ Passive AC Bonuses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Passive AC Bonuses ───────────────────────────────────
         public string AuracurseBonus1 = "";
         public int AuracurseBonusValue1 = 0;
         public string AuracurseBonus2 = "";
         public int AuracurseBonusValue2 = 0;
         public int IncreaseAurasSelf = 0;
 
-        // â”€â”€ AC Immunities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── AC Immunities ────────────────────────────────────────
         public string AuracurseImmune1 = "";
         public string AuracurseImmune2 = "";
 
-        // â”€â”€ Card Gain â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Card Gain ────────────────────────────────────────────
         public int CardNum = 0;
         public string CardToGain = "";        // Card ID
 
@@ -181,7 +181,7 @@ namespace UnknownMod.Definitions
         public Enums.CardPlace CardPlace = Enums.CardPlace.Hand;
         public List<string> CardToGainList = new();
 
-        // â”€â”€ Cost / Economy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Cost / Economy ───────────────────────────────────────
         public bool CostZero = false;
         public int CostReduction = 0;
         public int CardsReduced = 0;
@@ -193,11 +193,11 @@ namespace UnknownMod.Definitions
         public bool CostReducePermanent = false;
         public bool ReduceHighestCost = false;
 
-        // â”€â”€ Rewards / Discounts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Rewards / Discounts ──────────────────────────────────
         public int PercentRetentionEndGame = 0;
         public int PercentDiscountShop = 0;
 
-        // â”€â”€ Damage To Target (enchantment) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Damage To Target (enchantment) ───────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.DamageType DamageToTargetType = Enums.DamageType.None;
         public int DamageToTarget = 0;
@@ -212,7 +212,7 @@ namespace UnknownMod.Definitions
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.DamageType ModifiedDamageType = Enums.DamageType.None;
 
-        // â”€â”€ Flags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Flags ────────────────────────────────────────────────
         public bool CursedItem = false;
         public bool DropOnly = false;
         public bool QuestItem = false;
@@ -224,7 +224,7 @@ namespace UnknownMod.Definitions
         public bool OnlyAddItemToNPCs = false;
         public bool AddVanishToDeck = false;
 
-        // â”€â”€ Enchantment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Enchantment ──────────────────────────────────────────
         public bool IsEnchantment = false;
         public bool UseTheNextInsteadWhenYouPlay = false;
         public int DestroyAfterUses = 0;
@@ -232,55 +232,17 @@ namespace UnknownMod.Definitions
         public bool DestroyEndOfTurn = false;
         public bool CastEnchantmentOnFinishSelfCast = false;
 
-        // â”€â”€ Custom AC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Custom AC ────────────────────────────────────────────
         public string AuracurseCustomString = "";
         public string AuracurseCustomAC = "";  // AC ID
         public int AuracurseCustomModValue1 = 0;
         public int AuracurseCustomModValue2 = 0;
 
-        // â”€â”€ FX / Effects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── FX / Effects ─────────────────────────────────────────
         public string EffectItemOwner = "";
         public string EffectCaster = "";
         public float EffectCasterDelay = 0f;
         public string EffectTarget = "";
         public float EffectTargetDelay = 0f;
     }
-
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    //  LOOT TABLE
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-    [Serializable]
-    public class LootDef
-    {
-        public string Id = "";
-        public int NumItems = 1;
-        public int GoldQuantity = 0;
-        public bool AllowDropOnlyItems = false;
-        public float PercentUncommon = 0f;
-        public float PercentRare = 0f;
-        public float PercentEpic = 0f;
-        public float PercentMythic = 0f;
-        public List<LootItemDef> Items = new();
-    }
-
-    [Serializable]
-    public class LootItemDef
-    {
-        public string CardId = "";
-        public float Percent = 0f;
-
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.CardType LootType = Enums.CardType.None;
-
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.CardRarity LootRarity = Enums.CardRarity.Common;
-
-        public string LootMisc = "";
-    }
-
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    //  ROAD (editor visual data)
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 }

@@ -1,21 +1,21 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
-using UnityEngine;
 
 namespace UnknownMod.Definitions
 {
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
     //  EVENT
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
 
     [Serializable]
-    public class EventDef
+    public class EventDef : IModEntity
     {
         public string EventId = "";
+        [JsonIgnore] public string EntityId { get => EventId; set => EventId = value; }
         public string EventName = "";
         public string Description = "";
         public string DescriptionAction = "";
@@ -31,7 +31,7 @@ namespace UnknownMod.Definitions
         /// <summary>EventRequirement ID needed to trigger this event.</summary>
         public string RequirementId = "";
 
-        /// <summary>SubClass ID â€” limits this event to a specific hero class.</summary>
+        /// <summary>SubClass ID — limits this event to a specific hero class.</summary>
         public string RequiredClassId = "";
         public bool ShouldSerializeRequiredClassId() => !string.IsNullOrEmpty(RequiredClassId);
 
@@ -151,7 +151,7 @@ namespace UnknownMod.Definitions
         public string RequirementId = "";
         public string RequirementBlockedId = "";
 
-        /// <summary>SubClass ID â€” only show this reply for a specific hero class.</summary>
+        /// <summary>SubClass ID — only show this reply for a specific hero class.</summary>
         public string RequiredClassId = "";
         public bool ShouldSerializeRequiredClassId() => !string.IsNullOrEmpty(RequiredClassId);
 
@@ -202,7 +202,7 @@ namespace UnknownMod.Definitions
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardType RollCard = Enums.CardType.None;
 
-        // â”€â”€ Outcome branches â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Outcome branches ─────────────────────────────────────
         public OutcomeDef Ss = new();
         public OutcomeDef Fl = new();
         public OutcomeDef Ssc = new();
@@ -403,9 +403,4 @@ namespace UnknownMod.Definitions
             writer.WritePropertyName($"{p}UnlockSteamAchievement"); writer.WriteValue(o.UnlockSteamAchievement);
         }
     }
-
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    //  NPC
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 }

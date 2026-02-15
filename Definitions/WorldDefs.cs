@@ -9,10 +9,11 @@ namespace UnknownMod.Definitions
     // ───────────────────────────────────────────────────────────────
 
     [Serializable]
-    public class RequirementDef
+    public class RequirementDef : IModEntity
     {
         // ── Identity ─────────────────────────────────────────────
         public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
         public string RequirementName = "";
         public string Description = "";
 
@@ -36,10 +37,11 @@ namespace UnknownMod.Definitions
     // ───────────────────────────────────────────────────────────────
 
     [Serializable]
-    public class CardbackDef
+    public class CardbackDef : IModEntity
     {
         // ── Identity ─────────────────────────────────────────────
         public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
         public string CardbackName = "";
         public string CardbackTextId = "";
 
@@ -70,10 +72,11 @@ namespace UnknownMod.Definitions
     // ───────────────────────────────────────────────────────────────
 
     [Serializable]
-    public class TierRewardDef
+    public class TierRewardDef : IModEntity
     {
         // ── Identity ─────────────────────────────────────────────
-        public string Id = "";             // keyed by tier number as string
+        public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }             // keyed by tier number as string
         public int Tier = 0;
 
         // ── Rewards ──────────────────────────────────────────────

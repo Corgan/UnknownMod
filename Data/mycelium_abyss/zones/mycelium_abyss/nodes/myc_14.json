@@ -12,7 +12,7 @@
   "VisibleIfNotRequirement": false,
   "NodeGround": "None",
   "NodeRequirementId": "",
-  "CombatId": "cmyc_boss",
+  "CombatId": "cmyc_14",
   "CombatTier": "T5",
   "CombatPercent": 100,
   "EventId": "",

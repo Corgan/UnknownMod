@@ -43,7 +43,7 @@ namespace UnknownMod.Editor.Tabs
 
         private void DrawHeroPreview(Rect rect)
         {
-            string id = _editor.HeroEdit?.SelectedHeroId;
+            string id = _editor.HeroEdit?.SelectedId;
             HeroDef def = null;
             var proj = ModManagerPanel.ActiveProject;
             if (proj != null && !string.IsNullOrEmpty(id))
@@ -56,7 +56,7 @@ namespace UnknownMod.Editor.Tabs
 
         private void DrawTraitPreview(Rect rect)
         {
-            string id = _editor.TraitEdit?.SelectedTraitId;
+            string id = _editor.TraitEdit?.SelectedId;
             TraitDef def = null;
             var proj = ModManagerPanel.ActiveProject;
             if (proj != null && !string.IsNullOrEmpty(id))
@@ -69,7 +69,7 @@ namespace UnknownMod.Editor.Tabs
 
         private void DrawSkinPreview(Rect rect)
         {
-            string id = _editor.SkinEdit?.SelectedSkinId;
+            string id = _editor.SkinEdit?.SelectedId;
             SkinDef def = null;
             var proj = ModManagerPanel.ActiveProject;
             if (proj != null && !string.IsNullOrEmpty(id))
@@ -136,11 +136,11 @@ namespace UnknownMod.Editor.Tabs
             switch (ActiveSubTab)
             {
                 case SubTab.Heroes:
-                    if (_editor.HeroEdit?.SelectedHeroId != null)
+                    if (_editor.HeroEdit?.SelectedId != null)
                     {
                         HeroDef heroDef = null;
-                        if (!proj.Heroes.TryGetValue(_editor.HeroEdit.SelectedHeroId, out heroDef))
-                            proj.HeroPatches.TryGetValue(_editor.HeroEdit.SelectedHeroId, out heroDef);
+                        if (!proj.Heroes.TryGetValue(_editor.HeroEdit.SelectedId, out heroDef))
+                            proj.HeroPatches.TryGetValue(_editor.HeroEdit.SelectedId, out heroDef);
                         if (heroDef != null)
                         {
                             try { var sc = DataHelper.MakeFullHero(heroDef); DataHelper.RegisterHero(sc); }
@@ -149,11 +149,11 @@ namespace UnknownMod.Editor.Tabs
                     }
                     break;
                 case SubTab.Traits:
-                    if (_editor.TraitEdit?.SelectedTraitId != null)
+                    if (_editor.TraitEdit?.SelectedId != null)
                     {
                         TraitDef traitDef = null;
-                        if (!proj.Traits.TryGetValue(_editor.TraitEdit.SelectedTraitId, out traitDef))
-                            proj.TraitPatches.TryGetValue(_editor.TraitEdit.SelectedTraitId, out traitDef);
+                        if (!proj.Traits.TryGetValue(_editor.TraitEdit.SelectedId, out traitDef))
+                            proj.TraitPatches.TryGetValue(_editor.TraitEdit.SelectedId, out traitDef);
                         if (traitDef != null)
                         {
                             try { var t = DataHelper.MakeTrait(traitDef); DataHelper.RegisterTrait(t); }
@@ -162,11 +162,11 @@ namespace UnknownMod.Editor.Tabs
                     }
                     break;
                 case SubTab.Skins:
-                    if (_editor.SkinEdit?.SelectedSkinId != null)
+                    if (_editor.SkinEdit?.SelectedId != null)
                     {
                         SkinDef skinDef = null;
-                        if (!proj.Skins.TryGetValue(_editor.SkinEdit.SelectedSkinId, out skinDef))
-                            proj.SkinPatches.TryGetValue(_editor.SkinEdit.SelectedSkinId, out skinDef);
+                        if (!proj.Skins.TryGetValue(_editor.SkinEdit.SelectedId, out skinDef))
+                            proj.SkinPatches.TryGetValue(_editor.SkinEdit.SelectedId, out skinDef);
                         if (skinDef != null)
                         {
                             try { var s = DataHelper.MakeSkin(skinDef); DataHelper.RegisterSkin(s); }
@@ -175,11 +175,11 @@ namespace UnknownMod.Editor.Tabs
                     }
                     break;
                 case SubTab.HeroData:
-                    if (_editor.HeroDataEdit?.SelectedHeroDataId != null)
+                    if (_editor.HeroDataEdit?.SelectedId != null)
                     {
                         HeroDataDef hdDef = null;
-                        if (!proj.HeroDataEntries.TryGetValue(_editor.HeroDataEdit.SelectedHeroDataId, out hdDef))
-                            proj.HeroDataPatches.TryGetValue(_editor.HeroDataEdit.SelectedHeroDataId, out hdDef);
+                        if (!proj.HeroDataEntries.TryGetValue(_editor.HeroDataEdit.SelectedId, out hdDef))
+                            proj.HeroDataPatches.TryGetValue(_editor.HeroDataEdit.SelectedId, out hdDef);
                         if (hdDef != null)
                         {
                             try { var hd = DataHelper.MakeHeroData(hdDef); DataHelper.RegisterHeroData(hd); }

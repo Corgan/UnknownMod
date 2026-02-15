@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -8,9 +8,10 @@ namespace UnknownMod.Definitions
 {
     /// <summary>Top-level container for a complete zone definition.</summary>
     [Serializable]
-    public class ZoneDef
+    public class ZoneDef : IModEntity
     {
         public string ZoneId = "";
+        [JsonIgnore] public string EntityId { get => ZoneId; set => ZoneId = value; }
         public string ZoneName = "";
 
         /// <summary>Short prefix used for entity IDs (e.g. "myc" for mycelium_abyss).</summary>
@@ -77,9 +78,9 @@ namespace UnknownMod.Definitions
         public bool ShouldSerializeSpriteOverrides() => false; // never write to JSON
     }
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
     //  VISUAL LAYER (map background / overlay / decoration)
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
 
     [Serializable]
     public class VisualLayerDef
@@ -145,8 +146,38 @@ namespace UnknownMod.Definitions
         Container,      // Empty transform with children (thunder group, Castle Zoom, etc.)
     }
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    //  NODE
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ───────────────────────────────────────────────────────────────
+    //  ZONE PATCH
+    // ───────────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Represents modifications to a base-game zone.
+    /// Contains new entities to add and existing entities to override.
+    /// The zone's base data is read from Globals.Instance at build time.
+    /// </summary>
+    [Serializable]
+    public class ZonePatchDef : IModEntity
+    {
+        /// <summary>Base-game zone ID being patched (e.g. "Aquarfall").</summary>
+        public string TargetZoneId = "";
+        [JsonIgnore] public string EntityId { get => TargetZoneId; set => TargetZoneId = value; }
+
+        /// <summary>Auto-detected prefix for new entity IDs (e.g. "aqua_").</summary>
+        public string DetectedPrefix = "";
+
+        /// <summary>Next available node number for new entities.</summary>
+        public int NextNodeNumber = 0;
+
+        /// <summary>Added or modified nodes.</summary>
+        public Dictionary<string, NodeDef> Nodes = new();
+
+        /// <summary>Added or modified encounters.</summary>
+        public Dictionary<string, CombatDef> Encounters = new();
+
+        /// <summary>Added or modified events.</summary>
+        public Dictionary<string, EventDef> Events = new();
+
+        /// <summary>Modified roads.</summary>
+        public Dictionary<string, RoadDef> Roads = new();
+    }
 }
