@@ -10,7 +10,7 @@ namespace UnknownMod.Editor.Tabs
     public class WorldTabEditor
     {
         private readonly ModEditor _editor;
-        public enum SubTab { Perks, PerkNodes, Requirements, Cardbacks, TierRewards }
+        public enum SubTab { Perks, PerkNodes, Requirements, Cardbacks, TierRewards, Packs, PlayerPacks }
         public SubTab ActiveSubTab { get; set; } = SubTab.Perks;
 
         public WorldTabEditor(ModEditor editor) => _editor = editor;
@@ -38,6 +38,12 @@ namespace UnknownMod.Editor.Tabs
                     break;
                 case SubTab.TierRewards:
                     DrawTierRewardPreview(rect);
+                    break;
+                case SubTab.Packs:
+                    EditorStyles.ViewportBackground(rect);
+                    break;
+                case SubTab.PlayerPacks:
+                    EditorStyles.ViewportBackground(rect);
                     break;
             }
         }
@@ -118,6 +124,12 @@ namespace UnknownMod.Editor.Tabs
                 case SubTab.TierRewards:
                     _editor.TierRewardEdit?.DrawPanel();
                     break;
+                case SubTab.Packs:
+                    _editor.PackEdit?.DrawPanel();
+                    break;
+                case SubTab.PlayerPacks:
+                    _editor.CardPlayerPackEdit?.DrawPanel();
+                    break;
             }
         }
 
@@ -143,6 +155,12 @@ namespace UnknownMod.Editor.Tabs
                     break;
                 case SubTab.TierRewards:
                     changed = _editor.TierRewardEdit != null && _editor.TierRewardEdit.HandleChanges();
+                    break;
+                case SubTab.Packs:
+                    changed = _editor.PackEdit != null && _editor.PackEdit.HandleChanges();
+                    break;
+                case SubTab.PlayerPacks:
+                    changed = _editor.CardPlayerPackEdit != null && _editor.CardPlayerPackEdit.HandleChanges();
                     break;
             }
 
@@ -222,6 +240,45 @@ namespace UnknownMod.Editor.Tabs
                         }
                     }
                     break;
+                case SubTab.Packs:
+                    if (_editor.PackEdit?.SelectedPackId != null)
+                    {
+                        PackDef packDef = null;
+                        if (!proj.Packs.TryGetValue(_editor.PackEdit.SelectedPackId, out packDef))
+                            proj.PackPatches.TryGetValue(_editor.PackEdit.SelectedPackId, out packDef);
+                        if (packDef != null)
+                        {
+                            try { var p = DataHelper.MakePack(packDef); DataHelper.RegisterPack(p); }
+                            catch (System.Exception ex) { Plugin.Log.LogWarning($"[WorldTab] Pack hot-reload failed: {ex.Message}"); }
+                        }
+                    }
+                    break;
+                case SubTab.PlayerPacks:
+                    // Hot-reload player packs
+                    if (_editor.CardPlayerPackEdit?.SelectedPlayerPackId != null)
+                    {
+                        CardPlayerPackDef cppDef = null;
+                        if (!proj.CardPlayerPacks.TryGetValue(_editor.CardPlayerPackEdit.SelectedPlayerPackId, out cppDef))
+                            proj.CardPlayerPackPatches.TryGetValue(_editor.CardPlayerPackEdit.SelectedPlayerPackId, out cppDef);
+                        if (cppDef != null)
+                        {
+                            try { var cp = DataHelper.MakeCardPlayerPack(cppDef); DataHelper.RegisterCardPlayerPack(cp); }
+                            catch (System.Exception ex) { Plugin.Log.LogWarning($"[WorldTab] CardPlayerPack hot-reload failed: {ex.Message}"); }
+                        }
+                    }
+                    // Hot-reload pairs packs
+                    if (_editor.CardPlayerPackEdit?.SelectedPairsPackId != null)
+                    {
+                        CardPlayerPairsPackDef cppDef2 = null;
+                        if (!proj.CardPlayerPairsPacks.TryGetValue(_editor.CardPlayerPackEdit.SelectedPairsPackId, out cppDef2))
+                            proj.CardPlayerPairsPackPatches.TryGetValue(_editor.CardPlayerPackEdit.SelectedPairsPackId, out cppDef2);
+                        if (cppDef2 != null)
+                        {
+                            try { var cpp = DataHelper.MakeCardPlayerPairsPack(cppDef2); DataHelper.RegisterCardPlayerPairsPack(cpp); }
+                            catch (System.Exception ex) { Plugin.Log.LogWarning($"[WorldTab] CardPlayerPairsPack hot-reload failed: {ex.Message}"); }
+                        }
+                    }
+                    break;
             }
         }
 
@@ -233,6 +290,8 @@ namespace UnknownMod.Editor.Tabs
             SubTabButton("Reqs", SubTab.Requirements);
             SubTabButton("Cardbacks", SubTab.Cardbacks);
             SubTabButton("Tiers", SubTab.TierRewards);
+            SubTabButton("Packs", SubTab.Packs);
+            SubTabButton("PlrPacks", SubTab.PlayerPacks);
             GUILayout.EndHorizontal();
         }
 

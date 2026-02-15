@@ -11,7 +11,7 @@ namespace UnknownMod.Editor.Tabs
     public class CharacterTabEditor
     {
         private readonly ModEditor _editor;
-        public enum SubTab { Heroes, Traits, Skins }
+        public enum SubTab { Heroes, Traits, Skins, HeroData }
         public SubTab ActiveSubTab { get; set; } = SubTab.Heroes;
 
         public CharacterTabEditor(ModEditor editor) => _editor = editor;
@@ -32,6 +32,9 @@ namespace UnknownMod.Editor.Tabs
                     break;
                 case SubTab.Skins:
                     DrawSkinPreview(rect);
+                    break;
+                case SubTab.HeroData:
+                    EditorStyles.ViewportBackground(rect);
                     break;
             }
         }
@@ -93,6 +96,9 @@ namespace UnknownMod.Editor.Tabs
                 case SubTab.Skins:
                     _editor.SkinEdit?.DrawPanel();
                     break;
+                case SubTab.HeroData:
+                    _editor.HeroDataEdit?.DrawPanel();
+                    break;
             }
         }
 
@@ -112,6 +118,9 @@ namespace UnknownMod.Editor.Tabs
                     break;
                 case SubTab.Skins:
                     changed = _editor.SkinEdit != null && _editor.SkinEdit.HandleChanges();
+                    break;
+                case SubTab.HeroData:
+                    changed = _editor.HeroDataEdit != null && _editor.HeroDataEdit.HandleChanges();
                     break;
             }
 
@@ -165,6 +174,19 @@ namespace UnknownMod.Editor.Tabs
                         }
                     }
                     break;
+                case SubTab.HeroData:
+                    if (_editor.HeroDataEdit?.SelectedHeroDataId != null)
+                    {
+                        HeroDataDef hdDef = null;
+                        if (!proj.HeroDataEntries.TryGetValue(_editor.HeroDataEdit.SelectedHeroDataId, out hdDef))
+                            proj.HeroDataPatches.TryGetValue(_editor.HeroDataEdit.SelectedHeroDataId, out hdDef);
+                        if (hdDef != null)
+                        {
+                            try { var hd = DataHelper.MakeHeroData(hdDef); DataHelper.RegisterHeroData(hd); }
+                            catch (System.Exception ex) { Plugin.Log.LogWarning($"[CharTab] HeroData hot-reload failed: {ex.Message}"); }
+                        }
+                    }
+                    break;
             }
         }
 
@@ -174,6 +196,7 @@ namespace UnknownMod.Editor.Tabs
             SubTabButton("Heroes", SubTab.Heroes);
             SubTabButton("Traits", SubTab.Traits);
             SubTabButton("Skins", SubTab.Skins);
+            SubTabButton("HeroData", SubTab.HeroData);
             GUILayout.EndHorizontal();
         }
 

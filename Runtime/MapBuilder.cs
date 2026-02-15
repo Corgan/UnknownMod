@@ -147,7 +147,7 @@ namespace UnknownMod.Runtime
 
             var nodesGO = new GameObject("Nodes");
             nodesGO.transform.SetParent(root.transform, false);
-            nodesGO.transform.localPosition = new Vector3(0f, 0f, -2f);
+            nodesGO.transform.localPosition = new Vector3(zoneDef.NodesOffsetX, zoneDef.NodesOffsetY, -2f);
 
             var nodePositions = GetNodePositions(zoneDef);
             foreach (var kvp in nodePositions)
@@ -161,10 +161,37 @@ namespace UnknownMod.Runtime
                 var nodeComp = nodeGO.GetComponent<Node>();
                 if (nodeComp != null)
                     nodeComp.nodeData = Globals.Instance.GetNodeData(kvp.Key);
+
+                // Spawn mapPiece children (requirement-gated sprite overlays)
+                if (zoneDef.Nodes.TryGetValue(kvp.Key, out var nd))
+                {
+                    foreach (var mp in nd.MapPieces)
+                    {
+                        Sprite mpSprite = FindMapPieceSprite(mp.SpriteName);
+                        if (mpSprite == null) continue;
+
+                        var mpGO = new GameObject("mapPiece");
+                        mpGO.transform.SetParent(nodeGO.transform, false);
+                        mpGO.transform.localPosition = new Vector3(mp.PosX, mp.PosY, 0f);
+                        mpGO.transform.localScale = new Vector3(mp.ScaleX, mp.ScaleY, 1f);
+                        var sr = mpGO.AddComponent<SpriteRenderer>();
+                        sr.sprite = mpSprite;
+                        sr.sortingOrder = mp.SortingOrder;
+                        sr.color = new Color(mp.ColorR, mp.ColorG, mp.ColorB, mp.ColorA);
+                        sr.flipX = mp.FlipX;
+                        sr.flipY = mp.FlipY;
+                        if (!string.IsNullOrEmpty(mp.SortingLayer))
+                        {
+                            try { sr.sortingLayerName = mp.SortingLayer; }
+                            catch { }
+                        }
+                    }
+                }
             }
 
             var roadsGO = new GameObject("Roads");
             roadsGO.transform.SetParent(root.transform, false);
+            roadsGO.transform.localPosition = new Vector3(zoneDef.RoadsOffsetX, zoneDef.RoadsOffsetY, 0f);
             CreateMapRoads(roadsGO.transform, nodePositions, zoneDef);
 
             // Attach MapEditor to the zone map root (ModEditor is persistent)
@@ -220,13 +247,13 @@ namespace UnknownMod.Runtime
 
                 Vector3 posA = nodePositions[road.FromNodeId];
                 Vector3 posB = nodePositions[road.ToNodeId];
-                var waypoints = road.Waypoints.Select(wp => new Vector3(wp[0], wp[1], 0f)).ToArray();
-
-                int total = 2 + waypoints.Length;
-                var pts = new Vector3[total];
-                pts[0] = posA;
-                for (int i = 0; i < waypoints.Length; i++) pts[i + 1] = waypoints[i];
-                pts[total - 1] = posB;
+                // Waypoints now contain ALL road points (including endpoints)
+                var pts = road.Waypoints.Select(wp => new Vector3(wp[0], wp[1], 0f)).ToArray();
+                if (pts.Length < 2)
+                {
+                    // Fallback: if somehow no points, create endpoints at nodes
+                    pts = new Vector3[] { posA, posB };
+                }
 
                 var go = new GameObject(kvp.Key);
                 go.transform.SetParent(roadsParent, false);
@@ -234,8 +261,8 @@ namespace UnknownMod.Runtime
 
                 var lr = go.AddComponent<LineRenderer>();
                 lr.useWorldSpace = false;
-                lr.positionCount = total;
-                for (int i = 0; i < total; i++) lr.SetPosition(i, pts[i]);
+                lr.positionCount = pts.Length;
+                for (int i = 0; i < pts.Length; i++) lr.SetPosition(i, pts[i]);
                 lr.startWidth = 0.06f;
                 lr.endWidth = 0.06f;
                 lr.material = roadMat;
@@ -256,6 +283,19 @@ namespace UnknownMod.Runtime
                 if (roadsT == null || roadsT.childCount == 0) continue;
                 var lr = roadsT.GetChild(0).GetComponent<LineRenderer>();
                 if (lr?.material != null) return lr.material;
+            }
+            return null;
+        }
+
+        /// <summary>Find a sprite by name from game Resources for mapPiece rendering.</summary>
+        private static Sprite FindMapPieceSprite(string spriteName)
+        {
+            if (string.IsNullOrEmpty(spriteName)) return null;
+            // Search all loaded sprites for a name match
+            foreach (var s in Resources.FindObjectsOfTypeAll<Sprite>())
+            {
+                if (s != null && s.name == spriteName)
+                    return s;
             }
             return null;
         }

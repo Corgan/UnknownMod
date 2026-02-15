@@ -36,6 +36,10 @@ namespace UnknownMod.Core
         public Dictionary<string, CardbackDef> Cardbacks = new();
         public Dictionary<string, TierRewardDef> TierRewards = new();
         public Dictionary<string, SpriteOverrideDef> Sprites = new();
+        public Dictionary<string, PackDef> Packs = new();
+        public Dictionary<string, CardPlayerPackDef> CardPlayerPacks = new();
+        public Dictionary<string, CardPlayerPairsPackDef> CardPlayerPairsPacks = new();
+        public Dictionary<string, HeroDataDef> HeroDataEntries = new();
 
         // ── Overrides of base-game entities (stored in _patches/) ─
 
@@ -53,6 +57,10 @@ namespace UnknownMod.Core
         public Dictionary<string, CardbackDef> CardbackPatches = new();
         public Dictionary<string, TierRewardDef> TierRewardPatches = new();
         public Dictionary<string, SpriteOverrideDef> SpritePatches = new();
+        public Dictionary<string, PackDef> PackPatches = new();
+        public Dictionary<string, CardPlayerPackDef> CardPlayerPackPatches = new();
+        public Dictionary<string, CardPlayerPairsPackDef> CardPlayerPairsPackPatches = new();
+        public Dictionary<string, HeroDataDef> HeroDataPatches = new();
 
         // ── Zones ────────────────────────────────────────────────
 

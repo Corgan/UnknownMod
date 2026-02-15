@@ -88,6 +88,10 @@ namespace UnknownMod.Core
             LoadEntities(Path.Combine(root, "cardbacks"), proj.Cardbacks, d => d.Id);
             LoadEntities(Path.Combine(root, "tierrewards"), proj.TierRewards, d => d.Id);
             LoadEntities(Path.Combine(root, "sprites"), proj.Sprites, d => d.NpcId);
+            LoadEntities(Path.Combine(root, "packs"), proj.Packs, d => d.PackId);
+            LoadEntities(Path.Combine(root, "cardplayerpacks"), proj.CardPlayerPacks, d => d.PackId);
+            LoadEntities(Path.Combine(root, "cardplayerpairspacks"), proj.CardPlayerPairsPacks, d => d.PackId);
+            LoadEntities(Path.Combine(root, "herodata"), proj.HeroDataEntries, d => d.Id);
 
             // ── Patches (overrides of base-game) ─────────────────────
             string patches = Path.Combine(root, "_patches");
@@ -105,6 +109,10 @@ namespace UnknownMod.Core
             LoadEntities(Path.Combine(patches, "cardbacks"), proj.CardbackPatches, d => d.Id);
             LoadEntities(Path.Combine(patches, "tierrewards"), proj.TierRewardPatches, d => d.Id);
             LoadEntities(Path.Combine(patches, "sprites"), proj.SpritePatches, d => d.NpcId);
+            LoadEntities(Path.Combine(patches, "packs"), proj.PackPatches, d => d.PackId);
+            LoadEntities(Path.Combine(patches, "cardplayerpacks"), proj.CardPlayerPackPatches, d => d.PackId);
+            LoadEntities(Path.Combine(patches, "cardplayerpairspacks"), proj.CardPlayerPairsPackPatches, d => d.PackId);
+            LoadEntities(Path.Combine(patches, "herodata"), proj.HeroDataPatches, d => d.Id);
 
             // ── New zones ────────────────────────────────────────────
             string zonesDir = Path.Combine(root, "zones");
@@ -140,7 +148,9 @@ namespace UnknownMod.Core
                            proj.Npcs.Count + proj.AuraCurses.Count + proj.Heroes.Count +
                            proj.Traits.Count + proj.Skins.Count + proj.Perks.Count +
                            proj.PerkNodes.Count + proj.Requirements.Count +
-                           proj.Cardbacks.Count + proj.TierRewards.Count + proj.Sprites.Count;
+                           proj.Cardbacks.Count + proj.TierRewards.Count + proj.Sprites.Count +
+                           proj.Packs.Count + proj.CardPlayerPacks.Count +
+                           proj.CardPlayerPairsPacks.Count + proj.HeroDataEntries.Count;
 
             int totalPatches = proj.CardPatches.Count + proj.ItemPatches.Count +
                                proj.LootPatches.Count + proj.NpcPatches.Count +
@@ -148,7 +158,9 @@ namespace UnknownMod.Core
                                proj.TraitPatches.Count + proj.SkinPatches.Count +
                                proj.PerkPatches.Count + proj.PerkNodePatches.Count +
                                proj.RequirementPatches.Count + proj.CardbackPatches.Count +
-                               proj.TierRewardPatches.Count + proj.SpritePatches.Count;
+                               proj.TierRewardPatches.Count + proj.SpritePatches.Count +
+                               proj.PackPatches.Count + proj.CardPlayerPackPatches.Count +
+                               proj.CardPlayerPairsPackPatches.Count + proj.HeroDataPatches.Count;
 
             Plugin.Log.LogInfo($"[ModProjectLoader] Loaded '{modId}': " +
                 $"{totalNew} new, {totalPatches} patches, " +

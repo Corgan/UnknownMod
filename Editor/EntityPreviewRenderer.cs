@@ -39,6 +39,24 @@ namespace UnknownMod.Editor
         private static bool _bgCacheRequested;
         private static bool _bgCacheFailed;
 
+        // Incremented when bg cache becomes available; forces encounter re-render
+        private static int _bgCacheGeneration;
+        private int _lastBgGeneration;
+
+        // ── Event scene prefab cache (loaded once via additive scene) ──
+        private static GameObject _eventReplyPrefab;
+        private static GameObject _eventSceneTemplate;  // cloned EventManager root for layout reference
+        private static bool _eventCacheRequested;
+        private static bool _eventCacheFailed;
+        private static int _eventCacheGeneration;
+
+        /// <summary>Cached reply button prefab from the Event scene.</summary>
+        public static GameObject EventReplyPrefab => _eventReplyPrefab;
+        /// <summary>Cached EventManager root template (layout reference, no MonoBehaviours).</summary>
+        public static GameObject EventSceneTemplate => _eventSceneTemplate;
+        /// <summary>True when Event scene prefabs have been cached.</summary>
+        public static bool HasEventCache => _eventReplyPrefab != null;
+
         public RenderTexture RT => _rt;
         public bool HasContent => _objects.Count > 0;
 
@@ -423,7 +441,10 @@ namespace UnknownMod.Editor
         {
             EnsureInit();
             string key = "enc:" + (npcIds != null ? string.Join(",", npcIds) : "") + ":" + background;
-            if (key == _cacheKey && !_needsRender) return _objects.Count > 0;
+            // Re-render if bg cache arrived since last render
+            bool bgChanged = _lastBgGeneration != _bgCacheGeneration;
+            if (key == _cacheKey && !_needsRender && !bgChanged) return _objects.Count > 0;
+            _lastBgGeneration = _bgCacheGeneration;
 
             ClearObjects();
             _cacheKey = key;
@@ -553,12 +574,12 @@ namespace UnknownMod.Editor
         /// Additively load the Combat scene to extract MatchManager.backgroundPrefabs,
         /// cache them, then unload. Same pattern as ZoneEditingService's Map scene load.
         /// </summary>
-        private static void EnsureBgCache()
+        internal static void EnsureBgCache()
         {
             if (_bgPrefabCache != null || _bgCacheRequested || _bgCacheFailed) return;
             _bgCacheRequested = true;
 
-            ZoneEditingService.SuppressSceneLoad = true;
+            ZoneEditingService.SuppressSceneLoad++;
 
             // Register callback BEFORE loading — sceneLoaded fires when content is ready,
             // after Awake() but before Start(). This is where we extract data + tear down.
@@ -574,7 +595,7 @@ namespace UnknownMod.Editor
                 Plugin.Log.LogError($"[EntityPreview] Combat scene load failed: {ex.Message}\n{ex.StackTrace}");
                 SceneManager.sceneLoaded -= OnCombatSceneLoaded;
                 _bgCacheFailed = true;
-                ZoneEditingService.SuppressSceneLoad = false;
+                ZoneEditingService.SuppressSceneLoad--;
             }
         }
 
@@ -611,6 +632,7 @@ namespace UnknownMod.Editor
                             if (prefab == null) continue;
                             _bgPrefabCache[prefab.name] = prefab;
                         }
+                        _bgCacheGeneration++;
                         Plugin.Log.LogInfo($"[EntityPreview]   Cached {_bgPrefabCache.Count} background prefabs.");
                     }
                     break;
@@ -642,7 +664,7 @@ namespace UnknownMod.Editor
             {
                 Plugin.Log.LogError($"[EntityPreview] Combat scene extraction failed: {ex.Message}\n{ex.StackTrace}");
                 _bgCacheFailed = true;
-                ZoneEditingService.SuppressSceneLoad = false;
+                ZoneEditingService.SuppressSceneLoad--;
             }
         }
 
@@ -650,8 +672,102 @@ namespace UnknownMod.Editor
         {
             if (scene.name != "Combat") return;
             SceneManager.sceneUnloaded -= OnCombatUnloaded;
-            ZoneEditingService.SuppressSceneLoad = false;
+            ZoneEditingService.SuppressSceneLoad--;
             Plugin.Log.LogInfo("[EntityPreview] Combat scene unloaded, suppression released.");
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  EVENT SCENE PREFAB CACHE
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Cache EventManager's replyPrefab and layout template.
+        /// The EventManager lives inside the Map scene, so this is called
+        /// from OnMapSceneLoaded (ZoneEditingService) after the Map scene
+        /// has been additively loaded.
+        /// </summary>
+        internal static void EnsureEventCache()
+        {
+            if (_eventReplyPrefab != null || _eventCacheRequested || _eventCacheFailed) return;
+
+            // Try to find an already-loaded EventManager (e.g. Map scene active)
+            var allEM = Resources.FindObjectsOfTypeAll<EventManager>();
+            if (allEM.Length == 0)
+            {
+                Plugin.Log.LogInfo("[EntityPreview] No EventManager found yet — will cache when Map scene loads.");
+                return;
+            }
+
+            CacheEventDataFrom(allEM[0]);
+        }
+
+        /// <summary>
+        /// Called from ZoneEditingService.OnMapSceneLoaded when the Map scene
+        /// arrives — the EventManager is one of the Map scene root objects.
+        /// </summary>
+        internal static void CacheEventDataFromScene(GameObject[] rootObjects)
+        {
+            if (_eventReplyPrefab != null) return; // already cached
+
+            foreach (var root in rootObjects)
+            {
+                var em = root.GetComponentInChildren<EventManager>(true);
+                if (em != null)
+                {
+                    CacheEventDataFrom(em);
+                    return;
+                }
+            }
+
+            Plugin.Log.LogWarning("[EntityPreview] No EventManager found among Map scene roots.");
+            _eventCacheFailed = true;
+        }
+
+        /// <summary>Extract replyPrefab & layout template from a live EventManager.</summary>
+        private static void CacheEventDataFrom(EventManager em)
+        {
+            _eventCacheRequested = true;
+
+            try
+            {
+                Plugin.Log.LogInfo($"[EntityPreview] EventManager found: '{em.gameObject.name}', replyPrefab={(em.replyPrefab != null ? em.replyPrefab.name : "null")}");
+
+                // Cache reply prefab (clone so it survives scene unload)
+                if (em.replyPrefab != null)
+                {
+                    _eventReplyPrefab = UnityEngine.Object.Instantiate(em.replyPrefab);
+                    _eventReplyPrefab.name = "EventReplyPrefab_Cached";
+                    _eventReplyPrefab.SetActive(false);
+                    UnityEngine.Object.DontDestroyOnLoad(_eventReplyPrefab);
+                    Plugin.Log.LogInfo("[EntityPreview]   Cached event reply prefab.");
+                }
+
+                // Cache the EventManager's GO as a layout template (clone hierarchy)
+                // Preserves positions of title, description, replies, character slots, etc.
+                var templateGO = UnityEngine.Object.Instantiate(em.gameObject);
+                templateGO.name = "EventSceneTemplate_Cached";
+                templateGO.SetActive(false);
+                UnityEngine.Object.DontDestroyOnLoad(templateGO);
+
+                // Strip all MonoBehaviours from the template so nothing fires
+                foreach (var mb in templateGO.GetComponentsInChildren<MonoBehaviour>(true))
+                    UnityEngine.Object.DestroyImmediate(mb);
+
+                _eventSceneTemplate = templateGO;
+                _eventCacheGeneration++;
+                Plugin.Log.LogInfo("[EntityPreview]   Cached event scene layout template.");
+
+                if (_eventReplyPrefab == null)
+                {
+                    Plugin.Log.LogWarning("[EntityPreview] EventManager had no replyPrefab.");
+                    _eventCacheFailed = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogError($"[EntityPreview] Event cache extraction failed: {ex.Message}\n{ex.StackTrace}");
+                _eventCacheFailed = true;
+            }
         }
 
         /// <summary>Map CombatBackground enum to a tint color for the preview camera.</summary>

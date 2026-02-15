@@ -1,0 +1,69 @@
+﻿using System;
+using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using UnityEngine;
+
+namespace UnknownMod.Definitions
+{
+    //  COMBAT ENCOUNTER
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    [Serializable]
+    public class CombatDef
+    {
+        public string CombatId = "";
+        public string Description = "";
+        public List<string> NpcIds = new();
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.CombatTier CombatTier = Enums.CombatTier.T3;
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.CombatBackground Background = Enums.CombatBackground.Spider_Lair;
+
+        public int NpcRemoveInMadness0Index = -1;
+        public bool HealHeroes = false;
+        public bool IsRift = false;
+
+        /// <summary>Prevent randomizing enemy positions in this combat.</summary>
+        public bool NeverRandomizeEnemies = false;
+        public bool ShouldSerializeNeverRandomizeEnemies() => NeverRandomizeEnemies;
+
+        /// <summary>Allow NPC positions to be randomized.</summary>
+        public bool RandomizeNpcPosition = false;
+        public bool ShouldSerializeRandomizeNpcPosition() => RandomizeNpcPosition;
+
+        /// <summary>EventRequirement ID that gates this combat.</summary>
+        public string EventRequirementId = "";
+        public bool ShouldSerializeEventRequirementId() => !string.IsNullOrEmpty(EventRequirementId);
+
+        /// <summary>NPC ID summoned when a monster in this combat is killed.</summary>
+        public string NpcToSummonOnKilledId = "";
+
+        /// <summary>Event triggered after combat ends (post-combat event).</summary>
+        public string EventDataId = "";
+
+        /// <summary>Aura/curse effects applied at combat start.</summary>
+        public List<CombatEffectDef> CombatEffects = new();
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  COMBAT EFFECT (start-of-combat aura/curse)
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    [Serializable]
+    public class CombatEffectDef
+    {
+        public string AuraCurse = "";
+        public int Charges = 0;
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.CombatUnit Target = Enums.CombatUnit.Heroes;
+    }
+
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //  EVENT
+    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+}

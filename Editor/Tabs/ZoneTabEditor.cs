@@ -73,10 +73,22 @@ namespace UnknownMod.Editor.Tabs
             else if (isPatch && proj.ZonePatches.TryGetValue(SelectedZoneId, out var patchDef))
             {
                 var synth = ZoneEditingService.SynthesizeZoneDef(patchDef);
-                if (synth != null && ZoneEditingService.CurrentZone != synth)
+                if (synth != null)
                 {
-                    ZoneEditingService.CurrentZone = synth;
-                    ZoneEditingService.CurrentPatch = patchDef;
+                    if (ZoneEditingService.CurrentZone != synth)
+                    {
+                        ZoneEditingService.CurrentZone = synth;
+                        ZoneEditingService.CurrentPatch = patchDef;
+                    }
+                }
+                else if (ZoneEditingService.CurrentZone != null
+                         && ZoneEditingService.CurrentZone.ZoneId != patchDef.TargetZoneId)
+                {
+                    // Synthesis not ready yet (async base data loading).
+                    // Clear CurrentZone so we show "loading" instead of stale data
+                    // from a completely different zone.
+                    ZoneEditingService.CurrentZone = null;
+                    ZoneEditingService.CurrentPatch = null;
                 }
             }
 
@@ -187,10 +199,19 @@ namespace UnknownMod.Editor.Tabs
             if (proj.ZonePatches.TryGetValue(SelectedZoneId, out var patch))
             {
                 var synth = ZoneEditingService.SynthesizeZoneDef(patch);
-                if (synth != null && ZoneEditingService.CurrentZone != synth)
+                if (synth != null)
                 {
-                    ZoneEditingService.CurrentZone = synth;
-                    ZoneEditingService.CurrentPatch = patch;
+                    if (ZoneEditingService.CurrentZone != synth)
+                    {
+                        ZoneEditingService.CurrentZone = synth;
+                        ZoneEditingService.CurrentPatch = patch;
+                    }
+                }
+                else if (ZoneEditingService.CurrentZone != null
+                         && ZoneEditingService.CurrentZone.ZoneId != patch.TargetZoneId)
+                {
+                    ZoneEditingService.CurrentZone = null;
+                    ZoneEditingService.CurrentPatch = null;
                 }
             }
         }
@@ -301,6 +322,11 @@ namespace UnknownMod.Editor.Tabs
                 _editor.SelectedNodeId = null;
                 _editor.SelectedEventId = null;
                 _editor.SelectedCombatId = null;
+                // Clear CurrentZone immediately so viewport/sub-editors
+                // don't keep rendering the previous zone's data while
+                // the new zone (or its synthesis) is being resolved.
+                ZoneEditingService.CurrentZone = null;
+                ZoneEditingService.CurrentPatch = null;
             }
 
             // ── Action bar: New / Patch / Delete ─────────────────

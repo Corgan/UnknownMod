@@ -113,7 +113,7 @@ namespace UnknownMod.Editor
                 if (fromId == null) continue;
 
                 var cps = new List<Vector3>();
-                for (int i = 1; i < lr.positionCount - 1; i++)
+                for (int i = 0; i < lr.positionCount; i++)
                     cps.Add(lr.GetPosition(i));
 
                 RoadCPs[key] = cps;
@@ -143,7 +143,7 @@ namespace UnknownMod.Editor
         // ═══════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// Create a new road between two nodes with a single midpoint CP.
+        /// Create a new road between two nodes with endpoints at their positions (matching game methodology).
         /// Returns the road key ("fromId-toId").
         /// </summary>
         public string CreateRoad(string fromId, string toId)
@@ -152,9 +152,8 @@ namespace UnknownMod.Editor
 
             Vector3 posA = _getNodePos(fromId);
             Vector3 posB = _getNodePos(toId);
-            Vector3 mid = (posA + posB) / 2f;
 
-            RoadCPs[key] = new List<Vector3> { mid };
+            RoadCPs[key] = new List<Vector3> { posA, posB };
             TrackNodeRoad(fromId, key);
             TrackNodeRoad(toId, key);
 
@@ -192,32 +191,33 @@ namespace UnknownMod.Editor
         //  ROAD VISUAL REFRESH
         // ═══════════════════════════════════════════════════════════════
 
-        /// <summary>Recompute LineRenderer positions from node positions + CPs.</summary>
+        /// <summary>Recompute LineRenderer positions from all stored CPs (direct point-to-point, matching game methodology).</summary>
         public void RefreshRoadLR(string key)
         {
             if (!RoadLRs.TryGetValue(key, out var lr) || lr == null) return;
-            if (!RoadCPs.TryGetValue(key, out var cps)) return;
+            if (!RoadCPs.TryGetValue(key, out var cps) || cps.Count < 2) return;
 
-            ParseRoadKey(key, out var fromId, out var toId);
-            if (fromId == null) return;
-
-            Vector3 posA = _toLRSpace(_getNodePos(fromId));
-            Vector3 posB = _toLRSpace(_getNodePos(toId));
-
-            int total = 2 + cps.Count;
-            lr.positionCount = total;
-            lr.SetPosition(0, posA);
+            lr.positionCount = cps.Count;
             for (int i = 0; i < cps.Count; i++)
-                lr.SetPosition(i + 1, _toLRSpace(cps[i]));
-            lr.SetPosition(total - 1, posB);
+                lr.SetPosition(i, _toLRSpace(cps[i]));
         }
 
-        /// <summary>Refresh all roads connected to a node (call after moving a node).</summary>
+        /// <summary>Refresh all roads connected to a node (call after moving a node).
+        /// Updates the first or last CP of each connected road to stay at the node's new position.</summary>
         public void UpdateRoadsForNode(string nodeId)
         {
             if (!NodeToRoads.TryGetValue(nodeId, out var roads)) return;
+            Vector3 newPos = _getNodePos(nodeId);
             foreach (string key in roads)
+            {
+                if (!RoadCPs.TryGetValue(key, out var cps) || cps.Count < 2) continue;
+                ParseRoadKey(key, out var fromId, out var toId);
+                if (fromId == nodeId)
+                    cps[0] = newPos;
+                else if (toId == nodeId)
+                    cps[cps.Count - 1] = newPos;
                 RefreshRoadLR(key);
+            }
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -228,10 +228,10 @@ namespace UnknownMod.Editor
         public void InsertCPAfter(string key, int afterIndex)
         {
             if (!RoadCPs.TryGetValue(key, out var cps)) return;
+            if (afterIndex < 0 || afterIndex >= cps.Count - 1) return;
 
-            ParseRoadKey(key, out var fromId, out var toId);
             Vector3 posA = cps[afterIndex];
-            Vector3 posB = afterIndex + 1 < cps.Count ? cps[afterIndex + 1] : _getNodePos(toId);
+            Vector3 posB = cps[afterIndex + 1];
             cps.Insert(afterIndex + 1, (posA + posB) / 2f);
 
             RefreshRoadLR(key);
@@ -247,10 +247,11 @@ namespace UnknownMod.Editor
         {
             if (!RoadCPs.TryGetValue(key, out var cps)) return false;
 
-            if (cps.Count <= 1)
+            // Need at least 2 points (from/to endpoints) for a valid road
+            if (cps.Count <= 2)
             {
                 RemoveRoad(key);
-                Plugin.Log.LogInfo($"[RoadEditor] Last CP → removed road '{key}'");
+                Plugin.Log.LogInfo($"[RoadEditor] Too few CPs → removed road '{key}'");
                 return true;
             }
 

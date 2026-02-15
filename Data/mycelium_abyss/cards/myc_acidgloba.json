@@ -6,6 +6,7 @@
   "FluffPercent": 0.0,
   "IsUpgraded": true,
   "BaseCardId": "myc_acidglob",
+  "SpriteSource": "",
   "CardUpgraded": "No",
   "CardRarity": "Common",
   "CardType": "None",

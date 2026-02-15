@@ -62,6 +62,9 @@ namespace UnknownMod.Editor
         public RequirementEditor RequirementEdit { get; private set; }
         public CardbackEditor CardbackEdit { get; private set; }
         public TierRewardEditor TierRewardEdit { get; private set; }
+        public PackEditor PackEdit { get; private set; }
+        public CardPlayerPackEditor CardPlayerPackEdit { get; private set; }
+        public HeroDataEditor HeroDataEdit { get; private set; }
 
         // ── Selection state (shared between sub-editors) ─────────────
         public string SelectedNodeId { get; set; }
@@ -129,6 +132,9 @@ namespace UnknownMod.Editor
             RequirementEdit = new RequirementEditor(this);
             CardbackEdit = new CardbackEditor(this);
             TierRewardEdit = new TierRewardEditor(this);
+            PackEdit = new PackEditor(this);
+            CardPlayerPackEdit = new CardPlayerPackEditor(this);
+            HeroDataEdit = new HeroDataEditor(this);
 
             // Create category tab coordinators
             ModManager = new ModManagerPanel(this);
@@ -211,6 +217,10 @@ namespace UnknownMod.Editor
             {
                 if (EntityPreview == null)
                     EntityPreview = new EntityPreviewRenderer();
+
+                // Preload Map + Combat scenes to cache base-game zone data and
+                // combat backgrounds eagerly, instead of waiting for user to open a zone
+                ZoneEditingService.PreloadScenes();
             }
             else
             {

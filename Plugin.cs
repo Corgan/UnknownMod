@@ -29,6 +29,21 @@ namespace UnknownMod
                 Log.LogError($"Patch error: {ex.Message}");
                 Log.LogError(ex.StackTrace);
             }
+
+            // Start runtime inspector (file-based IPC for external tooling)
+            try
+            {
+                Core.RuntimeInspector.Init();
+            }
+            catch (Exception ex)
+            {
+                Log.LogWarning($"RuntimeInspector failed to start: {ex.Message}");
+            }
+        }
+
+        private void Update()
+        {
+            Core.RuntimeInspector.Poll();
         }
     }
 }
