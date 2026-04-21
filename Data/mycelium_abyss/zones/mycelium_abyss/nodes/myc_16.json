@@ -12,15 +12,15 @@
   "VisibleIfNotRequirement": false,
   "NodeGround": "None",
   "NodeRequirementId": "",
-  "CombatId": "cmyc_12",
+  "CombatIds": [
+    "cmyc_12"
+  ],
   "CombatTier": "T4",
   "CombatPercent": 100,
-  "EventId": "",
   "EventPercent": 0,
   "NodeEventTier": "T0",
   "Connections": [
     "myc_21",
     "myc_22"
-  ],
-  "ConnectionRequirements": []
+  ]
 }

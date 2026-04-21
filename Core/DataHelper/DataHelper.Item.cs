@@ -39,6 +39,10 @@ namespace UnknownMod.Core
                 item.CardToGainList = list;
             }
 
+            // ── Asset copy: spriteBossDrop + itemSound ───────────
+            if (!string.IsNullOrEmpty(d.SpriteSource))
+                CopyItemVisuals(item, d.SpriteSource);
+
             return item;
         }
 
@@ -51,8 +55,9 @@ namespace UnknownMod.Core
             // ── Auto-mapped fields (single source of truth: FieldMappings.Item) ──
             FieldMapper.Snapshot(FieldMappings.Item, item, d);
 
-            // ── Edge cases: Name not on SO ───────────────────────
-            d.Name = "";
+            // ── Edge cases: Name from paired CardData ───────────
+            var pairedCard = GetCard(item.Id);
+            d.Name = pairedCard?.CardName ?? item.Id;
 
             // ── Edge cases: SpecialValue structs ─────────────────
             d.HealQuantitySpecialValue = SnapSV(item.HealQuantitySpecialValue);
@@ -67,6 +72,10 @@ namespace UnknownMod.Core
             if (item.CardToGainList != null)
                 foreach (var c in item.CardToGainList)
                     if (c != null) d.CardToGainList.Add(c.Id ?? "");
+
+            // ── Snapshot paired card ─────────────────────────────
+            if (pairedCard != null)
+                d.Card = ModProjectBuilder.SnapshotCard(pairedCard);
 
             return d;
         }

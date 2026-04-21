@@ -1,0 +1,49 @@
+{
+  "Id": "mycelium_abyss_hero_sprite",
+  "SkinTarget": "HeroSkin",
+  "BaseSprite": "archer",
+  "Grafts": [
+    {
+      "TargetBone": "Head",
+      "Source": "druid/Cabeza",
+      "ReplaceTarget": true,
+      "BoneOverrides": {
+        "Cabeza": {
+          "PosX": 0.0,
+          "PosY": 0.0,
+          "Rotation": 0.0,
+          "ScaleX": 1.0,
+          "ScaleY": 1.0,
+          "Visible": true,
+          "SortingOffset": 15,
+          "ColorHex": "",
+          "FlipX": false,
+          "FlipY": false,
+          "Alpha": 1.0,
+          "PivotX": -1.0,
+          "PivotY": -1.0
+        }
+      }
+    }
+  ],
+  "BoneOverrides": {
+    "bone_3": {
+      "PosX": 0.0,
+      "PosY": 0.0,
+      "Rotation": 0.0,
+      "ScaleX": 1.0,
+      "ScaleY": 1.0,
+      "Visible": true,
+      "SortingOffset": 0,
+      "ColorHex": "",
+      "FlipX": false,
+      "FlipY": false,
+      "Alpha": 1.0,
+      "PivotX": -1.0,
+      "PivotY": -1.0
+    }
+  },
+  "Spritesheet": "",
+  "CustomSprites": {},
+  "AnimOverrides": {}
+}

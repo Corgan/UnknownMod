@@ -8,7 +8,7 @@ namespace UnknownMod.Editor
 {
     /// <summary>
     /// Top-level MonoBehaviour that manages the mod editor UI.
-    /// Coordinates between category tab coordinators (Mods, Combat, Characters, World, Zones, Sprites)
+    /// Coordinates between category tab coordinators (Mods, Cards, Heroes, Enemies, Player, Zones)
     /// and sub-editors. Owns the viewport split, tab bar, and input routing.
     ///
     /// Each tab coordinator owns its own save/hot-reload logic via HandleChanges() and Tick().
@@ -28,30 +28,30 @@ namespace UnknownMod.Editor
         public static EntityPreviewRenderer EntityPreview { get; private set; }
 
         /// <summary>True during frames where the mouse is over any editor GUI rect.
-        /// Checked by MapEditor to suppress world-space input.</summary>
+        /// Checked by sub-editors to suppress world-space input.</summary>
         public static bool IsMouseOverUI { get; private set; }
 
         // ── Active tab ───────────────────────────────────────────────
-        public enum EditorTab { ModManager, Combat, Characters, World, Zones, Sprites }
-        public EditorTab ActiveTab { get; set; } = EditorTab.Zones;
+        public enum EditorTab { ModManager, Cards, Heroes, Enemies, Player, World, SpriteSkins }
+        public EditorTab ActiveTab { get; set; } = EditorTab.ModManager;
 
         // ── Category tab coordinators ────────────────────────────────
         public ModManagerPanel ModManager { get; private set; }
-        public CombatTabEditor CombatTab { get; private set; }
-        public CharacterTabEditor CharacterTab { get; private set; }
-        public WorldTabEditor WorldTab { get; private set; }
+        public CardsTabEditor CardsTab { get; private set; }
+        public HeroesTabEditor HeroesTab { get; private set; }
+        public EnemiesTabEditor EnemiesTab { get; private set; }
+        public PlayerTabEditor PlayerTab { get; private set; }
         public ZoneTabEditor ZoneTab { get; private set; }
+        public SpriteSkinTabEditor SpriteSkinTab { get; private set; }
 
         // ── Sub-editor references ────────────────────────────────────
         public MapEditor MapEdit { get; private set; }
-        public MapViewport MapView { get; private set; }
         public NodeEditor NodeEdit { get; private set; }
         public EventEditor EventEdit { get; private set; }
         public EncounterEditor EncounterEdit { get; private set; }
         public NpcEditor NpcEdit { get; private set; }
-        public SpriteEditor SpriteEdit { get; private set; }
+        public SpriteSkinEditor SpriteEdit { get; private set; }
         public CardEditor CardEdit { get; private set; }
-        public ItemEditor ItemEdit { get; private set; }
         public LootEditor LootEdit { get; private set; }
         public AuraCurseEditor AuraCurseEdit { get; private set; }
         public HeroEditor HeroEdit { get; private set; }
@@ -65,6 +65,7 @@ namespace UnknownMod.Editor
         public PackEditor PackEdit { get; private set; }
         public CardPlayerPackEditor CardPlayerPackEdit { get; private set; }
         public HeroDataEditor HeroDataEdit { get; private set; }
+        public BackgroundEditor BackgroundEdit { get; private set; }
 
         // ── Selection state (shared between sub-editors) ─────────────
         public string SelectedNodeId { get; set; }
@@ -72,7 +73,6 @@ namespace UnknownMod.Editor
         public string SelectedCombatId { get; set; }
         public string SelectedNpcId { get; set; }
         public string SelectedCardId { get; set; }
-        public string SelectedItemId { get; set; }
         public string SelectedLootId { get; set; }
         public string SelectedAuraCurseId { get; set; }
 
@@ -91,7 +91,7 @@ namespace UnknownMod.Editor
 
         // ── Layout ────────────────────────────────────────────────────
         /// <summary>Fraction of screen width used by the viewport (left side). The editor panel fills the rest.</summary>
-        private const float ViewportFraction = 0.70f;
+        private const float ViewportFraction = 0.65f;
 
         /// <summary>Full-screen Canvas + Image that blocks all Unity UI raycasts
         /// (EventSystem) when the editor is active. Sits at a high sort order so
@@ -113,15 +113,14 @@ namespace UnknownMod.Editor
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // Create sub-editors (MapEditor is lazily attached to zone map root)
-            MapView = new MapViewport(this);
+            // Create sub-editors
+            MapEdit = new MapEditor(this);
             NodeEdit = new NodeEditor(this);
             EventEdit = new EventEditor(this);
             EncounterEdit = new EncounterEditor(this);
             NpcEdit = new NpcEditor(this);
-            SpriteEdit = new SpriteEditor(this);
+            SpriteEdit = new SpriteSkinEditor(this);
             CardEdit = new CardEditor(this);
-            ItemEdit = new ItemEditor(this);
             LootEdit = new LootEditor(this);
             AuraCurseEdit = new AuraCurseEditor(this);
             HeroEdit = new HeroEditor(this);
@@ -135,13 +134,16 @@ namespace UnknownMod.Editor
             PackEdit = new PackEditor(this);
             CardPlayerPackEdit = new CardPlayerPackEditor(this);
             HeroDataEdit = new HeroDataEditor(this);
+            BackgroundEdit = new BackgroundEditor(this);
 
             // Create category tab coordinators
             ModManager = new ModManagerPanel(this);
-            CombatTab = new CombatTabEditor(this);
-            CharacterTab = new CharacterTabEditor(this);
-            WorldTab = new WorldTabEditor(this);
+            CardsTab = new CardsTabEditor(this);
+            HeroesTab = new HeroesTabEditor(this);
+            EnemiesTab = new EnemiesTabEditor(this);
+            PlayerTab = new PlayerTabEditor(this);
             ZoneTab = new ZoneTabEditor(this);
+            SpriteSkinTab = new SpriteSkinTabEditor(this);
 
             // Initialize mod system
             ModManager.Initialize();
@@ -153,25 +155,7 @@ namespace UnknownMod.Editor
             EntityPreview?.Dispose();
             EntityPreview = null;
             SpriteEdit?.Cleanup();
-            MapView?.Cleanup();
-        }
-
-        /// <summary>
-        /// Attach or re-attach MapEditor to a zone map root GameObject.
-        /// Called by map builders after constructing the zone map.
-        /// </summary>
-        public void AttachMapEditor(GameObject mapRoot)
-        {
-            // Clean up old MapEditor if it was on a previous (destroyed) GO
-            if (MapEdit != null && MapEdit.gameObject == null)
-                MapEdit = null;
-
-            if (MapEdit == null)
-            {
-                MapEdit = mapRoot.AddComponent<MapEditor>();
-                if (IsEditing)
-                    MapEdit.SetEditMode(true);
-            }
+            MapEdit?.Cleanup();
         }
 
         void Update()
@@ -184,19 +168,25 @@ namespace UnknownMod.Editor
             switch (ActiveTab)
             {
                 case EditorTab.ModManager:  ModManager?.Tick(); break;
-                case EditorTab.Combat:      CombatTab?.Tick(); break;
-                case EditorTab.Characters:  CharacterTab?.Tick(); break;
-                case EditorTab.World:       WorldTab?.Tick(); break;
-                case EditorTab.Zones:       ZoneTab?.Tick(); break;
+                case EditorTab.Cards:       CardsTab?.Tick(); break;
+                case EditorTab.Heroes:      HeroesTab?.Tick(); break;
+                case EditorTab.Enemies:     EnemiesTab?.Tick(); break;
+                case EditorTab.Player:      PlayerTab?.Tick(); break;
+                case EditorTab.World:       ZoneTab?.Tick(); break;
+                case EditorTab.SpriteSkins: SpriteSkinTab?.Tick(); break;
             }
 
             // Number keys to switch tabs
-            if (Input.GetKeyDown(KeyCode.BackQuote)) ActiveTab = EditorTab.ModManager;
-            if (Input.GetKeyDown(KeyCode.Alpha1)) ActiveTab = EditorTab.Combat;
-            if (Input.GetKeyDown(KeyCode.Alpha2)) ActiveTab = EditorTab.Characters;
-            if (Input.GetKeyDown(KeyCode.Alpha3)) ActiveTab = EditorTab.World;
-            if (Input.GetKeyDown(KeyCode.Alpha4)) ActiveTab = EditorTab.Zones;
-            if (Input.GetKeyDown(KeyCode.Alpha5)) ActiveTab = EditorTab.Sprites;
+            if (GUIUtility.keyboardControl == 0)
+            {
+                if (Input.GetKeyDown(KeyCode.BackQuote)) ActiveTab = EditorTab.ModManager;
+                if (Input.GetKeyDown(KeyCode.Alpha1)) ActiveTab = EditorTab.Cards;
+                if (Input.GetKeyDown(KeyCode.Alpha2)) ActiveTab = EditorTab.Heroes;
+                if (Input.GetKeyDown(KeyCode.Alpha3)) ActiveTab = EditorTab.Enemies;
+                if (Input.GetKeyDown(KeyCode.Alpha4)) ActiveTab = EditorTab.Player;
+                if (Input.GetKeyDown(KeyCode.Alpha5)) ActiveTab = EditorTab.World;
+                if (Input.GetKeyDown(KeyCode.Alpha6)) ActiveTab = EditorTab.SpriteSkins;
+            }
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -207,10 +197,6 @@ namespace UnknownMod.Editor
         {
             IsEditing = !IsEditing;
             Plugin.Log.LogInfo($"[ModEditor] Edit mode: {(IsEditing ? "ON" : "OFF")}");
-
-            // Forward to MapEditor (it manages road CPs and visual state)
-            if (MapEdit != null)
-                MapEdit.SetEditMode(IsEditing);
 
             // Entity preview renderer lifecycle
             if (IsEditing)
@@ -279,57 +265,74 @@ namespace UnknownMod.Editor
         public void InspectNode(string nodeId)
         {
             SelectedNodeId = nodeId;
-            ActiveTab = EditorTab.Zones;
-            ZoneTab.ActiveSubTab = ZoneTabEditor.SubTab.Node;
+            ActiveTab = EditorTab.World;
+            ZoneTab.ActiveSubTab = ZoneTabEditor.SubTab.Zones;
+            ZoneTab.ActiveZoneInnerTab = ZoneTabEditor.ZoneInnerTab.Node;
         }
 
         public void InspectEvent(string eventId)
         {
             SelectedEventId = eventId;
-            ActiveTab = EditorTab.Zones;
+            ActiveTab = EditorTab.World;
             ZoneTab.ActiveSubTab = ZoneTabEditor.SubTab.Event;
         }
 
         public void InspectCombat(string combatId)
         {
             SelectedCombatId = combatId;
-            ActiveTab = EditorTab.Zones;
+            ActiveTab = EditorTab.World;
             ZoneTab.ActiveSubTab = ZoneTabEditor.SubTab.Encounter;
         }
 
         public void InspectNpc(string npcId)
         {
             SelectedNpcId = npcId;
-            ActiveTab = EditorTab.Combat;
-            CombatTab.ActiveSubTab = CombatTabEditor.SubTab.NPCs;
+            ActiveTab = EditorTab.Enemies;
+            EnemiesTab.ActiveSubTab = EnemiesTabEditor.SubTab.NPCs;
         }
 
         public void InspectCard(string cardId)
         {
             SelectedCardId = cardId;
-            ActiveTab = EditorTab.Combat;
-            CombatTab.ActiveSubTab = CombatTabEditor.SubTab.Cards;
+            ActiveTab = EditorTab.Cards;
+            CardsTab.ActiveSubTab = CardsTabEditor.SubTab.Hero;
         }
 
         public void InspectItem(string itemId)
         {
-            SelectedItemId = itemId;
-            ActiveTab = EditorTab.Combat;
-            CombatTab.ActiveSubTab = CombatTabEditor.SubTab.Items;
+            SelectedCardId = itemId;
+            ActiveTab = EditorTab.Cards;
+            CardsTab.ActiveSubTab = CardsTabEditor.SubTab.Equipment;
+            CardsTab.ActiveEquipmentSub = CardsTabEditor.EquipmentSub.Items;
+        }
+
+        public void InspectEnchantment(string enchantId)
+        {
+            SelectedCardId = enchantId;
+            ActiveTab = EditorTab.Cards;
+            CardsTab.ActiveSubTab = CardsTabEditor.SubTab.Equipment;
+            CardsTab.ActiveEquipmentSub = CardsTabEditor.EquipmentSub.Enchantments;
+        }
+
+        public void InspectPet(string petId)
+        {
+            SelectedCardId = petId;
+            ActiveTab = EditorTab.Cards;
+            CardsTab.ActiveSubTab = CardsTabEditor.SubTab.Equipment;
+            CardsTab.ActiveEquipmentSub = CardsTabEditor.EquipmentSub.Pets;
         }
 
         public void InspectLoot(string lootId)
         {
             SelectedLootId = lootId;
-            ActiveTab = EditorTab.Combat;
-            CombatTab.ActiveSubTab = CombatTabEditor.SubTab.Loot;
+            ActiveTab = EditorTab.Enemies;
+            EnemiesTab.ActiveSubTab = EnemiesTabEditor.SubTab.Loot;
         }
 
         public void InspectAuraCurse(string acId)
         {
             SelectedAuraCurseId = acId;
-            ActiveTab = EditorTab.Combat;
-            CombatTab.ActiveSubTab = CombatTabEditor.SubTab.AuraCurse;
+            ActiveTab = EditorTab.Cards;
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -350,38 +353,38 @@ namespace UnknownMod.Editor
             float editorWidth = screenW - editorLeft;
 
             // ── Compute UI rects for hit-testing ─────────────────────
-            Rect headerRect = new Rect(editorLeft, 10, editorWidth, 35);
+            Rect headerRect = new Rect(0, 10, screenW, 35);
             float tabX = editorLeft;
-            Rect tabBarRect = new Rect(tabX, PanelTop, editorWidth, TabBarHeight);
+            Rect tabBarRect = new Rect(0, PanelTop, screenW, TabBarHeight);
             float panelY = PanelTop + TabBarHeight;
             Rect panelRect = new Rect(tabX, panelY, editorWidth, panelH - TabBarHeight);
 
-            // ── Header bar ───────────────────────────────────────────
+            // ── Header bar (full width) ──────────────────────────────
             GUI.Box(headerRect, "", _boxStyle);
             string dirtyMark = ZoneEditingService.IsDirty ? " <color=yellow>●</color>" : "";
             string modLabel = Tabs.ModManagerPanel.ActiveProject != null
                 ? $"  <color=#aaa>mod: {Tabs.ModManagerPanel.ActiveProject.ModId}</color>" : "";
-            GUI.Label(new Rect(editorLeft + 5, 14, editorWidth - 10, 25),
-                $"<b>MOD EDITOR</b>  |  `=Mods  1-5=tabs  |  F9=close{dirtyMark}{modLabel}",
+            GUI.Label(new Rect(5, 14, screenW - 10, 25),
+                $"<b>MOD EDITOR</b>  |  `=Mods  1-6=tabs  |  F9=close{dirtyMark}{modLabel}",
                 _headerStyle);
 
-            // ── Tab bar ──────────────────────────────────────────────
-            var tabs = new[] { "Mods", "Combat", "Chars", "World", "Zones", "Sprites" };
-            float tabW = editorWidth / tabs.Length;
+            // ── Tab bar (full width) ─────────────────────────────
+            var tabs = new[] { "Mods", "Cards", "Heroes", "Enemies", "Player", "World", "Sprites" };
+            float tabW = screenW / tabs.Length;
 
             for (int i = 0; i < tabs.Length; i++)
             {
                 var style = (EditorTab)i == ActiveTab ? _tabActiveStyle : _tabStyle;
-                if (GUI.Button(new Rect(tabX + i * tabW, PanelTop, tabW, TabBarHeight), tabs[i], style))
+                if (GUI.Button(new Rect(i * tabW, PanelTop, tabW, TabBarHeight), tabs[i], style))
                 {
                     ActiveTab = (EditorTab)i;
                     PopupState.Close();
                 }
             }
 
-            // ── Viewport (left side of screen, always visible) ───────
-            float vpY = PanelTop + TabBarHeight + 2;
-            Rect vpRect = new Rect(10, vpY, editorLeft - 25, screenH - vpY - 10);
+            // ── Viewport (left side of screen, flush with panel) ─────
+            float vpY = PanelTop + TabBarHeight;
+            Rect vpRect = new Rect(0, vpY, editorLeft, screenH - vpY);
 
             // Set the flag: is the mouse inside any editor GUI rect?
             Vector2 mouse = Event.current.mousePosition;
@@ -390,27 +393,37 @@ namespace UnknownMod.Editor
                             panelRect.Contains(mouse) ||
                             vpRect.Contains(mouse);
 
-            // Draw viewport for active tab
-            switch (ActiveTab)
+            // Draw viewport: EntityPicker overlay takes priority when open
+            if (EntityPicker.IsOpen)
             {
-                case EditorTab.ModManager:
-                    ModManager?.DrawViewport(vpRect);
-                    break;
-                case EditorTab.Combat:
-                    CombatTab?.DrawViewport(vpRect);
-                    break;
-                case EditorTab.Characters:
-                    CharacterTab?.DrawViewport(vpRect);
-                    break;
-                case EditorTab.World:
-                    WorldTab?.DrawViewport(vpRect);
-                    break;
-                case EditorTab.Zones:
-                    ZoneTab?.DrawViewport(vpRect);
-                    break;
-                case EditorTab.Sprites:
-                    SpriteEdit?.DrawViewport(vpRect);
-                    break;
+                EntityPicker.Draw(vpRect);
+            }
+            else
+            {
+                switch (ActiveTab)
+                {
+                    case EditorTab.ModManager:
+                        ModManager?.DrawViewport(vpRect);
+                        break;
+                    case EditorTab.Cards:
+                        CardsTab?.DrawViewport(vpRect);
+                        break;
+                    case EditorTab.Heroes:
+                        HeroesTab?.DrawViewport(vpRect);
+                        break;
+                    case EditorTab.Enemies:
+                        EnemiesTab?.DrawViewport(vpRect);
+                        break;
+                    case EditorTab.Player:
+                        PlayerTab?.DrawViewport(vpRect);
+                        break;
+                    case EditorTab.World:
+                        ZoneTab?.DrawViewport(vpRect);
+                        break;
+                    case EditorTab.SpriteSkins:
+                        SpriteSkinTab?.DrawViewport(vpRect);
+                        break;
+                }
             }
 
             // ── Panel ────────────────────────────────────────────────
@@ -429,24 +442,29 @@ namespace UnknownMod.Editor
                 case EditorTab.ModManager:
                     ModManager?.DrawPanel();
                     break;
-                case EditorTab.Combat:
-                    CombatTab?.DrawPanel();
-                    CombatTab?.HandleChanges();
+                case EditorTab.Cards:
+                    CardsTab?.DrawPanel();
+                    CardsTab?.HandleChanges();
                     break;
-                case EditorTab.Characters:
-                    CharacterTab?.DrawPanel();
-                    CharacterTab?.HandleChanges();
+                case EditorTab.Heroes:
+                    HeroesTab?.DrawPanel();
+                    HeroesTab?.HandleChanges();
+                    break;
+                case EditorTab.Enemies:
+                    EnemiesTab?.DrawPanel();
+                    EnemiesTab?.HandleChanges();
+                    break;
+                case EditorTab.Player:
+                    PlayerTab?.DrawPanel();
+                    PlayerTab?.HandleChanges();
                     break;
                 case EditorTab.World:
-                    WorldTab?.DrawPanel();
-                    WorldTab?.HandleChanges();
-                    break;
-                case EditorTab.Zones:
                     ZoneTab?.DrawPanel();
                     ZoneTab?.HandleChanges();
                     break;
-                case EditorTab.Sprites:
-                    SpriteEdit?.DrawPanel();
+                case EditorTab.SpriteSkins:
+                    SpriteSkinTab?.DrawPanel();
+                    SpriteSkinTab?.HandleChanges();
                     break;
             }
 
@@ -498,8 +516,8 @@ namespace UnknownMod.Editor
             {
                 fontSize = 12,
                 fontStyle = FontStyle.Bold,
-                normal = { textColor = Color.cyan }
             };
+            _tabActiveStyle.normal.textColor = Color.cyan;
 
             if (_boxTex == null)
                 _boxTex = MakeTex(2, 2, new Color(0.1f, 0.1f, 0.12f, 0.92f));

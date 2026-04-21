@@ -4,7 +4,7 @@ using UnknownMod.Editor;
 namespace UnknownMod
 {
     /// <summary>
-    /// Block game node interaction when the MapEditor is active.
+    /// Block game node interaction when the mod editor is active.
     /// </summary>
     public static partial class Patches
     {

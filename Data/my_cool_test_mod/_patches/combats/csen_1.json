@@ -1,0 +1,19 @@
+{
+  "CombatId": "csen_1",
+  "Description": "3 cornies",
+  "NpcIds": [
+    "cornie",
+    "cornie",
+    "blazingcornie",
+    "advisor"
+  ],
+  "CombatTier": "T0",
+  "Background": "Senenthia_Dia",
+  "CustomBackgroundId": "my_cool_test_mod_new_zone_bg_0",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

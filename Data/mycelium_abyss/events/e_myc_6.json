@@ -1,0 +1,35 @@
+{
+  "EventId": "e_myc_6",
+  "EventName": "The Luminous Garden",
+  "Description": "A vast cavern opens before you, its ceiling lost in darkness. Bioluminescent mushrooms of every color carpet the floor, casting the chamber in ethereal light. At the center, a crystalline spring bubbles up through a ring of towering fungal growths, its water glowing faintly blue.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Drink from the crystalline spring.",
+      "Action": 30,
+      "HasRoll": true,
+      "RollDC": 5,
+      "RollCard": 4,
+      "SsText": "The water is cool and pure, cleansing your body of fatigue and corruption. A warm, holy light suffuses your party as the spring's healing energy flows through you.",
+      "SsHealPercent": 0.2,
+      "SsXP": 30,
+      "FlText": "The water burns your throat. Spores hidden in the spring flood your system with poison, and shapes emerge from the mushroom grove — Blightcallers drawn by your suffering.",
+      "FlCombatId": "cmyc_3"
+    },
+    {
+      "ReplyText": "Harvest the glowing mushrooms.",
+      "Action": 29,
+      "SsText": "You carefully pluck several luminous specimens. Their caps feel warm to the touch, and fine spores drift into the air as you work. You pocket a useful find among the fungi."
+    },
+    {
+      "ReplyText": "Purify the water with healing magic. [Healer]",
+      "Action": 29,
+      "SsText": "Holy energy flows from your hands into the spring. The water clarifies, and the fungal growths around it wither and retreat. Your party drinks deeply of the purified waters, feeling renewed.",
+      "SsHealPercent": 0.3
+    }
+  ]
+}

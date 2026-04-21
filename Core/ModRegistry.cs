@@ -22,21 +22,43 @@ namespace UnknownMod.Core
 
         /// <summary>Zone folder path map. Keyed by zone ID, value is disk folder path.</summary>
         public static readonly Dictionary<string, string> ZoneFolderMap = new();
+        // ── Starter map override (set by last mod with a non-empty StarterNodeId) ─
+        /// <summary>If non-empty, BeginAdventure is redirected to this node instead of "sen_0".</summary>
+        public static string StarterNodeId { get; set; } = "";
 
+        /// <summary>Called at runtime by the transpiled BeginAdventure IL.
+        /// Returns StarterNodeId if configured, otherwise falls back to "sen_0".</summary>
+        public static string GetStarterNode()
+        {
+            if (!string.IsNullOrEmpty(StarterNodeId))
+            {
+                Plugin.Log.LogInfo($"[ModRegistry] Starter node override: '{StarterNodeId}'");
+                return StarterNodeId;
+            }
+            return "sen_0";
+        }
         // ── Global cross-mod registries (last writer wins) ───────────
         /// <summary>Global sprite overrides from all loaded mods. Keyed by sprite def ID.</summary>
-        public static readonly Dictionary<string, SpriteOverrideDef> GlobalSprites = new();
+        public static readonly Dictionary<string, CharacterOverrideDef> GlobalSpriteSkins = new();
 
         /// <summary>Global NPC definitions from all loaded mods. Keyed by NPC ID.</summary>
         public static readonly Dictionary<string, NpcDef> GlobalNpcs = new();
 
-        // ── NPC → Zone reverse index (for runtime sprite resolution) ─
-        /// <summary>Maps NPC base ID → ZoneDef that owns it. Built during zone registration.</summary>
-        private static readonly Dictionary<string, ZoneDef> _npcToZone = new();
+        // ── Mod image sprites (loaded from sprites/ folder on disk) ──
+        /// <summary>Sprites loaded from image files in mod sprites/ folders. Keyed by sprite name.</summary>
+        public static readonly Dictionary<string, Sprite> ModImageSprites = new();
+
+        // ── Skin → CharacterOverrideDef mapping (for runtime hero sprite resolution) ──
+        /// <summary>Maps skin ID → CharacterOverrideDef for skins with runtime sprite overrides.
+        /// Populated at build time; queried by HeroItem.Init postfix patch.</summary>
+        public static readonly Dictionary<string, CharacterOverrideDef> SkinOverrides = new();
 
         // ── Globals key tracking (for clean teardown) ────────────────
         /// <summary>Keys registered in each Globals dict field by mod builds. Used to remove stale entries on rebuild.</summary>
         private static readonly Dictionary<string, HashSet<string>> _registeredKeys = new();
+
+        /// <summary>Tier reward keys (int-keyed dict) registered by mod builds.</summary>
+        private static readonly HashSet<int> _registeredTierKeys = new();
 
         // ═══════════════════════════════════════════════════════════════
         //  ZONE QUERIES
@@ -63,26 +85,22 @@ namespace UnknownMod.Core
             LoadedZones[zoneDef.ZoneId] = zoneDef;
             ZoneFolderMap[zoneDef.ZoneId] = folderPath;
 
-            // Build NPC → Zone reverse index for runtime sprite resolution
-            foreach (var npcId in zoneDef.Npcs.Keys)
-                _npcToZone[npcId] = zoneDef;
-
             Plugin.Log.LogInfo($"[ModRegistry] Registered mod zone '{zoneDef.ZoneId}' at {folderPath}");
         }
 
         /// <summary>
         /// Merge a mod's sprite defs into the global registries. Last writer wins.
         /// </summary>
-        public static void RegisterModSprites(
-            Dictionary<string, SpriteOverrideDef> sprites,
-            Dictionary<string, SpriteOverrideDef> spritePatches)
+        public static void RegisterModSpriteSkins(
+            Dictionary<string, CharacterOverrideDef> sprites,
+            Dictionary<string, CharacterOverrideDef> spritePatches)
         {
             if (sprites != null)
                 foreach (var kvp in sprites)
-                    GlobalSprites[kvp.Key] = kvp.Value;
+                    GlobalSpriteSkins[kvp.Key] = kvp.Value;
             if (spritePatches != null)
                 foreach (var kvp in spritePatches)
-                    GlobalSprites[kvp.Key] = kvp.Value;
+                    GlobalSpriteSkins[kvp.Key] = kvp.Value;
         }
 
         /// <summary>
@@ -100,26 +118,26 @@ namespace UnknownMod.Core
                     GlobalNpcs[kvp.Key] = kvp.Value;
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        //  NPC → ZONE LOOKUP (runtime)
-        // ═══════════════════════════════════════════════════════════════
+        /// <summary>
+        /// Register a skin's sprite override def for runtime resolution.
+        /// Called from the Skins build step afterBuild callback.
+        /// </summary>
+        public static void RegisterSkinOverride(string skinId, CharacterOverrideDef overrideDef)
+        {
+            if (string.IsNullOrEmpty(skinId) || overrideDef == null) return;
+            SkinOverrides[skinId] = overrideDef;
+            Plugin.Log.LogInfo($"[ModRegistry] Registered skin sprite override for '{skinId}'");
+        }
 
         /// <summary>
-        /// Find the zone that owns a given NPC ID (accounting for variant suffixes).
-        /// Returns null if no loaded zone owns this NPC.
+        /// Resolve the CharacterOverrideDef for a hero skin at runtime.
+        /// Returns null if no modded sprite override exists for this skin.
         /// </summary>
-        public static ZoneDef FindZoneForNpc(string npcId)
+        public static CharacterOverrideDef ResolveOverrideForSkin(string skinId)
         {
-            if (string.IsNullOrEmpty(npcId)) return null;
-
-            // Try direct lookup first
-            if (_npcToZone.TryGetValue(npcId, out var zone)) return zone;
-
-            // Try stripping variant suffix
-            string baseId = StripVariantSuffix(npcId);
-            if (baseId != npcId && _npcToZone.TryGetValue(baseId, out zone)) return zone;
-
-            return null;
+            if (string.IsNullOrEmpty(skinId)) return null;
+            SkinOverrides.TryGetValue(skinId, out var def);
+            return def;
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -138,6 +156,12 @@ namespace UnknownMod.Core
                 _registeredKeys[fieldName] = keys;
             }
             keys.Add(key);
+        }
+
+        /// <summary>Track a tier reward registration for later cleanup (int-keyed dict).</summary>
+        public static void TrackTierRewardRegistration(int tierNum)
+        {
+            _registeredTierKeys.Add(tierNum);
         }
 
         /// <summary>
@@ -163,6 +187,20 @@ namespace UnknownMod.Core
 
             Plugin.Log.LogInfo($"[ModRegistry] Unregistered {_registeredKeys.Sum(k => k.Value.Count)} keys from Globals.");
             _registeredKeys.Clear();
+
+            // Remove tier reward int-keyed registrations
+            if (_registeredTierKeys.Count > 0)
+            {
+                var tierDict = Traverse.Create(Globals.Instance)
+                    .Field<Dictionary<int, TierRewardData>>("_TierRewardDataSource").Value;
+                if (tierDict != null)
+                {
+                    foreach (var tier in _registeredTierKeys)
+                        tierDict.Remove(tier);
+                }
+                Plugin.Log.LogInfo($"[ModRegistry] Unregistered {_registeredTierKeys.Count} tier reward keys.");
+                _registeredTierKeys.Clear();
+            }
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -175,10 +213,133 @@ namespace UnknownMod.Core
             UnregisterFromGlobals();
             LoadedZones.Clear();
             ZoneFolderMap.Clear();
-            GlobalSprites.Clear();
+            GlobalSpriteSkins.Clear();
             GlobalNpcs.Clear();
-            _npcToZone.Clear();
+            SkinOverrides.Clear();
+            Editor.MapEditor.InvalidateSpriteNameCache();
+            StarterNodeId = "";
+
+            // Destroy all active override drivers BEFORE clearing sprite/texture caches.
+            // Drivers hold references to Sprites backed by cached textures — destroying
+            // textures first would cause magenta rendering on any surviving drivers.
+            DestroyActiveOverrideDrivers();
+
             NpcPrefabBuilder.ClearCache();
+            ClearModImageSprites();
+            SpriteUtils.ClearSpriteCache();
+            CharacterOverrideDriver.ClearAllPivotCaches();
+            DataHelper.CustomBackgroundPrefabs.Clear();
+            DataHelper.CombatCustomBackgrounds.Clear();
+        }
+
+        /// <summary>Find and destroy all active CharacterOverrideDriver + GraftPuppet components
+        /// so their OnDestroy cleans up sprite caches before textures are destroyed.</summary>
+        private static void DestroyActiveOverrideDrivers()
+        {
+            // Use the static registry instead of FindObjectsOfType, which misses inactive GOs.
+            // Copy to list first since OnDestroy modifies the collection.
+            var drivers = new List<Runtime.CharacterOverrideDriver>(Runtime.CharacterOverrideDriver.AllDrivers);
+
+            // Collect puppet GOs from each driver BEFORE destroying drivers.
+            // This catches puppets on inactive GOs that FindObjectsOfType would miss.
+            var puppetGOs = new List<GameObject>();
+            foreach (var driver in drivers)
+            {
+                if (driver == null) continue;
+                foreach (var puppet in driver.Puppets)
+                    if (puppet != null) puppetGOs.Add(puppet.gameObject);
+            }
+
+            // Destroy puppets first so their OnDestroy runs while textures still exist.
+            foreach (var go in puppetGOs)
+                if (go != null) Object.DestroyImmediate(go);
+
+            // Now destroy drivers.
+            foreach (var driver in drivers)
+            {
+                if (driver != null) Object.DestroyImmediate(driver);
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  MOD IMAGE SPRITES
+        // ═══════════════════════════════════════════════════════════════
+
+        private static readonly string[] _imageExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".tga" };
+
+        /// <summary>
+        /// Scan a mod's sprites/ folder for image files and load them as named Sprites.
+        /// If a sprite name conflicts with a base-game sprite, the mod ID is prepended.
+        /// </summary>
+        public static void LoadModImageSprites(string modId, string modRoot)
+        {
+            string spritesDir = System.IO.Path.Combine(modRoot, "sprites");
+            if (!System.IO.Directory.Exists(spritesDir)) return;
+
+            // Build a set of existing sprite names ONCE (instead of per-file)
+            var existingNames = new HashSet<string>();
+            foreach (var s in Resources.FindObjectsOfTypeAll<Sprite>())
+                if (s != null) existingNames.Add(s.name);
+
+            int loaded = 0;
+            foreach (var file in System.IO.Directory.GetFiles(spritesDir))
+            {
+                string ext = System.IO.Path.GetExtension(file).ToLowerInvariant();
+                bool isImage = false;
+                foreach (var valid in _imageExtensions)
+                    if (ext == valid) { isImage = true; break; }
+                if (!isImage) continue;
+
+                try
+                {
+                    byte[] data = System.IO.File.ReadAllBytes(file);
+                    var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                    tex.LoadImage(data);
+                    tex.filterMode = FilterMode.Bilinear;
+
+                    float ppu = Mathf.Max(tex.width, tex.height) / 10f; // reasonable default
+                    string baseName = System.IO.Path.GetFileNameWithoutExtension(file);
+
+                    // Check for conflict with base-game sprites
+                    string spriteName = baseName;
+                    bool conflict = existingNames.Contains(baseName);
+                    if (conflict)
+                        spriteName = $"{modId}_{baseName}";
+
+                    var sprite = Sprite.Create(tex,
+                        new Rect(0, 0, tex.width, tex.height),
+                        new Vector2(0.5f, 0.5f), ppu);
+                    sprite.name = spriteName;
+
+                    ModImageSprites[spriteName] = sprite;
+                    loaded++;
+
+                    if (conflict)
+                        Plugin.Log.LogInfo($"[ModRegistry] Loaded mod sprite '{baseName}' as '{spriteName}' (name conflict with base game)");
+                }
+                catch (System.Exception ex)
+                {
+                    Plugin.Log.LogError($"[ModRegistry] Failed to load image sprite '{file}': {ex.Message}");
+                }
+            }
+
+            if (loaded > 0)
+                Plugin.Log.LogInfo($"[ModRegistry] Loaded {loaded} image sprite(s) from '{spritesDir}'");
+        }
+
+        /// <summary>Destroy all mod-loaded image sprites and their textures.</summary>
+        private static void ClearModImageSprites()
+        {
+            foreach (var sprite in ModImageSprites.Values)
+            {
+                if (sprite != null)
+                {
+                    var tex = sprite.texture;
+                    Object.DestroyImmediate(sprite);
+                    if (tex != null) Object.DestroyImmediate(tex);
+                }
+            }
+            ModImageSprites.Clear();
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -208,8 +369,8 @@ namespace UnknownMod.Core
         /// </summary>
         public static string ResolveBaseNpcId(ZoneDef zone, NpcDef npcDef)
         {
-            if (zone != null && !string.IsNullOrEmpty(npcDef.SpriteSource) &&
-                zone.Sprites.TryGetValue(npcDef.SpriteSource, out var spriteDef) &&
+            if (!string.IsNullOrEmpty(npcDef.SpriteSource) &&
+                GlobalSpriteSkins.TryGetValue(npcDef.SpriteSource, out var spriteDef) &&
                 !string.IsNullOrEmpty(spriteDef.BaseSprite))
             {
                 return spriteDef.BaseSprite;
@@ -218,24 +379,36 @@ namespace UnknownMod.Core
         }
 
         /// <summary>
-        /// Resolve the SpriteOverrideDef for an NPC by checking its SpriteSource
-        /// against the zone's Sprites dictionary.
+        /// Resolve the CharacterOverrideDef for an NPC by checking its SpriteSkinId
+        /// → GlobalSpriteSkins directly.
         /// </summary>
-        public static SpriteOverrideDef ResolveSpriteDefForNpc(ZoneDef zone, NpcDef npcDef)
+        public static CharacterOverrideDef ResolveOverrideForNpc(NpcDef npcDef)
         {
-            if (zone != null && !string.IsNullOrEmpty(npcDef.SpriteSource) &&
-                zone.Sprites.TryGetValue(npcDef.SpriteSource, out var spriteDef))
-                return spriteDef;
+            // Direct path: SpriteSkinId → GlobalSpriteSkins
+            if (!string.IsNullOrEmpty(npcDef.SpriteSkinId) &&
+                GlobalSpriteSkins.TryGetValue(npcDef.SpriteSkinId, out var overrideDef))
+            {
+                return overrideDef;
+            }
+
+            // Legacy fallback: SpriteSource → GlobalSpriteSkins
+            if (!string.IsNullOrEmpty(npcDef.SpriteSource) &&
+                GlobalSpriteSkins.TryGetValue(npcDef.SpriteSource, out var legacyDef))
+                return legacyDef;
+
             return null;
         }
 
-        /// <summary>
-        /// Strip variant suffixes from an NPC ID to get the base NPC ID.
+        /// <summary>Variant suffixes checked longest-first to avoid partial matches
+        /// (e.g. "_plus_b" must be checked before "_b" or "_plus").</summary>
+        private static readonly string[] VariantSuffixes = { "_plush_b", "_plus_b", "_plush", "_plus", "_b" };
+
+        /// <summary>Strip variant suffixes from NPC IDs (e.g. "spider_plus_b" → "spider").
         /// Used for runtime resolution where variant NPCs share their base's sprite.
         /// </summary>
         public static string StripVariantSuffix(string npcId)
         {
-            foreach (string suffix in new[] { "_plus_b", "_plus", "_b" })
+            foreach (string suffix in VariantSuffixes)
             {
                 if (npcId.EndsWith(suffix))
                     return npcId.Substring(0, npcId.Length - suffix.Length);

@@ -44,6 +44,10 @@ namespace UnknownMod.Definitions
         public bool HistoryMode = false;
         public bool ShouldSerializeHistoryMode() => HistoryMode;
 
+        /// <summary>Unique identifier for this event instance.</summary>
+        public string EventUniqueId = "";
+        public bool ShouldSerializeEventUniqueId() => !string.IsNullOrEmpty(EventUniqueId);
+
         public List<ReplyDef> Replies = new();
     }
 
@@ -81,6 +85,26 @@ namespace UnknownMod.Definitions
         public bool UpgradeRandomCard = false;
         public bool FinishGame = false;
         public bool FinishObeliskMap = false;
+
+        /// <summary>Perk granted in this outcome (Ss-only in game). PerkData ID.</summary>
+        public string PerkDataId = "";
+        public bool ShouldSerializePerkDataId() => !string.IsNullOrEmpty(PerkDataId);
+
+        /// <summary>Secondary perk (Ss-only in game). PerkData ID.</summary>
+        public string PerkData1Id = "";
+        public bool ShouldSerializePerkData1Id() => !string.IsNullOrEmpty(PerkData1Id);
+
+        /// <summary>Finish Early Access flag (Ss and Ssc).</summary>
+        public bool FinishEarlyAccess = false;
+        public bool ShouldSerializeFinishEarlyAccess() => FinishEarlyAccess;
+
+        /// <summary>Steam stat to increment (Ss-only).</summary>
+        public string SteamStat = "";
+        public bool ShouldSerializeSteamStat() => !string.IsNullOrEmpty(SteamStat);
+
+        /// <summary>Skin to unlock (Ss-only). SkinData ID.</summary>
+        public string UnlockSkinId = "";
+        public bool ShouldSerializeUnlockSkinId() => !string.IsNullOrEmpty(UnlockSkinId);
 
         /// <summary>Max card rarity allowed in craft UI.</summary>
         [JsonConverter(typeof(StringEnumConverter))]
@@ -154,6 +178,18 @@ namespace UnknownMod.Definitions
         /// <summary>SubClass ID — only show this reply for a specific hero class.</summary>
         public string RequiredClassId = "";
         public bool ShouldSerializeRequiredClassId() => !string.IsNullOrEmpty(RequiredClassId);
+
+        /// <summary>SubClass ID — block this reply for a specific hero class.</summary>
+        public string RequiredClassForBlockedId = "";
+        public bool ShouldSerializeRequiredClassForBlockedId() => !string.IsNullOrEmpty(RequiredClassForBlockedId);
+
+        /// <summary>SKU requirement for this reply.</summary>
+        public string RequirementSku = "";
+        public bool ShouldSerializeRequirementSku() => !string.IsNullOrEmpty(RequirementSku);
+
+        /// <summary>Allow player to choose replacement hero.</summary>
+        public bool ChooseReplacementHero = false;
+        public bool ShouldSerializeChooseReplacementHero() => ChooseReplacementHero;
 
         /// <summary>Item card ID required to show this reply.</summary>
         public string RequirementItemId = "";
@@ -236,6 +272,9 @@ namespace UnknownMod.Definitions
 
             // New reply-level fields
             r.RequiredClassId = (string)jo["RequiredClassId"] ?? "";
+            r.RequiredClassForBlockedId = (string)jo["RequiredClassForBlockedId"] ?? "";
+            r.RequirementSku = (string)jo["RequirementSku"] ?? "";
+            r.ChooseReplacementHero = (bool?)jo["ChooseReplacementHero"] ?? false;
             r.RequirementItemId = (string)jo["RequirementItemId"] ?? "";
             r.RequirementItemIds = jo["RequirementItemIds"]?.ToObject<List<string>>(serializer) ?? new List<string>();
             r.RequirementCardIds = jo["RequirementCardIds"]?.ToObject<List<string>>(serializer) ?? new List<string>();
@@ -260,6 +299,14 @@ namespace UnknownMod.Definitions
             // Ss-only outcome fields
             r.Ss.CharacterReplacementId = (string)jo["SsCharacterReplacementId"] ?? "";
             r.Ss.CharacterReplacementPosition = (int?)jo["SsCharacterReplacementPosition"] ?? 0;
+            r.Ss.PerkDataId = (string)jo["SsPerkDataId"] ?? "";
+            r.Ss.PerkData1Id = (string)jo["SsPerkData1Id"] ?? "";
+            r.Ss.SteamStat = (string)jo["SsSteamStat"] ?? "";
+            r.Ss.UnlockSkinId = (string)jo["SsUnlockSkinId"] ?? "";
+
+            // FinishEarlyAccess: Ss and Ssc
+            r.Ss.FinishEarlyAccess = (bool?)jo["SsFinishEarlyAccess"] ?? false;
+            r.Ssc.FinishEarlyAccess = (bool?)jo["SscFinishEarlyAccess"] ?? false;
 
             return r;
         }
@@ -269,44 +316,53 @@ namespace UnknownMod.Definitions
             writer.WriteStartObject();
 
             writer.WritePropertyName("ReplyText"); writer.WriteValue(r.ReplyText);
-            writer.WritePropertyName("Action"); serializer.Serialize(writer, r.Action);
-            writer.WritePropertyName("GoldCost"); writer.WriteValue(r.GoldCost);
-            writer.WritePropertyName("DustCost"); writer.WriteValue(r.DustCost);
-            writer.WritePropertyName("RequirementId"); writer.WriteValue(r.RequirementId);
-            writer.WritePropertyName("RequirementBlockedId"); writer.WriteValue(r.RequirementBlockedId);
-            writer.WritePropertyName("HasRoll"); writer.WriteValue(r.HasRoll);
-            writer.WritePropertyName("RollDC"); writer.WriteValue(r.RollDC);
-            writer.WritePropertyName("RollCrit"); writer.WriteValue(r.RollCrit);
-            writer.WritePropertyName("RollCritFail"); writer.WriteValue(r.RollCritFail);
-            writer.WritePropertyName("RollMode"); serializer.Serialize(writer, r.RollMode);
-            writer.WritePropertyName("RollTarget"); serializer.Serialize(writer, r.RollTarget);
-            writer.WritePropertyName("RollCard"); serializer.Serialize(writer, r.RollCard);
+            if (r.Action != Enums.EventAction.None) { writer.WritePropertyName("Action"); serializer.Serialize(writer, r.Action); }
+            if (r.GoldCost != 0) { writer.WritePropertyName("GoldCost"); writer.WriteValue(r.GoldCost); }
+            if (r.DustCost != 0) { writer.WritePropertyName("DustCost"); writer.WriteValue(r.DustCost); }
+            if (!string.IsNullOrEmpty(r.RequirementId)) { writer.WritePropertyName("RequirementId"); writer.WriteValue(r.RequirementId); }
+            if (!string.IsNullOrEmpty(r.RequirementBlockedId)) { writer.WritePropertyName("RequirementBlockedId"); writer.WriteValue(r.RequirementBlockedId); }
+            if (r.HasRoll) { writer.WritePropertyName("HasRoll"); writer.WriteValue(r.HasRoll); }
+            if (r.RollDC != 0) { writer.WritePropertyName("RollDC"); writer.WriteValue(r.RollDC); }
+            if (r.RollCrit != -1) { writer.WritePropertyName("RollCrit"); writer.WriteValue(r.RollCrit); }
+            if (r.RollCritFail != -1) { writer.WritePropertyName("RollCritFail"); writer.WriteValue(r.RollCritFail); }
+            if (r.RollMode != Enums.RollMode.HigherOrEqual) { writer.WritePropertyName("RollMode"); serializer.Serialize(writer, r.RollMode); }
+            if (r.RollTarget != Enums.RollTarget.Single) { writer.WritePropertyName("RollTarget"); serializer.Serialize(writer, r.RollTarget); }
+            if (r.RollCard != Enums.CardType.None) { writer.WritePropertyName("RollCard"); serializer.Serialize(writer, r.RollCard); }
 
             // New reply-level fields
-            writer.WritePropertyName("RequiredClassId"); writer.WriteValue(r.RequiredClassId);
-            writer.WritePropertyName("RequirementItemId"); writer.WriteValue(r.RequirementItemId);
+            if (!string.IsNullOrEmpty(r.RequiredClassId)) { writer.WritePropertyName("RequiredClassId"); writer.WriteValue(r.RequiredClassId); }
+            if (!string.IsNullOrEmpty(r.RequiredClassForBlockedId)) { writer.WritePropertyName("RequiredClassForBlockedId"); writer.WriteValue(r.RequiredClassForBlockedId); }
+            if (!string.IsNullOrEmpty(r.RequirementSku)) { writer.WritePropertyName("RequirementSku"); writer.WriteValue(r.RequirementSku); }
+            if (r.ChooseReplacementHero) { writer.WritePropertyName("ChooseReplacementHero"); writer.WriteValue(r.ChooseReplacementHero); }
+            if (!string.IsNullOrEmpty(r.RequirementItemId)) { writer.WritePropertyName("RequirementItemId"); writer.WriteValue(r.RequirementItemId); }
             if (r.RequirementItemIds != null && r.RequirementItemIds.Count > 0)
             { writer.WritePropertyName("RequirementItemIds"); serializer.Serialize(writer, r.RequirementItemIds); }
             if (r.RequirementCardIds != null && r.RequirementCardIds.Count > 0)
             { writer.WritePropertyName("RequirementCardIds"); serializer.Serialize(writer, r.RequirementCardIds); }
-            writer.WritePropertyName("ReplyShowCardId"); writer.WriteValue(r.ReplyShowCardId);
-            writer.WritePropertyName("RequirementMultiplayer"); writer.WriteValue(r.RequirementMultiplayer);
-            writer.WritePropertyName("RepeatForAllCharacters"); writer.WriteValue(r.RepeatForAllCharacters);
-            writer.WritePropertyName("RepeatForAllWarriors"); writer.WriteValue(r.RepeatForAllWarriors);
-            writer.WritePropertyName("RepeatForAllScouts"); writer.WriteValue(r.RepeatForAllScouts);
-            writer.WritePropertyName("RepeatForAllMages"); writer.WriteValue(r.RepeatForAllMages);
-            writer.WritePropertyName("RepeatForAllHealers"); writer.WriteValue(r.RepeatForAllHealers);
+            if (!string.IsNullOrEmpty(r.ReplyShowCardId)) { writer.WritePropertyName("ReplyShowCardId"); writer.WriteValue(r.ReplyShowCardId); }
+            if (r.RequirementMultiplayer) { writer.WritePropertyName("RequirementMultiplayer"); writer.WriteValue(r.RequirementMultiplayer); }
+            if (r.RepeatForAllCharacters) { writer.WritePropertyName("RepeatForAllCharacters"); writer.WriteValue(r.RepeatForAllCharacters); }
+            if (r.RepeatForAllWarriors) { writer.WritePropertyName("RepeatForAllWarriors"); writer.WriteValue(r.RepeatForAllWarriors); }
+            if (r.RepeatForAllScouts) { writer.WritePropertyName("RepeatForAllScouts"); writer.WriteValue(r.RepeatForAllScouts); }
+            if (r.RepeatForAllMages) { writer.WritePropertyName("RepeatForAllMages"); writer.WriteValue(r.RepeatForAllMages); }
+            if (r.RepeatForAllHealers) { writer.WritePropertyName("RepeatForAllHealers"); writer.WriteValue(r.RepeatForAllHealers); }
 
             WriteOutcome(writer, "Ss", r.Ss, serializer);
-            writer.WritePropertyName("SsFinishGame"); writer.WriteValue(r.Ss.FinishGame);
-            writer.WritePropertyName("SsFinishObeliskMap"); writer.WriteValue(r.Ss.FinishObeliskMap);
-            writer.WritePropertyName("SsCharacterReplacementId"); writer.WriteValue(r.Ss.CharacterReplacementId);
-            writer.WritePropertyName("SsCharacterReplacementPosition"); writer.WriteValue(r.Ss.CharacterReplacementPosition);
+            if (r.Ss.FinishGame) { writer.WritePropertyName("SsFinishGame"); writer.WriteValue(r.Ss.FinishGame); }
+            if (r.Ss.FinishObeliskMap) { writer.WritePropertyName("SsFinishObeliskMap"); writer.WriteValue(r.Ss.FinishObeliskMap); }
+            if (!string.IsNullOrEmpty(r.Ss.CharacterReplacementId)) { writer.WritePropertyName("SsCharacterReplacementId"); writer.WriteValue(r.Ss.CharacterReplacementId); }
+            if (!string.IsNullOrEmpty(r.Ss.CharacterReplacementId)) { writer.WritePropertyName("SsCharacterReplacementPosition"); writer.WriteValue(r.Ss.CharacterReplacementPosition); }
+            if (!string.IsNullOrEmpty(r.Ss.PerkDataId)) { writer.WritePropertyName("SsPerkDataId"); writer.WriteValue(r.Ss.PerkDataId); }
+            if (!string.IsNullOrEmpty(r.Ss.PerkData1Id)) { writer.WritePropertyName("SsPerkData1Id"); writer.WriteValue(r.Ss.PerkData1Id); }
+            if (r.Ss.FinishEarlyAccess) { writer.WritePropertyName("SsFinishEarlyAccess"); writer.WriteValue(r.Ss.FinishEarlyAccess); }
+            if (!string.IsNullOrEmpty(r.Ss.SteamStat)) { writer.WritePropertyName("SsSteamStat"); writer.WriteValue(r.Ss.SteamStat); }
+            if (!string.IsNullOrEmpty(r.Ss.UnlockSkinId)) { writer.WritePropertyName("SsUnlockSkinId"); writer.WriteValue(r.Ss.UnlockSkinId); }
 
             WriteOutcome(writer, "Fl", r.Fl, serializer);
 
             WriteOutcome(writer, "Ssc", r.Ssc, serializer);
-            writer.WritePropertyName("SscFinishGame"); writer.WriteValue(r.Ssc.FinishGame);
+            if (r.Ssc.FinishGame) { writer.WritePropertyName("SscFinishGame"); writer.WriteValue(r.Ssc.FinishGame); }
+            if (r.Ssc.FinishEarlyAccess) { writer.WritePropertyName("SscFinishEarlyAccess"); writer.WriteValue(r.Ssc.FinishEarlyAccess); }
 
             WriteOutcome(writer, "Flc", r.Flc, serializer);
 
@@ -360,47 +416,47 @@ namespace UnknownMod.Definitions
 
         private static void WriteOutcome(JsonWriter writer, string p, OutcomeDef o, JsonSerializer serializer)
         {
-            writer.WritePropertyName($"{p}Text"); writer.WriteValue(o.Text);
-            writer.WritePropertyName($"{p}HealPercent"); writer.WriteValue(o.HealPercent);
-            writer.WritePropertyName($"{p}HealFlat"); writer.WriteValue(o.HealFlat);
-            writer.WritePropertyName($"{p}Gold"); writer.WriteValue(o.Gold);
-            writer.WritePropertyName($"{p}Dust"); writer.WriteValue(o.Dust);
-            writer.WritePropertyName($"{p}Supply"); writer.WriteValue(o.Supply);
-            writer.WritePropertyName($"{p}XP"); writer.WriteValue(o.XP);
-            writer.WritePropertyName($"{p}CombatId"); writer.WriteValue(o.CombatId);
-            writer.WritePropertyName($"{p}EventId"); writer.WriteValue(o.EventId);
-            writer.WritePropertyName($"{p}NodeTravelId"); writer.WriteValue(o.NodeTravelId);
-            writer.WritePropertyName($"{p}RequirementUnlockId"); writer.WriteValue(o.RequirementUnlockId);
-            writer.WritePropertyName($"{p}RequirementUnlock2Id"); writer.WriteValue(o.RequirementUnlock2Id);
-            writer.WritePropertyName($"{p}RequirementLockId"); writer.WriteValue(o.RequirementLockId);
-            writer.WritePropertyName($"{p}RequirementLock2Id"); writer.WriteValue(o.RequirementLock2Id);
-            writer.WritePropertyName($"{p}LootId"); writer.WriteValue(o.LootId);
-            writer.WritePropertyName($"{p}ShopId"); writer.WriteValue(o.ShopId);
-            writer.WritePropertyName($"{p}AddItemId"); writer.WriteValue(o.AddItemId);
-            writer.WritePropertyName($"{p}AddCard1Id"); writer.WriteValue(o.AddCard1Id);
-            writer.WritePropertyName($"{p}AddCard2Id"); writer.WriteValue(o.AddCard2Id);
-            writer.WritePropertyName($"{p}AddCard3Id"); writer.WriteValue(o.AddCard3Id);
-            writer.WritePropertyName($"{p}RewardTier"); writer.WriteValue(o.RewardTier);
-            writer.WritePropertyName($"{p}Discount"); writer.WriteValue(o.Discount);
-            writer.WritePropertyName($"{p}MaxQuantity"); writer.WriteValue(o.MaxQuantity);
-            writer.WritePropertyName($"{p}HealerUI"); writer.WriteValue(o.HealerUI);
-            writer.WritePropertyName($"{p}UpgradeUI"); writer.WriteValue(o.UpgradeUI);
-            writer.WritePropertyName($"{p}CraftUI"); writer.WriteValue(o.CraftUI);
-            writer.WritePropertyName($"{p}MerchantUI"); writer.WriteValue(o.MerchantUI);
-            writer.WritePropertyName($"{p}CorruptionUI"); writer.WriteValue(o.CorruptionUI);
-            writer.WritePropertyName($"{p}UpgradeRandomCard"); writer.WriteValue(o.UpgradeRandomCard);
+            if (!string.IsNullOrEmpty(o.Text)) { writer.WritePropertyName($"{p}Text"); writer.WriteValue(o.Text); }
+            if (o.HealPercent != 0f) { writer.WritePropertyName($"{p}HealPercent"); writer.WriteValue(o.HealPercent); }
+            if (o.HealFlat != 0) { writer.WritePropertyName($"{p}HealFlat"); writer.WriteValue(o.HealFlat); }
+            if (o.Gold != 0) { writer.WritePropertyName($"{p}Gold"); writer.WriteValue(o.Gold); }
+            if (o.Dust != 0) { writer.WritePropertyName($"{p}Dust"); writer.WriteValue(o.Dust); }
+            if (o.Supply != 0) { writer.WritePropertyName($"{p}Supply"); writer.WriteValue(o.Supply); }
+            if (o.XP != 0) { writer.WritePropertyName($"{p}XP"); writer.WriteValue(o.XP); }
+            if (!string.IsNullOrEmpty(o.CombatId)) { writer.WritePropertyName($"{p}CombatId"); writer.WriteValue(o.CombatId); }
+            if (!string.IsNullOrEmpty(o.EventId)) { writer.WritePropertyName($"{p}EventId"); writer.WriteValue(o.EventId); }
+            if (!string.IsNullOrEmpty(o.NodeTravelId)) { writer.WritePropertyName($"{p}NodeTravelId"); writer.WriteValue(o.NodeTravelId); }
+            if (!string.IsNullOrEmpty(o.RequirementUnlockId)) { writer.WritePropertyName($"{p}RequirementUnlockId"); writer.WriteValue(o.RequirementUnlockId); }
+            if (!string.IsNullOrEmpty(o.RequirementUnlock2Id)) { writer.WritePropertyName($"{p}RequirementUnlock2Id"); writer.WriteValue(o.RequirementUnlock2Id); }
+            if (!string.IsNullOrEmpty(o.RequirementLockId)) { writer.WritePropertyName($"{p}RequirementLockId"); writer.WriteValue(o.RequirementLockId); }
+            if (!string.IsNullOrEmpty(o.RequirementLock2Id)) { writer.WritePropertyName($"{p}RequirementLock2Id"); writer.WriteValue(o.RequirementLock2Id); }
+            if (!string.IsNullOrEmpty(o.LootId)) { writer.WritePropertyName($"{p}LootId"); writer.WriteValue(o.LootId); }
+            if (!string.IsNullOrEmpty(o.ShopId)) { writer.WritePropertyName($"{p}ShopId"); writer.WriteValue(o.ShopId); }
+            if (!string.IsNullOrEmpty(o.AddItemId)) { writer.WritePropertyName($"{p}AddItemId"); writer.WriteValue(o.AddItemId); }
+            if (!string.IsNullOrEmpty(o.AddCard1Id)) { writer.WritePropertyName($"{p}AddCard1Id"); writer.WriteValue(o.AddCard1Id); }
+            if (!string.IsNullOrEmpty(o.AddCard2Id)) { writer.WritePropertyName($"{p}AddCard2Id"); writer.WriteValue(o.AddCard2Id); }
+            if (!string.IsNullOrEmpty(o.AddCard3Id)) { writer.WritePropertyName($"{p}AddCard3Id"); writer.WriteValue(o.AddCard3Id); }
+            if (!string.IsNullOrEmpty(o.RewardTier)) { writer.WritePropertyName($"{p}RewardTier"); writer.WriteValue(o.RewardTier); }
+            if (o.Discount != 0) { writer.WritePropertyName($"{p}Discount"); writer.WriteValue(o.Discount); }
+            if (o.MaxQuantity != 0) { writer.WritePropertyName($"{p}MaxQuantity"); writer.WriteValue(o.MaxQuantity); }
+            if (o.HealerUI) { writer.WritePropertyName($"{p}HealerUI"); writer.WriteValue(o.HealerUI); }
+            if (o.UpgradeUI) { writer.WritePropertyName($"{p}UpgradeUI"); writer.WriteValue(o.UpgradeUI); }
+            if (o.CraftUI) { writer.WritePropertyName($"{p}CraftUI"); writer.WriteValue(o.CraftUI); }
+            if (o.MerchantUI) { writer.WritePropertyName($"{p}MerchantUI"); writer.WriteValue(o.MerchantUI); }
+            if (o.CorruptionUI) { writer.WritePropertyName($"{p}CorruptionUI"); writer.WriteValue(o.CorruptionUI); }
+            if (o.UpgradeRandomCard) { writer.WritePropertyName($"{p}UpgradeRandomCard"); writer.WriteValue(o.UpgradeRandomCard); }
 
-            // New outcome fields
-            writer.WritePropertyName($"{p}CraftUIMaxType"); serializer.Serialize(writer, o.CraftUIMaxType);
-            writer.WritePropertyName($"{p}ItemCorruptionUI"); writer.WriteValue(o.ItemCorruptionUI);
-            writer.WritePropertyName($"{p}RemoveItemSlot"); serializer.Serialize(writer, o.RemoveItemSlot);
-            writer.WritePropertyName($"{p}CorruptItemSlot"); serializer.Serialize(writer, o.CorruptItemSlot);
-            writer.WritePropertyName($"{p}UnlockClassId"); writer.WriteValue(o.UnlockClassId);
-            writer.WritePropertyName($"{p}CardPlayerGame"); writer.WriteValue(o.CardPlayerGame);
-            writer.WritePropertyName($"{p}CardPlayerGamePackId"); writer.WriteValue(o.CardPlayerGamePackId);
-            writer.WritePropertyName($"{p}CardPlayerPairsGame"); writer.WriteValue(o.CardPlayerPairsGame);
-            writer.WritePropertyName($"{p}CardPlayerPairsGamePackId"); writer.WriteValue(o.CardPlayerPairsGamePackId);
-            writer.WritePropertyName($"{p}UnlockSteamAchievement"); writer.WriteValue(o.UnlockSteamAchievement);
+            // New outcome fields — only write non-default
+            if (o.CraftUI && o.CraftUIMaxType != Enums.CardRarity.Common) { writer.WritePropertyName($"{p}CraftUIMaxType"); serializer.Serialize(writer, o.CraftUIMaxType); }
+            if (o.ItemCorruptionUI) { writer.WritePropertyName($"{p}ItemCorruptionUI"); writer.WriteValue(o.ItemCorruptionUI); }
+            if (o.RemoveItemSlot != Enums.ItemSlot.None) { writer.WritePropertyName($"{p}RemoveItemSlot"); serializer.Serialize(writer, o.RemoveItemSlot); }
+            if (o.CorruptItemSlot != Enums.ItemSlot.None) { writer.WritePropertyName($"{p}CorruptItemSlot"); serializer.Serialize(writer, o.CorruptItemSlot); }
+            if (!string.IsNullOrEmpty(o.UnlockClassId)) { writer.WritePropertyName($"{p}UnlockClassId"); writer.WriteValue(o.UnlockClassId); }
+            if (o.CardPlayerGame) { writer.WritePropertyName($"{p}CardPlayerGame"); writer.WriteValue(o.CardPlayerGame); }
+            if (!string.IsNullOrEmpty(o.CardPlayerGamePackId)) { writer.WritePropertyName($"{p}CardPlayerGamePackId"); writer.WriteValue(o.CardPlayerGamePackId); }
+            if (o.CardPlayerPairsGame) { writer.WritePropertyName($"{p}CardPlayerPairsGame"); writer.WriteValue(o.CardPlayerPairsGame); }
+            if (!string.IsNullOrEmpty(o.CardPlayerPairsGamePackId)) { writer.WritePropertyName($"{p}CardPlayerPairsGamePackId"); writer.WriteValue(o.CardPlayerPairsGamePackId); }
+            if (!string.IsNullOrEmpty(o.UnlockSteamAchievement)) { writer.WritePropertyName($"{p}UnlockSteamAchievement"); writer.WriteValue(o.UnlockSteamAchievement); }
         }
     }
 }

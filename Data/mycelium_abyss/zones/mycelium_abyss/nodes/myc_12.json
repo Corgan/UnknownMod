@@ -2,7 +2,7 @@
   "NodeId": "myc_12",
   "NodeName": "Glowing Grotto",
   "Description": "",
-  "PosX": 2.4,
+  "PosX": 2.472754,
   "PosY": 3.8,
   "TravelDestination": false,
   "GoToTown": false,
@@ -12,14 +12,14 @@
   "VisibleIfNotRequirement": false,
   "NodeGround": "None",
   "NodeRequirementId": "",
-  "CombatId": "cmyc_6",
+  "CombatIds": [
+    "cmyc_6"
+  ],
   "CombatTier": "T3",
   "CombatPercent": 100,
-  "EventId": "",
   "EventPercent": 0,
   "NodeEventTier": "T0",
   "Connections": [
     "myc_16"
-  ],
-  "ConnectionRequirements": []
+  ]
 }

@@ -49,6 +49,20 @@ namespace UnknownMod.Core
             return _cardIds;
         }
 
+        /// <summary>Sorted list of base-game Card IDs that have a petModel GameObject.</summary>
+        public static List<string> GetAllPetModelCardIds()
+        {
+            if (_petModelCardIds != null) return _petModelCardIds;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CardData>>("_CardsSource").Value;
+            if (dict == null) { _petModelCardIds = new List<string>(); return _petModelCardIds; }
+            _petModelCardIds = dict
+                .Where(kvp => kvp.Value.PetModel != null)
+                .Select(kvp => kvp.Key)
+                .OrderBy(k => k)
+                .ToList();
+            return _petModelCardIds;
+        }
+
         /// <summary>Sorted list of all base-game Item IDs.</summary>
         public static List<string> GetAllItemIds()
         {
@@ -58,12 +72,25 @@ namespace UnknownMod.Core
             return _itemIds;
         }
 
-        /// <summary>Sorted list of all base-game SubClass IDs.</summary>
+        /// <summary>Sorted list of all base-game SubClass IDs.
+        /// Filters out junk partial-prefix entries that some systems inject.</summary>
         public static List<string> GetAllSubClassIds()
         {
             if (_subClassIds != null) return _subClassIds;
             var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, SubClassData>>("_SubClassSource").Value;
-            _subClassIds = dict != null ? dict.Keys.OrderBy(k => k).ToList() : new List<string>();
+            if (dict == null) { _subClassIds = new List<string>(); return _subClassIds; }
+
+            // Filter: only include entries whose SubClassName (normalized) matches the key.
+            // This removes ghost/prefix entries injected by the game's autocomplete or other systems.
+            var valid = new List<string>();
+            foreach (var kvp in dict)
+            {
+                if (kvp.Value == null) continue;
+                string expected = NormalizeKey(kvp.Value.SubClassName);
+                if (kvp.Key == expected)
+                    valid.Add(kvp.Key);
+            }
+            _subClassIds = valid.OrderBy(k => k).ToList();
             return _subClassIds;
         }
 
@@ -174,6 +201,15 @@ namespace UnknownMod.Core
             return _cardPlayerPairsPackIds;
         }
 
+        /// <summary>Sorted list of all base-game Combat IDs.</summary>
+        public static List<string> GetAllCombatIds()
+        {
+            if (_combatIds != null) return _combatIds;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CombatData>>("_CombatDataSource").Value;
+            _combatIds = dict != null ? dict.Keys.OrderBy(k => k).ToList() : new List<string>();
+            return _combatIds;
+        }
+
         public static List<string> GetAllHeroDataIds()
         {
             if (_heroDataIds != null) return _heroDataIds;
@@ -255,6 +291,15 @@ namespace UnknownMod.Core
             var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, NodeData>>("_NodeDataSource").Value;
             if (dict != null && dict.TryGetValue(NormalizeKey(id), out var node))
                 return node;
+            return null;
+        }
+
+        public static CombatData GetExistingCombat(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CombatData>>("_CombatDataSource").Value;
+            if (dict != null && dict.TryGetValue(NormalizeKey(id), out var combat))
+                return combat;
             return null;
         }
 

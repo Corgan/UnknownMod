@@ -44,7 +44,6 @@ namespace UnknownMod.Core
         {
             Register(new EntityTypeInfo { DefType = typeof(AuraCurseDef),            TypeLabel = "AuraCurse",            FolderName = "auracurse",            GetAllBaseIds = DataHelper.GetAllAuraCurseIds });
             Register(new EntityTypeInfo { DefType = typeof(CardDef),                 TypeLabel = "Card",                 FolderName = "cards",                GetAllBaseIds = DataHelper.GetAllCardIds });
-            Register(new EntityTypeInfo { DefType = typeof(ItemDef),                 TypeLabel = "Item",                 FolderName = "items",                GetAllBaseIds = DataHelper.GetAllItemIds });
             Register(new EntityTypeInfo { DefType = typeof(LootDef),                 TypeLabel = "Loot",                 FolderName = "loot",                 GetAllBaseIds = DataHelper.GetAllLootIds });
             Register(new EntityTypeInfo { DefType = typeof(NpcDef),                  TypeLabel = "NPC",                  FolderName = "npcs",                 GetAllBaseIds = DataHelper.GetAllNpcIds });
             Register(new EntityTypeInfo { DefType = typeof(HeroDef),                 TypeLabel = "Hero",                 FolderName = "heroes",               GetAllBaseIds = DataHelper.GetAllSubClassIds });
@@ -59,7 +58,7 @@ namespace UnknownMod.Core
             Register(new EntityTypeInfo { DefType = typeof(CardPlayerPackDef),       TypeLabel = "CardPlayerPack",       FolderName = "cardplayerpacks",      GetAllBaseIds = DataHelper.GetAllCardPlayerPackIds });
             Register(new EntityTypeInfo { DefType = typeof(CardPlayerPairsPackDef),  TypeLabel = "CardPlayerPairsPack",  FolderName = "cardplayerpairspacks", GetAllBaseIds = DataHelper.GetAllCardPlayerPairsPackIds });
             Register(new EntityTypeInfo { DefType = typeof(HeroDataDef),             TypeLabel = "HeroData",             FolderName = "herodata",             GetAllBaseIds = DataHelper.GetAllHeroDataIds });
-            Register(new EntityTypeInfo { DefType = typeof(SpriteOverrideDef),       TypeLabel = "Sprite",               FolderName = "sprites",              GetAllBaseIds = null }); // no base-game IDs
+            Register(new EntityTypeInfo { DefType = typeof(CharacterOverrideDef),       TypeLabel = "SpriteSkin",           FolderName = "spriteskins",          GetAllBaseIds = null }); // no base-game IDs
         }
     }
 }

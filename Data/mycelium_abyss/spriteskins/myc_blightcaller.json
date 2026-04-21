@@ -1,0 +1,65 @@
+{
+  "Id": "myc_blightcaller",
+  "BaseSprite": "druid",
+  "Grafts": [
+    {
+      "TargetBone": "BrazoIzk",
+      "Source": "astarios/Left Arm",
+      "ReplaceTarget": true,
+      "BoneOverrides": {
+        "Left Arm": {
+          "PosX": 0.71,
+          "PosY": -1.38,
+          "Rotation": 3.0,
+          "ScaleX": 0.5,
+          "ScaleY": 0.5,
+          "Visible": true,
+          "SortingOffset": 0,
+          "ColorHex": "",
+          "FlipX": false,
+          "FlipY": false,
+          "Alpha": 1.0,
+          "PivotX": -1.0,
+          "PivotY": -1.0
+        },
+        "bone_2": {
+          "PosX": -0.02,
+          "PosY": -0.04,
+          "Rotation": -0.4,
+          "ScaleX": 1.0,
+          "ScaleY": 1.0,
+          "Visible": true,
+          "SortingOffset": 0,
+          "ColorHex": "",
+          "FlipX": false,
+          "FlipY": false,
+          "Alpha": 1.0,
+          "PivotX": -1.0,
+          "PivotY": -1.0
+        },
+        "bone_5": {
+          "PosX": 0.97,
+          "PosY": -0.78,
+          "Rotation": 3.0,
+          "ScaleX": 0.5,
+          "ScaleY": 0.5,
+          "Visible": true,
+          "SortingOffset": 0,
+          "ColorHex": "",
+          "FlipX": false,
+          "FlipY": false,
+          "Alpha": 1.0,
+          "PivotX": -1.0,
+          "PivotY": -1.0
+        }
+      }
+    }
+  ],
+  "BoneOverrides": {},
+  "RemovedBones": [
+    "AntebrazokIzk"
+  ],
+  "Spritesheet": "",
+  "CustomSprites": {},
+  "AnimOverrides": {}
+}

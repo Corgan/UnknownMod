@@ -54,11 +54,11 @@ namespace UnknownMod.Core
                 }
             }
 
-            // Auto-discover mod folders not in the list
+            // Auto-discover mod folders not in the list (case-insensitive on Windows)
             var discovered = ModProjectLoader.DiscoverMods();
             foreach (var modId in discovered)
             {
-                if (!_order.Contains(modId))
+                if (!_order.Any(existing => string.Equals(existing, modId, StringComparison.OrdinalIgnoreCase)))
                 {
                     _order.Add(modId);
                     Plugin.Log.LogInfo($"[LoadOrder] Auto-discovered new mod: {modId}");
@@ -66,7 +66,7 @@ namespace UnknownMod.Core
             }
 
             // Remove entries for mods that no longer exist on disk
-            _order.RemoveAll(id => !discovered.Contains(id));
+            _order.RemoveAll(id => !discovered.Any(d => string.Equals(d, id, StringComparison.OrdinalIgnoreCase)));
 
             Plugin.Log.LogInfo($"[LoadOrder] Loaded {_order.Count} mod(s): {string.Join(", ", _order)}");
 

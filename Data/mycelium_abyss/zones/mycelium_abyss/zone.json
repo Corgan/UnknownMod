@@ -7,5 +7,40 @@
   "ObeliskFinal": false,
   "DisableExperience": false,
   "DisableMadness": false,
-  "BackgroundImage": "background.jpeg"
+  "NodesOffsetX": 0.0,
+  "NodesOffsetY": 0.0,
+  "RoadsOffsetX": 0.0,
+  "RoadsOffsetY": 0.0,
+  "Sku": "",
+  "ChangeTeamOnEntrance": false,
+  "NewTeam": [],
+  "RestoreTeamOnExit": false,
+  "CombatBackgroundSprite": "",
+  "VisualLayers": [
+    {
+      "Name": "Background_Bg",
+      "Type": "Sprite",
+      "SpriteName": "mycelium_abyss_background",
+      "SortingOrder": 0,
+      "SortingLayer": "Map",
+      "PosX": 0.0,
+      "PosY": 0.01,
+      "PosZ": 10.0,
+      "ScaleX": 1.920035,
+      "ScaleY": 1.89,
+      "ColorR": 1.0,
+      "ColorG": 1.0,
+      "ColorB": 1.0,
+      "ColorA": 1.0,
+      "SpriteWidth": 1792.0,
+      "SpriteHeight": 1024.0,
+      "PPU": 179.2,
+      "Visible": true,
+      "IsOverride": true,
+      "ReplacesBase": false,
+      "Hidden": false,
+      "FlipX": false,
+      "FlipY": false
+    }
+  ]
 }

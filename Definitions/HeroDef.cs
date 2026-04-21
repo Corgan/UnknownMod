@@ -92,7 +92,10 @@ namespace UnknownMod.Definitions
         public string Trait3BCard = "";
         public string Trait4A = "";
         public string Trait4B = "";
-
+        // ── Character Replacement ──────────────────────────────
+        public List<HeroCardDef> CardsOnReplaceCharacter = new();
+        public string PerksOnReplace = "";
+        public bool UseXpFromOriginal = false;
         // ── Challenge Packs ──────────────────────────────────────
         public string ChallengePack0 = "";
         public string ChallengePack1 = "";

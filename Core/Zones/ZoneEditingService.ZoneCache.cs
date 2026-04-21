@@ -5,6 +5,7 @@ using System.Linq;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnknownMod.Definitions;
 using UnknownMod.Editor;
@@ -16,8 +17,8 @@ namespace UnknownMod.Core
     {
         private static void CacheZoneFromTransform(string zoneId, Transform zoneT)
         {
-            var nodePositions = new Dictionary<string, Vector2>();
-            var roads = new Dictionary<string, List<float[]>>();
+            var nodePositions = new Dictionary<string, Vector2>(StringComparer.OrdinalIgnoreCase);
+            var roads = new Dictionary<string, List<float[]>>(StringComparer.OrdinalIgnoreCase);
 
             //  Visual Layers 
             // Capture ALL visual elements (sprites, particles, lights, etc.)
@@ -60,7 +61,10 @@ namespace UnknownMod.Core
                     }
                     else if (ps != null)
                     {
-                        // Particle system
+                        // Particle system — capture main + emission properties
+                        var main = ps.main;
+                        var emission = ps.emission;
+                        var psr = child.GetComponent<ParticleSystemRenderer>();
                         layers.Add(new VisualLayerDef
                         {
                             Name = childName,
@@ -68,32 +72,55 @@ namespace UnknownMod.Core
                             PosX = child.localPosition.x,
                             PosY = child.localPosition.y,
                             PosZ = child.localPosition.z,
+                            ScaleX = child.localScale.x,
+                            ScaleY = child.localScale.y,
                             Visible = child.gameObject.activeSelf,
+                            Duration = main.duration,
+                            Loop = main.loop,
+                            Prewarm = main.prewarm,
+                            StartLifetime = main.startLifetime.constant,
+                            StartSpeed = main.startSpeed.constant,
+                            StartSize = main.startSize.constant,
+                            MaxParticles = main.maxParticles,
+                            SimulationSpeed = main.simulationSpeed,
+                            PlayOnAwake = main.playOnAwake,
+                            GravityModifier = main.gravityModifier.constant,
+                            EmissionRate = emission.rateOverTime.constant,
+                            ColorR = main.startColor.color.r,
+                            ColorG = main.startColor.color.g,
+                            ColorB = main.startColor.color.b,
+                            ColorA = main.startColor.color.a,
+                            SortingOrder = psr != null ? psr.sortingOrder : 0,
+                            Enabled = psr != null ? psr.enabled : true,
                         });
                     }
                     else if (mask != null)
                     {
-                        // Sprite mask
+                        // Sprite mask — capture mask properties
                         layers.Add(new VisualLayerDef
                         {
                             Name = childName,
                             Type = VisualLayerType.SpriteMask,
                             PosX = child.localPosition.x,
                             PosY = child.localPosition.y,
+                            ScaleX = child.localScale.x,
+                            ScaleY = child.localScale.y,
                             Visible = child.gameObject.activeSelf,
+                            SpriteName = mask.sprite != null ? mask.sprite.name : "",
+                            AlphaCutoff = mask.alphaCutoff,
+                            CustomRange = mask.isCustomRangeActive,
+                            FrontSortingOrder = mask.frontSortingOrder,
+                            BackSortingOrder = mask.backSortingOrder,
+                            SortingOrder = mask.sortingOrder,
+                            Enabled = mask.enabled,
                         });
                     }
                     else
                     {
                         // Check for Light2D component
-                        bool hasLight = false;
-                        foreach (var comp in child.GetComponents<Component>())
-                        {
-                            if (comp != null && comp.GetType().Name == "Light2D")
-                            { hasLight = true; break; }
-                        }
+                        var light = child.GetComponent<Light2D>();
 
-                        if (hasLight)
+                        if (light != null)
                         {
                             layers.Add(new VisualLayerDef
                             {
@@ -103,6 +130,23 @@ namespace UnknownMod.Core
                                 PosY = child.localPosition.y,
                                 PosZ = child.localPosition.z,
                                 Visible = child.gameObject.activeSelf,
+                                LightType = (int)light.lightType,
+                                ColorR = light.color.r,
+                                ColorG = light.color.g,
+                                ColorB = light.color.b,
+                                ColorA = light.color.a,
+                                Intensity = light.intensity,
+                                FalloffIntensity = light.falloffIntensity,
+                                PointLightInnerAngle = light.pointLightInnerAngle,
+                                PointLightOuterAngle = light.pointLightOuterAngle,
+                                PointLightInnerRadius = light.pointLightInnerRadius,
+                                PointLightOuterRadius = light.pointLightOuterRadius,
+                                ShapeLightFalloffSize = light.shapeLightFalloffSize,
+                                LightOrder = light.lightOrder,
+                                BlendStyleIndex = light.blendStyleIndex,
+                                ShadowsEnabled = light.shadowsEnabled,
+                                ShadowIntensity = light.shadowIntensity,
+                                Enabled = light.enabled,
                             });
                         }
                         else if (child.childCount > 0)
@@ -597,7 +641,7 @@ namespace UnknownMod.Core
         }
 
         /// <summary>Snapshot a CombatData SO into a CombatDef.</summary>
-        private static CombatDef SnapshotCombatDef(CombatData c)
+        internal static CombatDef SnapshotCombatDef(CombatData c)
         {
             var d = new CombatDef
             {
@@ -642,7 +686,7 @@ namespace UnknownMod.Core
         }
 
         /// <summary>Snapshot an EventData SO into an EventDef.</summary>
-        private static EventDef SnapshotEventDef(EventData e)
+        internal static EventDef SnapshotEventDef(EventData e)
         {
             var d = new EventDef
             {

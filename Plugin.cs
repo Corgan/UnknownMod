@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using System;
+using UnknownMod.Core;
 
 namespace UnknownMod
 {
@@ -30,6 +31,9 @@ namespace UnknownMod
                 Log.LogError(ex.StackTrace);
             }
 
+            // Register entity types for the override browser
+            EntityTypeRegistry.Initialize();
+
             // Start runtime inspector (file-based IPC for external tooling)
             try
             {
@@ -39,6 +43,9 @@ namespace UnknownMod
             {
                 Log.LogWarning($"RuntimeInspector failed to start: {ex.Message}");
             }
+
+            // In-game sprite stack inspector (toggle with F9)
+            gameObject.AddComponent<Core.SpriteStackInspector>();
         }
 
         private void Update()

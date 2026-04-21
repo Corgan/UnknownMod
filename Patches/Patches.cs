@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
 using UnknownMod.Core;
@@ -13,6 +14,29 @@ namespace UnknownMod
     [HarmonyPatch]
     public static partial class Patches
     {
+        // ═══════════════════════════════════════════════════════════════
+        //  BASE-GAME NULL GUARDS
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// HeroData.Awake() does Regex.Replace(heroName, ...) which throws
+        /// ArgumentNullException when heroName is null — as it always is when
+        /// we create a HeroData via ScriptableObject.CreateInstance because
+        /// Awake fires before we can assign any fields. Skip in that case.
+        /// </summary>
+        [HarmonyPatch(typeof(HeroData), "Awake")]
+        [HarmonyPrefix]
+        public static bool HeroDataAwake_Prefix(HeroData __instance)
+        {
+            // Let Awake run normally when heroName is set (e.g. asset deserialization).
+            // Skip it when heroName is null (our runtime CreateInstance path).
+            return __instance.HeroName != null;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  CONTENT INJECTION
+        // ═══════════════════════════════════════════════════════════════
+
         /// <summary>
         /// After Globals.CreateGameContent() finishes loading vanilla data,
         /// discover and build all modded content via LoadOrderManager.
@@ -33,26 +57,37 @@ namespace UnknownMod
         }
 
         /// <summary>
-        /// [TEST] Transpiler on BeginAdventure: replaces the hardcoded "sen_0" string
-        /// with "myc_0" so new adventures start in our zone.
-        /// Remove this patch when done testing.
+        /// Transpiler on BeginAdventure: replaces the ldstr "sen_0" with a call to
+        /// ModRegistry.GetStarterNode() so the starter node is resolved at runtime
+        /// (after mods have loaded and configured StarterNodeId).
         /// </summary>
         [HarmonyPatch(typeof(AtOManager), "BeginAdventure")]
         [HarmonyTranspiler]
         public static IEnumerable<CodeInstruction> BeginAdventure_Transpiler(IEnumerable<CodeInstruction> instructions)
         {
+            var resolver = typeof(ModRegistry).GetMethod(
+                nameof(ModRegistry.GetStarterNode),
+                BindingFlags.Public | BindingFlags.Static);
+
             int replaced = 0;
             foreach (var inst in instructions)
             {
                 if (inst.opcode == OpCodes.Ldstr && (string)inst.operand == "sen_0")
                 {
-                    inst.operand = "myc_0";
+                    // Replace:  ldstr "sen_0"
+                    // With:     call string ModRegistry::GetStarterNode()
+                    yield return new CodeInstruction(OpCodes.Call, resolver);
                     replaced++;
                 }
-                yield return inst;
+                else
+                {
+                    yield return inst;
+                }
             }
-            if (replaced == 0)
-                Plugin.Log.LogWarning("[Transpiler] Did NOT find \"sen_0\" in BeginAdventure IL!");
+            if (replaced > 0)
+                Plugin.Log.LogInfo($"[Transpiler] Patched {replaced} 'sen_0' reference(s) in BeginAdventure → GetStarterNode()");
+            else
+                Plugin.Log.LogWarning("[Transpiler] Did NOT find 'sen_0' in BeginAdventure IL!");
         }
 
         /// <summary>
@@ -76,7 +111,9 @@ namespace UnknownMod
             if (!ModRegistry.IsModdedZone(zoneId))
                 return true;
 
-            __result = MapBuilder.BuildAndInjectMap(zoneId, MapManager.Instance.worldTransform);
+            // If map is already built (returns false), that's still a success for the game
+            __result = MapBuilder.BuildAndInjectMap(zoneId, MapManager.Instance.worldTransform)
+                    || MapBuilder.MapExists(zoneId, MapManager.Instance.worldTransform);
             return false;
         }
     }

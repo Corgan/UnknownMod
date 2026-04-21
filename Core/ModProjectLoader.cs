@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Newtonsoft.Json;
 using UnknownMod.Definitions;
 
@@ -74,8 +73,8 @@ namespace UnknownMod.Core
             LoadMetadata(proj, root);
 
             // ── New content ──────────────────────────────────────────
-            LoadEntities(Path.Combine(root, "cards"), proj.Cards, d => d.Id);
-            LoadEntities(Path.Combine(root, "items"), proj.Items, d => d.Id);
+            // Cards: load from all semantic subfolders under cards/
+            LoadCardsRecursive(Path.Combine(root, "cards"), proj.Cards);
             LoadEntities(Path.Combine(root, "loot"), proj.Loot, d => d.Id);
             LoadEntities(Path.Combine(root, "npcs"), proj.Npcs, d => d.Id);
             LoadEntities(Path.Combine(root, "auracurse"), proj.AuraCurses, d => d.Id);
@@ -87,16 +86,18 @@ namespace UnknownMod.Core
             LoadEntities(Path.Combine(root, "requirements"), proj.Requirements, d => d.Id);
             LoadEntities(Path.Combine(root, "cardbacks"), proj.Cardbacks, d => d.Id);
             LoadEntities(Path.Combine(root, "tierrewards"), proj.TierRewards, d => d.Id);
-            LoadEntities(Path.Combine(root, "sprites"), proj.Sprites, d => d.NpcId);
+            LoadEntities(Path.Combine(root, "spriteskins"), proj.SpriteSkins, d => d.Id);
             LoadEntities(Path.Combine(root, "packs"), proj.Packs, d => d.PackId);
             LoadEntities(Path.Combine(root, "cardplayerpacks"), proj.CardPlayerPacks, d => d.PackId);
             LoadEntities(Path.Combine(root, "cardplayerpairspacks"), proj.CardPlayerPairsPacks, d => d.PackId);
             LoadEntities(Path.Combine(root, "herodata"), proj.HeroDataEntries, d => d.Id);
+            LoadEntities(Path.Combine(root, "backgrounds"), proj.Backgrounds, d => d.BackgroundId);
+            LoadEntities(Path.Combine(root, "events"), proj.Events, d => d.EventId);
+            LoadEntities(Path.Combine(root, "combats"), proj.Combats, d => d.CombatId);
 
             // ── Patches (overrides of base-game) ─────────────────────
             string patches = Path.Combine(root, "_patches");
-            LoadEntities(Path.Combine(patches, "cards"), proj.CardPatches, d => d.Id);
-            LoadEntities(Path.Combine(patches, "items"), proj.ItemPatches, d => d.Id);
+            LoadCardsRecursive(Path.Combine(patches, "cards"), proj.CardPatches);
             LoadEntities(Path.Combine(patches, "loot"), proj.LootPatches, d => d.Id);
             LoadEntities(Path.Combine(patches, "npcs"), proj.NpcPatches, d => d.Id);
             LoadEntities(Path.Combine(patches, "auracurse"), proj.AuraCursePatches, d => d.Id);
@@ -108,11 +109,14 @@ namespace UnknownMod.Core
             LoadEntities(Path.Combine(patches, "requirements"), proj.RequirementPatches, d => d.Id);
             LoadEntities(Path.Combine(patches, "cardbacks"), proj.CardbackPatches, d => d.Id);
             LoadEntities(Path.Combine(patches, "tierrewards"), proj.TierRewardPatches, d => d.Id);
-            LoadEntities(Path.Combine(patches, "sprites"), proj.SpritePatches, d => d.NpcId);
+            LoadEntities(Path.Combine(patches, "spriteskins"), proj.SpriteSkinPatches, d => d.Id);
             LoadEntities(Path.Combine(patches, "packs"), proj.PackPatches, d => d.PackId);
             LoadEntities(Path.Combine(patches, "cardplayerpacks"), proj.CardPlayerPackPatches, d => d.PackId);
             LoadEntities(Path.Combine(patches, "cardplayerpairspacks"), proj.CardPlayerPairsPackPatches, d => d.PackId);
             LoadEntities(Path.Combine(patches, "herodata"), proj.HeroDataPatches, d => d.Id);
+            LoadEntities(Path.Combine(patches, "events"), proj.EventPatches, d => d.EventId);
+            LoadEntities(Path.Combine(patches, "combats"), proj.CombatPatches, d => d.CombatId);
+            LoadEntities(Path.Combine(patches, "backgrounds"), proj.BackgroundPatches, d => d.BackgroundId);
 
             // ── New zones ────────────────────────────────────────────
             string zonesDir = Path.Combine(root, "zones");
@@ -144,23 +148,27 @@ namespace UnknownMod.Core
                 }
             }
 
-            int totalNew = proj.Cards.Count + proj.Items.Count + proj.Loot.Count +
+            int totalNew = proj.Cards.Count + proj.Loot.Count +
                            proj.Npcs.Count + proj.AuraCurses.Count + proj.Heroes.Count +
                            proj.Traits.Count + proj.Skins.Count + proj.Perks.Count +
                            proj.PerkNodes.Count + proj.Requirements.Count +
-                           proj.Cardbacks.Count + proj.TierRewards.Count + proj.Sprites.Count +
+                           proj.Cardbacks.Count + proj.TierRewards.Count + proj.SpriteSkins.Count +
                            proj.Packs.Count + proj.CardPlayerPacks.Count +
-                           proj.CardPlayerPairsPacks.Count + proj.HeroDataEntries.Count;
+                           proj.CardPlayerPairsPacks.Count + proj.HeroDataEntries.Count +
+                           proj.Backgrounds.Count +
+                           proj.Events.Count + proj.Combats.Count;
 
-            int totalPatches = proj.CardPatches.Count + proj.ItemPatches.Count +
+            int totalPatches = proj.CardPatches.Count +
                                proj.LootPatches.Count + proj.NpcPatches.Count +
                                proj.AuraCursePatches.Count + proj.HeroPatches.Count +
                                proj.TraitPatches.Count + proj.SkinPatches.Count +
                                proj.PerkPatches.Count + proj.PerkNodePatches.Count +
                                proj.RequirementPatches.Count + proj.CardbackPatches.Count +
-                               proj.TierRewardPatches.Count + proj.SpritePatches.Count +
+                               proj.TierRewardPatches.Count + proj.SpriteSkinPatches.Count +
                                proj.PackPatches.Count + proj.CardPlayerPackPatches.Count +
-                               proj.CardPlayerPairsPackPatches.Count + proj.HeroDataPatches.Count;
+                               proj.CardPlayerPairsPackPatches.Count + proj.HeroDataPatches.Count +
+                               proj.EventPatches.Count + proj.CombatPatches.Count +
+                               proj.BackgroundPatches.Count;
 
             Plugin.Log.LogInfo($"[ModProjectLoader] Loaded '{modId}': " +
                 $"{totalNew} new, {totalPatches} patches, " +
@@ -256,7 +264,7 @@ namespace UnknownMod.Core
             string zoneDir = Path.Combine(ModFolder(proj.ModId), "zones", zone.ZoneId);
             Directory.CreateDirectory(zoneDir);
 
-            // Zone metadata
+            // Zone metadata — copy ALL zone-level fields so nothing is lost
             var meta = new ZoneDef
             {
                 ZoneId = zone.ZoneId,
@@ -267,19 +275,20 @@ namespace UnknownMod.Core
                 ObeliskFinal = zone.ObeliskFinal,
                 DisableExperience = zone.DisableExperience,
                 DisableMadness = zone.DisableMadness,
-                BackgroundImage = zone.BackgroundImage
+                Sku = zone.Sku,
+                ChangeTeamOnEntrance = zone.ChangeTeamOnEntrance,
+                NewTeam = zone.NewTeam,
+                RestoreTeamOnExit = zone.RestoreTeamOnExit,
+                CombatBackgroundSprite = zone.CombatBackgroundSprite,
+                VisualLayers = zone.VisualLayers,
+                NodesOffsetX = zone.NodesOffsetX,
+                NodesOffsetY = zone.NodesOffsetY,
+                RoadsOffsetX = zone.RoadsOffsetX,
+                RoadsOffsetY = zone.RoadsOffsetY
             };
             File.WriteAllText(Path.Combine(zoneDir, "zone.json"), JsonConvert.SerializeObject(meta, _json));
 
-            // Sub-entities
             SaveAllEntities(Path.Combine(zoneDir, "nodes"), zone.Nodes, d => d.NodeId);
-            SaveAllEntities(Path.Combine(zoneDir, "combats"), zone.Combats, d => d.CombatId);
-            SaveAllEntities(Path.Combine(zoneDir, "events"), zone.Events, d => d.EventId);
-            SaveAllEntities(Path.Combine(zoneDir, "npcs"), zone.Npcs, d => d.Id);
-            SaveAllEntities(Path.Combine(zoneDir, "cards"), zone.Cards, d => d.Id);
-            SaveAllEntities(Path.Combine(zoneDir, "items"), zone.Items, d => d.Id);
-            SaveAllEntities(Path.Combine(zoneDir, "loot"), zone.Loot, d => d.Id);
-            SaveAllEntities(Path.Combine(zoneDir, "sprites"), zone.Sprites, d => d.NpcId);
 
             if (zone.Roads.Count > 0)
                 File.WriteAllText(Path.Combine(zoneDir, "roads.json"), JsonConvert.SerializeObject(zone.Roads, _json));
@@ -352,6 +361,67 @@ namespace UnknownMod.Core
             }
         }
 
+        /// <summary>Load CardDef entities from a folder and all its subfolders recursively.</summary>
+        private static void LoadCardsRecursive(string folder, Dictionary<string, CardDef> dict)
+        {
+            if (!Directory.Exists(folder)) return;
+            // Load any JSONs directly in this folder
+            LoadEntities(folder, dict, d => d.Id);
+            // Recurse into subfolders (hero/, equipment/, enchantments/, pets/, etc.)
+            foreach (var subDir in Directory.GetDirectories(folder))
+            {
+                string dirName = Path.GetFileName(subDir);
+                if (dirName.StartsWith("_") || dirName.StartsWith(".")) continue;
+                LoadCardsRecursive(subDir, dict);
+            }
+        }
+
+        /// <summary>Save a card to the correct semantic subfolder under cards/.</summary>
+        public static void SaveCard(ModProject proj, CardDef card, bool isPatch = false)
+        {
+            string root = ModFolder(proj.ModId);
+            string cardsRoot = isPatch
+                ? Path.Combine(root, "_patches", "cards")
+                : Path.Combine(root, "cards");
+
+            // Remove any existing file first (SemanticFolder may have changed)
+            DeleteCardRecursive(cardsRoot, card.Id);
+
+            string folder = Path.Combine(cardsRoot, card.SemanticFolder);
+            Directory.CreateDirectory(folder);
+            string path = Path.Combine(folder, $"{card.Id}.json");
+            File.WriteAllText(path, JsonConvert.SerializeObject(card, _json));
+        }
+
+        /// <summary>Delete a card JSON file (checks all semantic subfolders).</summary>
+        public static bool DeleteCard(ModProject proj, string cardId, bool isPatch = false)
+        {
+            string root = ModFolder(proj.ModId);
+            string cardsRoot = isPatch
+                ? Path.Combine(root, "_patches", "cards")
+                : Path.Combine(root, "cards");
+            if (!Directory.Exists(cardsRoot)) return false;
+
+            // Search all subfolders recursively for the card
+            return DeleteCardRecursive(cardsRoot, cardId);
+        }
+
+        private static bool DeleteCardRecursive(string folder, string cardId)
+        {
+            string path = Path.Combine(folder, $"{cardId}.json");
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+                return true;
+            }
+            foreach (var subDir in Directory.GetDirectories(folder))
+            {
+                if (DeleteCardRecursive(subDir, cardId))
+                    return true;
+            }
+            return false;
+        }
+
         private static void SaveAllEntities<T>(string folder, Dictionary<string, T> dict, Func<T, string> getKey)
         {
             if (dict.Count == 0) return;
@@ -368,46 +438,27 @@ namespace UnknownMod.Core
 
         private static ZoneDef LoadZoneFromFolder(string folder)
         {
-            var def = new ZoneDef();
+            ZoneDef def;
 
             string zonePath = Path.Combine(folder, "zone.json");
             if (File.Exists(zonePath))
             {
-                var meta = JsonConvert.DeserializeObject<ZoneDef>(File.ReadAllText(zonePath));
-                def.ZoneId = meta.ZoneId;
-                def.ZoneName = meta.ZoneName;
-                def.IdPrefix = meta.IdPrefix;
-                def.ObeliskLow = meta.ObeliskLow;
-                def.ObeliskHigh = meta.ObeliskHigh;
-                def.ObeliskFinal = meta.ObeliskFinal;
-                def.DisableExperience = meta.DisableExperience;
-                def.DisableMadness = meta.DisableMadness;
-                def.BackgroundImage = meta.BackgroundImage ?? "background.jpeg";
+                def = JsonConvert.DeserializeObject<ZoneDef>(File.ReadAllText(zonePath)) ?? new ZoneDef();
+                if (string.IsNullOrEmpty(def.ZoneId))
+                    def.ZoneId = Path.GetFileName(folder);
+            }
+            else
+            {
+                def = new ZoneDef();
             }
 
             LoadEntities(Path.Combine(folder, "nodes"), def.Nodes, d => d.NodeId);
-            LoadEntities(Path.Combine(folder, "combats"), def.Combats, d => d.CombatId);
-            LoadEntities(Path.Combine(folder, "events"), def.Events, d => d.EventId);
-            LoadEntities(Path.Combine(folder, "npcs"), def.Npcs, d => d.Id);
-            LoadEntities(Path.Combine(folder, "cards"), def.Cards, d => d.Id);
-            LoadEntities(Path.Combine(folder, "items"), def.Items, d => d.Id);
-            LoadEntities(Path.Combine(folder, "loot"), def.Loot, d => d.Id);
-            LoadEntities(Path.Combine(folder, "sprites"), def.Sprites, d => d.NpcId);
 
             string roadsPath = Path.Combine(folder, "roads.json");
             if (File.Exists(roadsPath))
             {
                 var roads = JsonConvert.DeserializeObject<Dictionary<string, RoadDef>>(File.ReadAllText(roadsPath));
                 if (roads != null) def.Roads = roads;
-            }
-
-            // Sort animation keyframes by Time
-            foreach (var sprOvr in def.Sprites.Values)
-            {
-                if (sprOvr.AnimOverrides == null) continue;
-                foreach (var animOvr in sprOvr.AnimOverrides.Values)
-                    foreach (var kfList in animOvr.BoneKeyframes.Values)
-                        kfList.Sort((a, b) => a.Time.CompareTo(b.Time));
             }
 
             return def;
@@ -418,8 +469,6 @@ namespace UnknownMod.Core
             var patch = new ZonePatchDef { TargetZoneId = targetZoneId };
 
             LoadEntities(Path.Combine(folder, "nodes"), patch.Nodes, d => d.NodeId);
-            LoadEntities(Path.Combine(folder, "encounters"), patch.Encounters, d => d.CombatId);
-            LoadEntities(Path.Combine(folder, "events"), patch.Events, d => d.EventId);
 
             string roadsPath = Path.Combine(folder, "roads.json");
             if (File.Exists(roadsPath))
@@ -429,10 +478,10 @@ namespace UnknownMod.Core
             }
 
             Plugin.Log.LogInfo($"[ModProjectLoader] Loaded zone patch '{targetZoneId}': " +
-                $"{patch.Nodes.Count} nodes, {patch.Encounters.Count} encounters, " +
-                $"{patch.Events.Count} events, {patch.Roads.Count} roads");
+                $"{patch.Nodes.Count} nodes, {patch.Roads.Count} roads");
 
             return patch;
         }
+
     }
 }

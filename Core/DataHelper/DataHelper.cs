@@ -21,6 +21,7 @@ namespace UnknownMod.Core
         private static List<string> _eventReqIds;
         private static List<string> _npcIds;
         private static List<string> _cardIds;
+        private static List<string> _petModelCardIds;
         private static List<string> _itemIds;
         private static List<string> _subClassIds;
         private static List<string> _traitIds;
@@ -35,7 +36,16 @@ namespace UnknownMod.Core
         private static List<string> _cardPlayerPackIds;
         private static List<string> _cardPlayerPairsPackIds;
         private static List<string> _heroDataIds;
+        private static List<string> _combatIds;
         private static List<int> _tierRewardTiers;
+
+        /// <summary>Clear entity caches (NPC, AC, TierReward). Call before a full rebuild.</summary>
+        public static void ClearEntityCaches()
+        {
+            _npcCache.Clear();
+            _acCache.Clear();
+            _tierCache.Clear();
+        }
 
         /// <summary>Invalidate cached ID lists (call if game data reloads).</summary>
         public static void ClearIdListCaches()
@@ -44,6 +54,7 @@ namespace UnknownMod.Core
             _eventReqIds = null;
             _npcIds = null;
             _cardIds = null;
+            _petModelCardIds = null;
             _itemIds = null;
             _subClassIds = null;
             _traitIds = null;
@@ -58,6 +69,7 @@ namespace UnknownMod.Core
             _cardPlayerPackIds = null;
             _cardPlayerPairsPackIds = null;
             _heroDataIds = null;
+            _combatIds = null;
             _tierRewardTiers = null;
         }
 

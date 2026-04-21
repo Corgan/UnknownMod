@@ -1,89 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using HarmonyLib;
-using Newtonsoft.Json;
-using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnknownMod.Definitions;
 using UnknownMod.Editor;
-using UnknownMod.Runtime;
 
 namespace UnknownMod.Core
 {
     public static partial class ZoneEditingService
     {
-        // 
-        //  HOT RELOAD TO GAME
-        // 
-
-        /// <summary>
-        /// Push live editor changes into the running game: re-build SOs in Globals
-        /// and optionally rebuild the Map scene graph. Call after save completes.
-        /// </summary>
-        public static void HotReloadToGame()
-        {
-            if (CurrentZone == null)
-            {
-                Plugin.Log.LogWarning("[HotReload] No zone loaded  nothing to reload.");
-                return;
-            }
-
-            string zoneId = CurrentZone.ZoneId;
-            bool isPatch = CurrentPatch != null;
-            Plugin.Log.LogInfo($"[HotReload] Reloading zone '{zoneId}' (patch={isPatch})...");
-
-            //  1. Rebuild SOs in Globals 
-            try
-            {
-                if (isPatch)
-                {
-                    // Re-apply the patch (creates/overwrites NodeData, CombatData, EventData in Globals)
-                    ModProjectBuilder.ApplyZonePatchPublic(CurrentPatch);
-                }
-                else
-                {
-                    // Full zone rebuild
-                    ModProjectBuilder.BuildZone(CurrentZone);
-                }
-                Plugin.Log.LogInfo("[HotReload] Globals dictionaries updated.");
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogError($"[HotReload] Failed to rebuild SOs: {ex.Message}");
-                Plugin.Log.LogError(ex.StackTrace);
-                return;
-            }
-
-            //  2. Rebuild map visuals if on Map scene 
-            var mapMgr = MapManager.Instance;
-            if (mapMgr != null && mapMgr.worldTransform != null)
-            {
-                // Destroy existing zone root if present
-                for (int i = mapMgr.worldTransform.childCount - 1; i >= 0; i--)
-                {
-                    var child = mapMgr.worldTransform.GetChild(i);
-                    if (child.gameObject.name == zoneId)
-                    {
-                        UnityEngine.Object.Destroy(child.gameObject);
-                        Plugin.Log.LogInfo($"[HotReload] Destroyed old map for '{zoneId}'.");
-                        break;
-                    }
-                }
-
-                // Rebuild the visual map
-                if (Runtime.MapBuilder.BuildAndInjectMap(zoneId, mapMgr.worldTransform))
-                    Plugin.Log.LogInfo($"[HotReload] Map rebuilt for '{zoneId}'.");
-            }
-
-            //  3. Combat notice 
-            if (MatchManager.Instance != null)
-                Plugin.Log.LogWarning("[HotReload] In combat  changes will take effect after restarting the encounter.");
-
-            Plugin.Log.LogInfo("[HotReload] Done.");
-        }
-
         // 
         //  NODE ADD / DELETE
         // 
@@ -163,18 +87,26 @@ namespace UnknownMod.Core
                 return;
             }
 
-            if (!string.IsNullOrEmpty(nodeDef.CombatId) && CurrentZone.Combats.ContainsKey(nodeDef.CombatId))
+            // Clean up auto-generated combats for ALL combat IDs
+            var proj = UnknownMod.Editor.Tabs.ModManagerPanel.ActiveProject;
+            foreach (var cid in nodeDef.CombatIds)
             {
+                if (string.IsNullOrEmpty(cid)) continue;
                 string expectedCombatId = "c" + nodeId;
-                if (nodeDef.CombatId == expectedCombatId)
-                    CurrentZone.Combats.Remove(nodeDef.CombatId);
+                if (cid == expectedCombatId)
+                {
+                    if (proj != null) proj.Combats.Remove(cid);
+                }
             }
 
-            if (!string.IsNullOrEmpty(nodeDef.EventId) && CurrentZone.Events.ContainsKey(nodeDef.EventId))
+            // Clean up auto-generated events for ALL event IDs (prefix match, consistent with patch cleanup)
+            foreach (var eid in nodeDef.EventIds)
             {
-                string expectedEventId = $"e_{nodeId}_a";
-                if (nodeDef.EventId == expectedEventId)
-                    CurrentZone.Events.Remove(nodeDef.EventId);
+                if (string.IsNullOrEmpty(eid)) continue;
+                if (eid.StartsWith($"e_{nodeId}_"))
+                {
+                    if (proj != null) proj.Events.Remove(eid);
+                }
             }
 
             var roadsToRemove = CurrentZone.Roads.Keys
@@ -212,16 +144,22 @@ namespace UnknownMod.Core
             if (CurrentZone == null || !CurrentZone.Nodes.TryGetValue(nodeId, out var nodeDef)) return null;
             if (!string.IsNullOrEmpty(nodeDef.CombatId)) return nodeDef.CombatId;
 
+            var proj = UnknownMod.Editor.Tabs.ModManagerPanel.ActiveProject;
+            if (proj == null) return null;
+
             string combatId = "c" + nodeId;
             var combatDef = new CombatDef { CombatId = combatId, Description = $"Combat at {nodeDef.NodeName}" };
 
-            CurrentZone.Combats[combatId] = combatDef;
+            proj.Combats[combatId] = combatDef;
             nodeDef.CombatId = combatId;
+
+
 
             var combat = DataHelper.MakeCombat(combatDef, new NPCData[0]);
             DataHelper.RegisterCombat(combat);
 
-            RebuildNode(nodeId);
+            ModProjectLoader.SaveEntity(proj, "combats", combatId, combatDef);
+
             MarkDirty();
 
             Plugin.Log.LogInfo($"[ZoneEditing] Created combat '{combatId}' for node '{nodeId}'");
@@ -233,6 +171,9 @@ namespace UnknownMod.Core
             if (CurrentZone == null || !CurrentZone.Nodes.TryGetValue(nodeId, out var nodeDef)) return null;
             if (!string.IsNullOrEmpty(nodeDef.EventId)) return nodeDef.EventId;
 
+            var proj = UnknownMod.Editor.Tabs.ModManagerPanel.ActiveProject;
+            if (proj == null) return null;
+
             string eventId = $"e_{nodeId}_a";
             var eventDef = new EventDef
             {
@@ -242,14 +183,17 @@ namespace UnknownMod.Core
                 DescriptionAction = "What do you do?",
             };
 
-            CurrentZone.Events[eventId] = eventDef;
+            proj.Events[eventId] = eventDef;
             nodeDef.EventId = eventId;
+
+
 
             var evt = DataHelper.MakeEvent(eventId, eventDef.EventName,
                 eventDef.Description, eventDef.DescriptionAction, new EventReplyData[0]);
             DataHelper.RegisterEvent(evt);
 
-            RebuildNode(nodeId);
+            ModProjectLoader.SaveEntity(proj, "events", eventId, eventDef);
+
             MarkDirty();
 
             Plugin.Log.LogInfo($"[ZoneEditing] Created event '{eventId}' for node '{nodeId}'");
@@ -261,13 +205,20 @@ namespace UnknownMod.Core
             if (CurrentZone == null || !CurrentZone.Nodes.TryGetValue(nodeId, out var nodeDef)) return;
             if (string.IsNullOrEmpty(nodeDef.CombatId)) return;
 
+            var proj = UnknownMod.Editor.Tabs.ModManagerPanel.ActiveProject;
             string expectedId = "c" + nodeId;
             if (nodeDef.CombatId == expectedId)
-                CurrentZone.Combats.Remove(nodeDef.CombatId);
+            {
+                if (proj != null) proj.Combats.Remove(nodeDef.CombatId);
+            }
 
-            nodeDef.CombatId = "";
+
+
+            // Remove only the first combat ID — don't use the CombatId setter
+            // which calls CombatIds.Clear() and would wipe multi-combat nodes.
+            if (nodeDef.CombatIds.Count > 0)
+                nodeDef.CombatIds.RemoveAt(0);
             nodeDef.CombatPercent = -1;
-            RebuildNode(nodeId);
             MarkDirty();
         }
 
@@ -276,243 +227,21 @@ namespace UnknownMod.Core
             if (CurrentZone == null || !CurrentZone.Nodes.TryGetValue(nodeId, out var nodeDef)) return;
             if (string.IsNullOrEmpty(nodeDef.EventId)) return;
 
+            var proj = UnknownMod.Editor.Tabs.ModManagerPanel.ActiveProject;
             string expectedId = $"e_{nodeId}_a";
             if (nodeDef.EventId == expectedId)
-                CurrentZone.Events.Remove(nodeDef.EventId);
+            {
+                if (proj != null) proj.Events.Remove(nodeDef.EventId);
+            }
 
-            nodeDef.EventId = "";
+
+
+            // Remove only the first event ID — don't use the EventId setter
+            // which calls EventIds.Clear() and would wipe multi-event nodes.
+            if (nodeDef.EventIds.Count > 0)
+                nodeDef.EventIds.RemoveAt(0);
             nodeDef.EventPercent = -1;
-            RebuildNode(nodeId);
             MarkDirty();
-        }
-
-        // 
-        //  HOT-RELOAD: Rebuild individual entities from DTO
-        //  Uses Globals.Instance directly  no local SO dicts.
-        // 
-
-        public static void RebuildCard(string cardId)
-        {
-            if (CurrentZone == null || !CurrentZone.Cards.TryGetValue(cardId, out var cardDef)) return;
-            try
-            {
-                CardData card;
-                if (cardDef.IsUpgraded && !string.IsNullOrEmpty(cardDef.BaseCardId))
-                {
-                    var baseCard = DataHelper.GetCard(cardDef.BaseCardId);
-                    if (baseCard != null)
-                        card = DataHelper.MakeUpgradedCard(baseCard, cardDef.Id, cardDef.Name,
-                            cardDef.UpgDamageMult, cardDef.UpgBonusCurseCharges,
-                            cardDef.UpgBonusAuraCharges, cardDef.UpgBonusHeal);
-                    else
-                        card = MakeCard(cardDef);
-                }
-                else
-                {
-                    card = MakeCard(cardDef);
-                }
-
-                if (!string.IsNullOrEmpty(cardDef.SummonUnitId))
-                {
-                    var summonNpc = DataHelper.GetExistingNPC(cardDef.SummonUnitId);
-                    if (summonNpc != null)
-                        Traverse.Create(card).Field("summonUnit").SetValue(summonNpc);
-                }
-
-                DataHelper.RegisterCard(card);
-                MarkDirty();
-            }
-            catch (Exception ex) { Plugin.Log.LogError($"[ZoneEditing] RebuildCard '{cardId}' failed: {ex.Message}"); }
-        }
-
-        public static void RebuildNpc(string npcId)
-        {
-            if (CurrentZone == null || !CurrentZone.Npcs.TryGetValue(npcId, out var npcDef)) return;
-            try
-            {
-                var npc = DataHelper.MakeNPC(npcDef, ModRegistry.ResolveBaseNpcId(CurrentZone, npcDef));
-                var aiCards = ResolveAICards(npcDef.AiCards);
-                npc.AICards = aiCards;
-
-                if (!string.IsNullOrEmpty(npcDef.UpgradedMobId))
-                {
-                    var u = DataHelper.GetExistingNPC(npcDef.UpgradedMobId);
-                    if (u != null) npc.UpgradedMob = u;
-                }
-                if (!string.IsNullOrEmpty(npcDef.NgPlusMobId))
-                {
-                    var n = DataHelper.GetExistingNPC(npcDef.NgPlusMobId);
-                    if (n != null) npc.NgPlusMob = n;
-                }
-                if (!string.IsNullOrEmpty(npcDef.HellModeMobId))
-                {
-                    var h = DataHelper.GetExistingNPC(npcDef.HellModeMobId);
-                    if (h != null) npc.HellModeMob = h;
-                }
-
-                // Build custom prefab if sprite definition exists
-                var sprDef = ModRegistry.ResolveSpriteDefForNpc(CurrentZone, npcDef);
-                if (sprDef != null)
-                {
-                    NpcPrefabBuilder.InvalidateCache(npcId);
-                    var customPrefab = NpcPrefabBuilder.BuildCustomPrefab(npcId, npc, sprDef, CurrentZone.ZoneId);
-                    if (customPrefab != null)
-                        npc.GameObjectAnimated = customPrefab;
-                }
-
-                DataHelper.RegisterNPC(npc);
-
-                // Update variant chain parents
-                foreach (var kvp in CurrentZone.Npcs)
-                {
-                    if (kvp.Key == npcId) continue;
-                    var parentNpc = DataHelper.GetExistingNPC(kvp.Key);
-                    if (parentNpc == null) continue;
-                    if (kvp.Value.UpgradedMobId == npcId) parentNpc.UpgradedMob = npc;
-                    if (kvp.Value.NgPlusMobId == npcId) parentNpc.NgPlusMob = npc;
-                    if (kvp.Value.HellModeMobId == npcId) parentNpc.HellModeMob = npc;
-                }
-
-                MarkDirty();
-            }
-            catch (Exception ex) { Plugin.Log.LogError($"[ZoneEditing] RebuildNpc '{npcId}' failed: {ex.Message}"); }
-        }
-
-        public static void RebuildCombat(string combatId)
-        {
-            if (CurrentZone == null || !CurrentZone.Combats.TryGetValue(combatId, out var combatDef)) return;
-            try
-            {
-                var npcList = combatDef.NpcIds
-                    .Select(id => DataHelper.GetExistingNPC(id))
-                    .Where(n => n != null)
-                    .ToArray();
-
-                var combat = DataHelper.MakeCombat(combatDef, npcList);
-
-                if (!string.IsNullOrEmpty(combatDef.EventDataId))
-                {
-                    var postEvt = DataHelper.GetExistingEvent(combatDef.EventDataId);
-                    if (postEvt != null) combat.EventData = postEvt;
-                }
-                if (!string.IsNullOrEmpty(combatDef.NpcToSummonOnKilledId))
-                {
-                    var summonNpc = DataHelper.GetExistingNPC(combatDef.NpcToSummonOnKilledId);
-                    if (summonNpc != null) combat.NpcToSummonOnNpcKilled = summonNpc;
-                }
-
-                DataHelper.RegisterCombat(combat);
-
-                // Update nodecombat references
-                foreach (var nodeDef in CurrentZone.Nodes.Values)
-                {
-                    if (nodeDef.CombatId != combatId) continue;
-                    var node = DataHelper.GetExistingNode(nodeDef.NodeId);
-                    if (node != null) node.NodeCombat = new[] { combat };
-                }
-
-                // Update event replycombat references
-                foreach (var evtDef in CurrentZone.Events.Values)
-                {
-                    var evt = DataHelper.GetExistingEvent(evtDef.EventId);
-                    if (evt?.Replys == null) continue;
-                    foreach (var reply in evt.Replys)
-                    {
-                        if (reply.SsCombat != null && reply.SsCombat.CombatId == combatId) reply.SsCombat = combat;
-                        if (reply.FlCombat != null && reply.FlCombat.CombatId == combatId) reply.FlCombat = combat;
-                        if (reply.SscCombat != null && reply.SscCombat.CombatId == combatId) reply.SscCombat = combat;
-                        if (reply.FlcCombat != null && reply.FlcCombat.CombatId == combatId) reply.FlcCombat = combat;
-                    }
-                }
-
-                MarkDirty();
-            }
-            catch (Exception ex) { Plugin.Log.LogError($"[ZoneEditing] RebuildCombat '{combatId}' failed: {ex.Message}"); }
-        }
-
-        public static void RebuildEvent(string eventId)
-        {
-            if (CurrentZone == null || !CurrentZone.Events.TryGetValue(eventId, out var eventDef)) return;
-            try
-            {
-                var replies = eventDef.Replies.Select(r => CreateReply(r)).ToArray();
-                var evt = DataHelper.MakeEvent(
-                    eventDef.EventId, eventDef.EventName,
-                    eventDef.Description, eventDef.DescriptionAction, replies,
-                    eventDef.EventTier, eventDef.ReplyRandom);
-
-                if (!string.IsNullOrEmpty(eventDef.RequirementId))
-                {
-                    var req = DataHelper.GetEventRequirement(eventDef.RequirementId);
-                    if (req != null)
-                        Traverse.Create(evt).Field("requirement").SetValue(req);
-                }
-
-                if (!string.IsNullOrEmpty(eventDef.SpriteSource))
-                    DataHelper.CopyEventVisuals(evt, eventDef.SpriteSource);
-
-                DataHelper.RegisterEvent(evt);
-
-                // Update nodeevent references
-                foreach (var nodeDef in CurrentZone.Nodes.Values)
-                {
-                    if (nodeDef.EventId != eventId) continue;
-                    var node = DataHelper.GetExistingNode(nodeDef.NodeId);
-                    if (node != null) node.NodeEvent = new[] { evt };
-                }
-
-                MarkDirty();
-            }
-            catch (Exception ex) { Plugin.Log.LogError($"[ZoneEditing] RebuildEvent '{eventId}' failed: {ex.Message}"); }
-        }
-
-        public static void RebuildNode(string nodeId)
-        {
-            if (CurrentZone == null || !CurrentZone.Nodes.TryGetValue(nodeId, out var nodeDef)) return;
-            try
-            {
-                var node = BuildNodeSO(nodeDef);
-                var zoneData = DataHelper.GetExistingZone(CurrentZone.ZoneId);
-                if (zoneData != null) node.NodeZone = zoneData;
-
-                var connected = nodeDef.Connections
-                    .Select(id => DataHelper.GetExistingNode(id))
-                    .Where(n => n != null)
-                    .ToArray();
-                node.NodesConnected = connected;
-
-                DataHelper.RegisterNode(node);
-                MarkDirty();
-            }
-            catch (Exception ex) { Plugin.Log.LogError($"[ZoneEditing] RebuildNode '{nodeId}' failed: {ex.Message}"); }
-        }
-
-        public static void RebuildItem(string itemId)
-        {
-            if (CurrentZone == null || !CurrentZone.Items.TryGetValue(itemId, out var itemDef)) return;
-            try
-            {
-                var item = DataHelper.MakeFullItem(itemDef);
-                DataHelper.RegisterItem(item);
-
-                var itemCard = DataHelper.MakeItemCard(itemDef, item);
-                DataHelper.RegisterCard(itemCard);
-
-                MarkDirty();
-            }
-            catch (Exception ex) { Plugin.Log.LogError($"[ZoneEditing] RebuildItem '{itemId}' failed: {ex.Message}"); }
-        }
-
-        public static void RebuildLoot(string lootId)
-        {
-            if (CurrentZone == null || !CurrentZone.Loot.TryGetValue(lootId, out var lootDef)) return;
-            try
-            {
-                var loot = DataHelper.MakeLoot(lootDef);
-                DataHelper.RegisterLoot(loot);
-                MarkDirty();
-            }
-            catch (Exception ex) { Plugin.Log.LogError($"[ZoneEditing] RebuildLoot '{lootId}' failed: {ex.Message}"); }
         }
 
         // 

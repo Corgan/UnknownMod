@@ -1,4 +1,5 @@
 using HarmonyLib;
+using Photon.Pun;
 using UnityEngine.SceneManagement;
 using UnknownMod.Core;
 
@@ -10,6 +11,19 @@ namespace UnknownMod
     /// </summary>
     public static partial class Patches
     {
+        // ── Suppress PhotonView registration during additive scene load ──
+        // PhotonView.Awake() fires before SceneManager.sceneLoaded, so we can't
+        // deactivate roots in time. Suppress to prevent duplicate ViewID errors.
+
+        [HarmonyPatch(typeof(PhotonView), "Awake")]
+        [HarmonyPrefix]
+        public static bool PhotonView_Awake_Prefix()
+        {
+            if (ZoneEditingService.SuppressSceneLoad > 0)
+                return false;
+            return true;
+        }
+
         // ── Suppress MapManager initialization during additive scene load ──
 
         [HarmonyPatch(typeof(MapManager), "Awake")]

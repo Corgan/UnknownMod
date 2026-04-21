@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using UnknownMod.Definitions;
 
@@ -23,7 +24,6 @@ namespace UnknownMod.Core
         // ── New content (keyed by entity ID) ─────────────────────
 
         public Dictionary<string, CardDef> Cards = new();
-        public Dictionary<string, ItemDef> Items = new();
         public Dictionary<string, LootDef> Loot = new();
         public Dictionary<string, NpcDef> Npcs = new();
         public Dictionary<string, AuraCurseDef> AuraCurses = new();
@@ -35,16 +35,19 @@ namespace UnknownMod.Core
         public Dictionary<string, RequirementDef> Requirements = new();
         public Dictionary<string, CardbackDef> Cardbacks = new();
         public Dictionary<string, TierRewardDef> TierRewards = new();
-        public Dictionary<string, SpriteOverrideDef> Sprites = new();
+        [JsonProperty("Sprites")]
+        public Dictionary<string, CharacterOverrideDef> SpriteSkins = new();
         public Dictionary<string, PackDef> Packs = new();
         public Dictionary<string, CardPlayerPackDef> CardPlayerPacks = new();
         public Dictionary<string, CardPlayerPairsPackDef> CardPlayerPairsPacks = new();
         public Dictionary<string, HeroDataDef> HeroDataEntries = new();
+        public Dictionary<string, BackgroundDef> Backgrounds = new();
+        public Dictionary<string, EventDef> Events = new();
+        public Dictionary<string, CombatDef> Combats = new();
 
         // ── Overrides of base-game entities (stored in _patches/) ─
 
         public Dictionary<string, CardDef> CardPatches = new();
-        public Dictionary<string, ItemDef> ItemPatches = new();
         public Dictionary<string, LootDef> LootPatches = new();
         public Dictionary<string, NpcDef> NpcPatches = new();
         public Dictionary<string, AuraCurseDef> AuraCursePatches = new();
@@ -56,11 +59,15 @@ namespace UnknownMod.Core
         public Dictionary<string, RequirementDef> RequirementPatches = new();
         public Dictionary<string, CardbackDef> CardbackPatches = new();
         public Dictionary<string, TierRewardDef> TierRewardPatches = new();
-        public Dictionary<string, SpriteOverrideDef> SpritePatches = new();
+        [JsonProperty("SpritePatches")]
+        public Dictionary<string, CharacterOverrideDef> SpriteSkinPatches = new();
         public Dictionary<string, PackDef> PackPatches = new();
         public Dictionary<string, CardPlayerPackDef> CardPlayerPackPatches = new();
         public Dictionary<string, CardPlayerPairsPackDef> CardPlayerPairsPackPatches = new();
         public Dictionary<string, HeroDataDef> HeroDataPatches = new();
+        public Dictionary<string, EventDef> EventPatches = new();
+        public Dictionary<string, CombatDef> CombatPatches = new();
+        public Dictionary<string, BackgroundDef> BackgroundPatches = new();
 
         // ── Zones ────────────────────────────────────────────────
 
@@ -69,6 +76,12 @@ namespace UnknownMod.Core
 
         /// <summary>Patches to base-game zones.</summary>
         public Dictionary<string, ZonePatchDef> ZonePatches = new();
+
+        // ── Starter override ──────────────────────────────────
+
+        /// <summary>If set, new adventures start at this node instead of the default "sen_0".
+        /// Use the zone's _0 node, e.g. "myc_0" for the mycelium zone.</summary>
+        public string StarterNodeId = "";
 
         // ── Dirty tracking ───────────────────────────────────────
 

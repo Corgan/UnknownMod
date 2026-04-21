@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnknownMod.Core;
 using UnknownMod.Definitions;
@@ -28,48 +29,52 @@ namespace UnknownMod.Editor
 
         private static void EnsureStyles()
         {
-            if (_titleStyle != null) return;
-            _titleStyle = new GUIStyle(GUI.skin.label)
+            if (_titleStyle == null)
             {
-                fontSize = 16, fontStyle = FontStyle.Bold, richText = true,
-                alignment = TextAnchor.UpperCenter,
-                normal = { textColor = Color.white },
-                wordWrap = true
-            };
-            _subtitleStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 12, richText = true,
-                alignment = TextAnchor.UpperCenter,
-                normal = { textColor = new Color(0.7f, 0.7f, 0.7f) },
-                wordWrap = true
-            };
-            _bodyStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 12, richText = true,
-                alignment = TextAnchor.UpperLeft,
-                normal = { textColor = new Color(0.85f, 0.85f, 0.85f) },
-                wordWrap = true
-            };
-            _statStyle = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 11, richText = true,
-                alignment = TextAnchor.UpperLeft,
-                normal = { textColor = new Color(0.6f, 0.8f, 1f) },
-                wordWrap = true
-            };
-            _replyStyle = new GUIStyle(GUI.skin.button)
-            {
-                fontSize = 12, richText = true,
-                alignment = TextAnchor.MiddleCenter,
-                wordWrap = true
-            };
-            _smallLabel = new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 10, richText = true,
-                alignment = TextAnchor.UpperLeft,
-                normal = { textColor = new Color(0.5f, 0.5f, 0.55f) },
-                wordWrap = true
-            };
+                _titleStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 16, fontStyle = FontStyle.Bold, richText = true,
+                    alignment = TextAnchor.UpperCenter,
+                    normal = { textColor = Color.white },
+                    wordWrap = true
+                };
+                _subtitleStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 12, richText = true,
+                    alignment = TextAnchor.UpperCenter,
+                    normal = { textColor = new Color(0.7f, 0.7f, 0.7f) },
+                    wordWrap = true
+                };
+                _bodyStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 12, richText = true,
+                    alignment = TextAnchor.UpperLeft,
+                    normal = { textColor = new Color(0.85f, 0.85f, 0.85f) },
+                    wordWrap = true
+                };
+                _statStyle = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 11, richText = true,
+                    alignment = TextAnchor.UpperLeft,
+                    normal = { textColor = new Color(0.6f, 0.8f, 1f) },
+                    wordWrap = true
+                };
+                _replyStyle = new GUIStyle(GUI.skin.button)
+                {
+                    fontSize = 12, richText = true,
+                    alignment = TextAnchor.MiddleCenter,
+                    wordWrap = true
+                };
+                _smallLabel = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 10, richText = true,
+                    alignment = TextAnchor.UpperLeft,
+                    normal = { textColor = new Color(0.5f, 0.5f, 0.55f) },
+                    wordWrap = true
+                };
+            }
+            // Check overlay texture independently — it's a UnityEngine.Object that
+            // can be destroyed by Resources.UnloadUnusedAssets while styles survive.
             if (_overlayBgTex == null)
             {
                 _overlayBgTex = new Texture2D(1, 1);
@@ -146,19 +151,25 @@ namespace UnknownMod.Editor
             var tex = sprite.texture;
             if (tex == null) return null;
 
-            // Full texture — no need to copy
-            var tr = sprite.textureRect;
-            if (Mathf.Approximately(tr.x, 0) && Mathf.Approximately(tr.y, 0) &&
-                Mathf.Approximately(tr.width, tex.width) && Mathf.Approximately(tr.height, tex.height))
-                return tex;
-
-            // Atlas sub-rect — blit to standalone texture (cached)
-            int key = sprite.GetInstanceID();
-            if (_spriteTexCache.TryGetValue(key, out var cached) && cached != null)
-                return cached;
-
             try
             {
+                // textureRect throws InvalidOperationException for tight-packed atlas sprites
+                var tr = sprite.textureRect;
+
+                // Full texture — no need to copy
+                if (Mathf.Approximately(tr.x, 0) && Mathf.Approximately(tr.y, 0) &&
+                    Mathf.Approximately(tr.width, tex.width) && Mathf.Approximately(tr.height, tex.height))
+                    return tex;
+
+                // Atlas sub-rect — blit to standalone texture (cached)
+                int key = sprite.GetInstanceID();
+                if (_spriteTexCache.TryGetValue(key, out var cached) && cached != null)
+                    return cached;
+
+                // Evict cache if too large to prevent unbounded growth
+                if (_spriteTexCache.Count > 256)
+                    ClearSpriteTexCache();
+
                 int x = Mathf.FloorToInt(tr.x);
                 int y = Mathf.FloorToInt(tr.y);
                 int w = Mathf.FloorToInt(tr.width);
@@ -174,9 +185,22 @@ namespace UnknownMod.Editor
             }
             catch
             {
-                // Texture may not be readable — fall back to full texture
+                // textureRect throws for tight-packed sprites,
+                // GetPixels throws for non-readable textures — fall back
                 return tex;
             }
+        }
+
+        /// <summary>Destroy all cached sub-textures and clear the cache.</summary>
+        public static void ClearSpriteTexCache()
+        {
+            foreach (var tex in _spriteTexCache.Values)
+                if (tex != null) Object.Destroy(tex);
+            _spriteTexCache.Clear();
+
+            foreach (var tex in _barTexCache.Values)
+                if (tex != null) Object.Destroy(tex);
+            _barTexCache.Clear();
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -210,6 +234,13 @@ namespace UnknownMod.Editor
         // ═══════════════════════════════════════════════════════════════
         //  ITEM PREVIEW
         // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>Draw an item preview from a CardDef that has ItemFields.</summary>
+        public static void DrawItemCard(Rect vp, string cardId, CardDef def)
+        {
+            // Reuse the existing DrawItem path via the card's ID (which matches the item ID)
+            DrawItem(vp, cardId, null);
+        }
 
         public static void DrawItem(Rect vp, string itemId, ItemDef def)
         {
@@ -447,6 +478,7 @@ namespace UnknownMod.Editor
                 if (def.HealFlatBonus != 0) lines.Add($"Heal: {def.HealFlatBonus:+#;-#;0}");
                 if (!string.IsNullOrEmpty(def.AuracurseImmune1)) lines.Add($"Immune: {def.AuracurseImmune1}");
                 if (!string.IsNullOrEmpty(def.AuracurseImmune2)) lines.Add($"Immune: {def.AuracurseImmune2}");
+                if (!string.IsNullOrEmpty(def.AuracurseImmune3)) lines.Add($"Immune: {def.AuracurseImmune3}");
 
                 foreach (var line in lines)
                 {
@@ -645,6 +677,8 @@ namespace UnknownMod.Editor
             DrawRewardBar(vp.x + pad, ref y, contentW, "Dust", def.Dust, "#aaf");
         }
 
+        private static readonly System.Collections.Generic.Dictionary<string, Texture2D> _barTexCache = new();
+
         private static void DrawRewardBar(float x, ref float y, float w, string label, int value, string color)
         {
             float barW = Mathf.Clamp(value * 4f, 0, w - 90f);
@@ -652,7 +686,11 @@ namespace UnknownMod.Editor
 
             if (value > 0)
             {
-                var barTex = ModEditor.MakeTex(1, 1, ColorFromHex(color, 0.5f));
+                if (!_barTexCache.TryGetValue(color, out var barTex) || barTex == null)
+                {
+                    barTex = ModEditor.MakeTex(1, 1, ColorFromHex(color, 0.5f));
+                    _barTexCache[color] = barTex;
+                }
                 GUI.DrawTexture(new Rect(x + 82, y + 2, barW, 14), barTex);
             }
             GUI.Label(new Rect(x + 86 + barW, y, 40, 20), value.ToString(), _bodyStyle);
@@ -698,6 +736,49 @@ namespace UnknownMod.Editor
         }
 
         // ═══════════════════════════════════════════════════════════════
+        //  BACKGROUND PREVIEW
+        // ═══════════════════════════════════════════════════════════════
+
+        public static void DrawBackground(Rect vp, string bgId, BackgroundDef def)
+        {
+            EnsureStyles();
+            EditorStyles.ViewportBackground(vp);
+
+            if (string.IsNullOrEmpty(bgId) || def == null)
+            { EditorStyles.ViewportPlaceholder(vp, "Select a background to preview"); return; }
+
+            var preview = ModEditor.EntityPreview;
+            if (preview == null)
+            { DrawPreviewError(vp, "Renderer not initialized"); return; }
+
+            preview.ResizeRT((int)vp.width, (int)vp.height);
+            if (preview.ShowBackground(def))
+            {
+                preview.Tick();
+                GUI.DrawTexture(vp, preview.RT, ScaleMode.ScaleToFit);
+                DrawBackgroundOverlay(vp, bgId, def);
+            }
+            else
+            {
+                DrawPreviewError(vp, preview.LastError);
+            }
+        }
+
+        private static void DrawBackgroundOverlay(Rect vp, string bgId, BackgroundDef def)
+        {
+            float pad = 10f;
+            float stripH = 44f;
+            Rect strip = new Rect(vp.x, vp.y, vp.width, stripH);
+            GUI.DrawTexture(strip, _overlayBgTex);
+
+            string name = !string.IsNullOrEmpty(def.DisplayName) ? def.DisplayName : bgId;
+            GUI.Label(new Rect(vp.x + pad, vp.y + 4, vp.width - pad * 2, 20),
+                $"<b>{name}</b>", _titleStyle);
+            GUI.Label(new Rect(vp.x + pad, vp.y + 24, vp.width - pad * 2, 16),
+                $"{def.Layers.Count} layers", _subtitleStyle);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
         //  ENCOUNTER PREVIEW
         // ═══════════════════════════════════════════════════════════════
 
@@ -714,7 +795,9 @@ namespace UnknownMod.Editor
             { DrawPreviewError(vp, "Renderer not initialized"); return; }
 
             preview.ResizeRT((int)vp.width, (int)vp.height);
-            if (def.NpcIds != null && def.NpcIds.Count > 0 && preview.ShowEncounter(def.NpcIds, def.Background))
+            bool hasNpcs = def.NpcIds != null && def.NpcIds.Any(id => !string.IsNullOrEmpty(id));
+            string customBgId = !string.IsNullOrEmpty(def.CustomBackgroundId) ? def.CustomBackgroundId : null;
+            if (hasNpcs && preview.ShowEncounter(def.NpcIds, def.Background, customBgId))
             {
                 preview.Tick();
                 GUI.DrawTexture(vp, preview.RT, ScaleMode.ScaleToFit);
@@ -722,7 +805,7 @@ namespace UnknownMod.Editor
             }
             else
             {
-                DrawPreviewError(vp, def.NpcIds == null || def.NpcIds.Count == 0
+                DrawPreviewError(vp, !hasNpcs
                     ? "Encounter has no NPCs" : preview.LastError);
             }
         }
@@ -733,30 +816,63 @@ namespace UnknownMod.Editor
 
         private static void DrawNpcOverlay(Rect vp, string npcId, NpcDef def)
         {
+            if (def == null) return;
             float pad = 10f;
-            float stripH = 68f;
+            float cw = vp.width - pad * 2;
+
+            // Compute strip height based on content
+            int lines = 3; // name, stats, tier
+            var resists = new System.Collections.Generic.List<string>();
+            if (def.ResSlash != 0) resists.Add($"Sl:{def.ResSlash}"); if (def.ResBlunt != 0) resists.Add($"Bl:{def.ResBlunt}");
+            if (def.ResPierce != 0) resists.Add($"Pi:{def.ResPierce}"); if (def.ResFire != 0) resists.Add($"Fi:{def.ResFire}");
+            if (def.ResCold != 0) resists.Add($"Co:{def.ResCold}"); if (def.ResLight != 0) resists.Add($"Li:{def.ResLight}");
+            if (def.ResMind != 0) resists.Add($"Mi:{def.ResMind}"); if (def.ResHoly != 0) resists.Add($"Ho:{def.ResHoly}");
+            if (def.ResShadow != 0) resists.Add($"Sh:{def.ResShadow}");
+            if (resists.Count > 0) lines++;
+            if (def.Immunities != null && def.Immunities.Count > 0) lines++;
+            if (def.AiCards != null && def.AiCards.Count > 0) lines++;
+
+            float stripH = lines * 20f + 8f;
             Rect strip = new Rect(vp.x, vp.yMax - stripH, vp.width, stripH);
             GUI.DrawTexture(strip, _overlayBgTex);
 
             float y = strip.y + 4;
-            float cw = vp.width - pad * 2;
 
-            var npcData = DataHelper.GetExistingNPC(npcId);
-            string name = def?.Name ?? npcData?.NPCName ?? npcId;
-            string bossTag = (def?.IsBoss ?? false) ? " <color=#f44>[BOSS]</color>" : "";
-            GUI.Label(new Rect(vp.x + pad, y, cw, 20), $"<b>{name}</b>{bossTag}", _titleStyle);
+            string name = def.Name ?? npcId;
+            string bossTag = def.IsBoss ? " <color=#f44>[BOSS]</color>" : "";
+            string namedTag = def.IsNamed ? " <color=#ff6>[NAMED]</color>" : "";
+            GUI.Label(new Rect(vp.x + pad, y, cw, 20), $"<b>{name}</b>{bossTag}{namedTag}", _titleStyle);
             y += 20;
 
-            int hp = def?.Hp ?? npcData?.Hp ?? 0;
-            int spd = def?.Speed ?? npcData?.Speed ?? 0;
-            int nrg = def?.Energy ?? 0;
             GUI.Label(new Rect(vp.x + pad, y, cw, 18),
-                $"<color=#f66>HP {hp}</color>   <color=#ff6>SPD {spd}</color>   <color=#6cf>NRG {nrg}</color>", _statStyle);
+                $"<color=#f66>HP {def.Hp}</color>   <color=#ff6>SPD {def.Speed}</color>   <color=#6cf>NRG {def.Energy}</color>   Cards: {def.CardsInHand}", _statStyle);
             y += 20;
 
-            if (def != null)
+            GUI.Label(new Rect(vp.x + pad, y, cw, 16),
+                $"Tier: {def.TierMob}   Pos: {def.PreferredPos}", _statStyle);
+            y += 18;
+
+            if (resists.Count > 0)
+            {
                 GUI.Label(new Rect(vp.x + pad, y, cw, 16),
-                    $"Tier: {def.TierMob}   Cards: {def.CardsInHand}", _statStyle);
+                    $"<color=#88aacc>Resist: {string.Join(" ", resists)}</color>", _smallLabel);
+                y += 18;
+            }
+
+            if (def.Immunities != null && def.Immunities.Count > 0)
+            {
+                string immText = string.Join(", ", def.Immunities);
+                if (immText.Length > 60) immText = immText.Substring(0, 57) + "...";
+                GUI.Label(new Rect(vp.x + pad, y, cw, 16),
+                    $"<color=#88ccff>Immune: {immText}</color>", _smallLabel);
+                y += 18;
+            }
+
+            if (def.AiCards != null && def.AiCards.Count > 0)
+            {
+                GUI.Label(new Rect(vp.x + pad, y, cw, 16),
+                    $"<color=#dd88ff>{def.AiCards.Count} AI card(s)</color>", _smallLabel);
+            }
         }
 
         private static void DrawEncounterOverlay(Rect vp, string combatId, CombatDef def)
@@ -820,42 +936,64 @@ namespace UnknownMod.Editor
 
         private static void DrawHeroOverlay(Rect vp, string heroId, HeroDef def)
         {
+            if (def == null) return;
             float pad = 10f;
             float cw = vp.width - pad * 2;
 
-            float stripH = def != null ? 86f : 28f;
+            int lines = 4; // name, class, stats, resists
+            if (def.Cards != null && def.Cards.Count > 0) lines++;
+            var flags = new System.Collections.Generic.List<string>();
+            if (def.MainCharacter) flags.Add("Main");
+            if (def.InitialUnlock) flags.Add("Unlocked");
+            if (def.Blocked) flags.Add("Blocked");
+            if (!string.IsNullOrEmpty(def.Sku)) flags.Add($"DLC:{def.Sku}");
+            if (flags.Count > 0) lines++;
+
+            float stripH = Mathf.Min(lines * 20 + 8, vp.height * 0.4f);
             Rect strip = new Rect(vp.x, vp.yMax - stripH, vp.width, stripH);
             GUI.DrawTexture(strip, _overlayBgTex);
             float y = strip.y + 4;
 
             var scData = DataHelper.GetSubClass(heroId);
-            string subName = def?.SubClassName ?? scData?.SubClassName ?? heroId;
+            string subName = def.SubClassName ?? scData?.SubClassName ?? heroId;
             GUI.Label(new Rect(vp.x + pad, y, cw, 20), $"<b>{subName}</b>", _titleStyle);
             y += 20;
 
-            if (def != null)
+            string cls = $"{def.HeroClass}";
+            if (def.HeroClassSecondary != Enums.HeroClass.None) cls += $" / {def.HeroClassSecondary}";
+            if (def.HeroClassThird != Enums.HeroClass.None) cls += $" / {def.HeroClassThird}";
+            GUI.Label(new Rect(vp.x + pad, y, cw, 16), cls, _subtitleStyle);
+            y += 18;
+
+            GUI.Label(new Rect(vp.x + pad, y, cw, 18),
+                $"<color=#f66>HP {def.Hp}</color>   <color=#ff6>SPD {def.Speed}</color>   <color=#6cf>NRG {def.Energy}</color>   E/Turn {def.EnergyTurn}", _statStyle);
+            y += 20;
+
+            // Resistances
+            string[] resNames = { "Slash", "Blunt", "Pierc", "Fire", "Cold", "Light", "Shadow", "Holy", "Mind" };
+            int[] resVals = { def.ResSlash, def.ResBlunt, def.ResPierce, def.ResFire, def.ResCold,
+                              def.ResLight, def.ResShadow, def.ResHoly, def.ResMind };
+            string line = "";
+            for (int i = 0; i < resNames.Length; i++)
             {
-                string cls = $"{def.HeroClass}";
-                if (def.HeroClassSecondary != Enums.HeroClass.None) cls += $" / {def.HeroClassSecondary}";
-                GUI.Label(new Rect(vp.x + pad, y, cw, 16), cls, _subtitleStyle);
-                y += 18;
-
-                int hp = def.Hp; int spd = def.Speed; int nrg = def.Energy;
-                GUI.Label(new Rect(vp.x + pad, y, cw, 18),
-                    $"<color=#f66>HP {hp}</color>   <color=#ff6>SPD {spd}</color>   <color=#6cf>NRG {nrg}</color>", _statStyle);
-                y += 20;
-
-                string[] resNames = { "Slash", "Blunt", "Pierc", "Fire", "Cold", "Light", "Shadow", "Holy", "Mind" };
-                int[] resVals = { def.ResSlash, def.ResBlunt, def.ResPierce, def.ResFire, def.ResCold,
-                                  def.ResLight, def.ResShadow, def.ResHoly, def.ResMind };
-                string line = "";
-                for (int i = 0; i < resNames.Length; i++)
-                {
-                    string col = resVals[i] > 0 ? "#8f8" : resVals[i] < 0 ? "#f88" : "#555";
-                    line += $"<color={col}>{resNames[i]}:{resVals[i]}</color>  ";
-                }
-                GUI.Label(new Rect(vp.x + pad, y, cw, 18), line, _smallLabel);
+                string col = resVals[i] > 0 ? "#8f8" : resVals[i] < 0 ? "#f88" : "#555";
+                line += $"<color={col}>{resNames[i]}:{resVals[i]}</color>  ";
             }
+            GUI.Label(new Rect(vp.x + pad, y, cw, 18), line, _smallLabel);
+            y += 18;
+
+            if (def.Cards != null && def.Cards.Count > 0)
+            {
+                int total = 0;
+                foreach (var c in def.Cards) total += c.UnitsInDeck;
+                GUI.Label(new Rect(vp.x + pad, y, cw, 16),
+                    $"<color=#dd88ff>{def.Cards.Count} starting card(s), {total} total copies</color>", _smallLabel);
+                y += 18;
+            }
+
+            if (flags.Count > 0)
+                GUI.Label(new Rect(vp.x + pad, y, cw, 16),
+                    $"<color=#888>{string.Join(" | ", flags)}</color>", _smallLabel);
         }
 
         private static void DrawSkinOverlay(Rect vp, string skinId, SkinDef def)
@@ -885,7 +1023,11 @@ namespace UnknownMod.Editor
             float pad = 10f;
             float cw = vp.width - pad * 2;
 
-            float stripH = 68f;
+            int lines = 2; // name + type tag
+            if (def != null && def.MaxCharges > 0) lines++;
+            string desc = def?.Description ?? "";
+            if (!string.IsNullOrEmpty(desc)) lines++;
+            float stripH = lines * 22f + 8f;
             Rect strip = new Rect(vp.x, vp.yMax - stripH, vp.width, stripH);
             GUI.DrawTexture(strip, _overlayBgTex);
             float y = strip.y + 4;
@@ -902,7 +1044,6 @@ namespace UnknownMod.Editor
                 y += 18;
             }
 
-            string desc = def?.Description ?? "";
             if (!string.IsNullOrEmpty(desc))
                 GUI.Label(new Rect(vp.x + pad, y, cw, 24), desc, _bodyStyle);
         }

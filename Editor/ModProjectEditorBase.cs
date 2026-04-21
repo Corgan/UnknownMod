@@ -61,14 +61,59 @@ namespace UnknownMod.Editor
             return info?.GetAllBaseIds?.Invoke() ?? new List<string>();
         }
 
+        // ── Per-frame cache for GetAllBaseIds ──────────────────
+        private List<string> _cachedBaseIds;
+        private int _cachedBaseIdsFrame = -1;
+
+        private List<string> GetCachedBaseIds()
+        {
+            int frame = Time.frameCount;
+            if (_cachedBaseIds == null || frame != _cachedBaseIdsFrame)
+            {
+                _cachedBaseIds = GetAllBaseIds();
+                _cachedBaseIdsFrame = frame;
+            }
+            return _cachedBaseIds;
+        }
+
         /// <summary>
         /// Snapshot a base-game entity into a TDef for overriding.
         /// Returns null if the entity doesn't exist.
         /// </summary>
         protected abstract TDef SnapshotBaseEntity(string id);
 
+        /// <summary>
+        /// EntityPicker mode for the visual browse grid. Override to enable the
+        /// browse button on the entity selector. Return null for text-only types.
+        /// </summary>
+        protected virtual EntityPicker.Mode? PickerMode => null;
+
+        /// <summary>
+        /// When true, selecting a base-game ID auto-snapshots it as a patch.
+        /// Override to false for editors that want to browse before committing.
+        /// </summary>
+        protected virtual bool AutoSnapshotOnSelect => true;
+
         /// <summary>Draw all type-specific field sections for the selected entity.</summary>
         protected abstract void DrawAllSections(TDef def, ModProject proj);
+
+        /// <summary>
+        /// Called when SelectedId is a base-game entity not in the project dictionaries
+        /// and AutoSnapshotOnSelect is false. Override to show a browsing UI.
+        /// </summary>
+        protected virtual void DrawGameEntityBrowser(ModProject proj, string id) { }
+
+        /// <summary>Filter the entity list before display. Override to hide entries
+        /// (e.g. NpcEditor hides NPC variants that appear as tabs on their base entry).</summary>
+        protected virtual List<string> FilterEntityList(List<string> allIds, ModProject proj) => allIds;
+
+        /// <summary>Save an entity to disk. Override to customize folder routing.</summary>
+        protected virtual void OnSaveEntity(ModProject proj, string id, TDef def, bool isPatch = false)
+            => ModProjectLoader.SaveEntity(proj, FolderName, id, def, isPatch);
+
+        /// <summary>Delete an entity from disk. Override to customize folder routing.</summary>
+        protected virtual void OnDeleteEntity(ModProject proj, string id, bool isPatch)
+            => ModProjectLoader.DeleteEntity(proj, FolderName, id, isPatch);
 
         // ═══════════════════════════════════════════════════════
         //  CONSTRUCTOR
@@ -125,7 +170,26 @@ namespace UnknownMod.Editor
                 badges[id] = "[OVR]";
             }
 
-            // 2. Entity selector
+            // 1b. Track all project IDs before filtering for picker dedup
+            var projectIdSet = new HashSet<string>(allIds);
+
+            // 1c. Filter display list (subclass hook, e.g. NpcEditor hides variants)
+            allIds = FilterEntityList(allIds, proj);
+
+            // 2. Build picker list: project entities first, then all base-game IDs
+            List<string> pickerIds = null;
+            if (PickerMode.HasValue)
+            {
+                var baseIds = GetCachedBaseIds();
+                pickerIds = new List<string>(allIds);
+                foreach (var baseId in baseIds)
+                {
+                    if (!projectIdSet.Contains(baseId))
+                        pickerIds.Add(baseId);
+                }
+            }
+
+            // 3. Entity selector
             string sel = EditorFields.EntitySelector(
                 SelectedId, allIds,
                 id =>
@@ -138,9 +202,27 @@ namespace UnknownMod.Editor
                         name = GetDisplayName(pd);
                     return $"{badge} {id}  {name}";
                 },
-                $"{FolderName}_sel");
+                $"{FolderName}_sel",
+                PickerMode,
+                pickerIds);
+
+            // Auto-override: if picker returned a base-game ID not in the project, snapshot it
             if (sel != SelectedId)
+            {
+                if (!string.IsNullOrEmpty(sel) && !newDict.ContainsKey(sel) && !patchDict.ContainsKey(sel)
+                    && AutoSnapshotOnSelect)
+                {
+                    var snapshot = SnapshotBaseEntity(sel);
+                    if (snapshot != null)
+                    {
+                        snapshot.EntityId = sel;
+                        patchDict[sel] = snapshot;
+                        ModProjectLoader.SaveEntity(proj, FolderName, sel, snapshot, true);
+                        proj.IsDirty = true;
+                    }
+                }
                 SelectedId = sel;
+            }
 
             // 3. Action bar
             GUILayout.BeginHorizontal();
@@ -154,7 +236,7 @@ namespace UnknownMod.Editor
                 var def = CreateDefault(newId, proj);
                 newDict[newId] = def;
                 SelectedId = newId;
-                ModProjectLoader.SaveEntity(proj, FolderName, def.EntityId, def);
+                OnSaveEntity(proj, def.EntityId, def);
                 proj.IsDirty = true;
             }
 
@@ -170,7 +252,7 @@ namespace UnknownMod.Editor
                     if (GUILayout.Button("Delete", EditorStyles.DangerButton, GUILayout.Width(60)))
                     {
                         newDict.Remove(SelectedId);
-                        ModProjectLoader.DeleteEntity(proj, FolderName, SelectedId, false);
+                        OnDeleteEntity(proj, SelectedId, false);
                         SelectedId = allIds.FirstOrDefault(k => k != SelectedId);
                         proj.IsDirty = true;
                     }
@@ -180,7 +262,7 @@ namespace UnknownMod.Editor
                     if (GUILayout.Button("Revert", EditorStyles.DangerButton, GUILayout.Width(60)))
                     {
                         patchDict.Remove(SelectedId);
-                        ModProjectLoader.DeleteEntity(proj, FolderName, SelectedId, true);
+                        OnDeleteEntity(proj, SelectedId, true);
                         SelectedId = allIds.FirstOrDefault(k => k != SelectedId);
                         proj.IsDirty = true;
                     }
@@ -208,18 +290,41 @@ namespace UnknownMod.Editor
 
             if (d == null)
             {
+                if (!AutoSnapshotOnSelect && !string.IsNullOrEmpty(SelectedId))
+                {
+                    DrawGameEntityBrowser(proj, SelectedId);
+                    return;
+                }
                 GUILayout.Label($"<i>Select a {TypeLabel.ToLower()} above, or create / override one.</i>",
                     EditorStyles.RichLabel);
                 return;
             }
 
             // 6. Draw type-specific sections
+            string prevEntityId = d.EntityId;
             DrawAllSections(d, proj);
 
             // 7. Auto-save on change
             if (GUI.changed)
             {
-                ModProjectLoader.SaveEntity(proj, FolderName, d.EntityId, d, isPatch);
+                // Handle ID rename: re-key dictionary, delete old file
+                if (d.EntityId != prevEntityId && !string.IsNullOrEmpty(d.EntityId))
+                {
+                    var dict = isPatch ? patchDict : newDict;
+                    var otherDict = isPatch ? newDict : patchDict;
+                    if (otherDict.ContainsKey(d.EntityId))
+                    {
+                        d.EntityId = prevEntityId; // collision with other dict, revert
+                    }
+                    else
+                    {
+                        dict.Remove(prevEntityId);
+                        dict[d.EntityId] = d;
+                        OnDeleteEntity(proj, prevEntityId, isPatch);
+                        SelectedId = d.EntityId;
+                    }
+                }
+                OnSaveEntity(proj, d.EntityId, d, isPatch);
                 proj.IsDirty = true;
                 proj.LastChangeTime = Time.realtimeSinceStartup;
             }
@@ -234,12 +339,12 @@ namespace UnknownMod.Editor
 
             _overrideScroll = GUILayout.BeginScrollView(_overrideScroll, GUILayout.Height(180));
             string filterLow = (_overrideFilter ?? "").ToLower();
-            var allBaseIds = GetAllBaseIds();
+            var allBaseIds = GetCachedBaseIds();
             int shown = 0;
             foreach (var id in allBaseIds)
             {
                 if (shown >= 50) break;
-                if (!string.IsNullOrEmpty(filterLow) && !id.Contains(filterLow)) continue;
+                if (!string.IsNullOrEmpty(filterLow) && !id.ToLower().Contains(filterLow)) continue;
                 if (patchDict.ContainsKey(id) || newDict.ContainsKey(id)) continue;
                 shown++;
                 if (GUILayout.Button(id, EditorStyles.LinkButton))
@@ -248,7 +353,7 @@ namespace UnknownMod.Editor
                     def.EntityId = id;
                     patchDict[id] = def;
                     SelectedId = id;
-                    ModProjectLoader.SaveEntity(proj, FolderName, id, def, true);
+                    OnSaveEntity(proj, id, def, true);
                     _showOverrideBrowser = false;
                     proj.IsDirty = true;
                 }

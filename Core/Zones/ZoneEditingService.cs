@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,7 +14,7 @@ namespace UnknownMod.Core
 {
     /// <summary>
     /// Editor-side zone mutation service. Owns CurrentZone, dirty/auto-save state,
-    /// node add/delete, combat/event creation, BFS reflow, hot-reload Rebuild methods,
+    /// node add/delete, combat/event creation, hot-reload Rebuild methods,
     /// and folder-based save.
     /// </summary>
     public static partial class ZoneEditingService
@@ -46,7 +46,6 @@ namespace UnknownMod.Core
             if (Time.unscaledTime - _lastDirtyTime < AutoSaveDelay) return;
             _dirty = false;
             SaveCurrentZone();
-            HotReloadToGame();
         }
 
         public static bool IsDirty => _dirty;
@@ -66,10 +65,13 @@ namespace UnknownMod.Core
         {
             if (CurrentZone == null) return;
 
-            // If editing a zone patch, sync changes back to the patch def
+            // If editing a zone patch, sync changes back to the patch def then persist to disk
             if (CurrentPatch != null)
             {
                 SyncSynthesizedToPatch();
+                var proj = UnknownMod.Editor.Tabs.ModManagerPanel.ActiveProject;
+                if (proj != null)
+                    UnknownMod.Editor.Tabs.ZoneTabEditor.SaveZonePatch(proj, CurrentPatch);
                 return;
             }
 
@@ -92,7 +94,8 @@ namespace UnknownMod.Core
 
             // Nodes: sync any node that is:
             //   (a) already in the patch (existing patch additions/modifications), or
-            //   (b) NOT in the base position cache (newly added during this session)
+            //   (b) NOT in the base position cache (newly added during this session), or
+            //   (c) a base-game node that was modified (position differs from cached)
             foreach (var kvp in CurrentZone.Nodes)
             {
                 if (CurrentPatch.Nodes.ContainsKey(kvp.Key))
@@ -102,8 +105,17 @@ namespace UnknownMod.Core
                 }
                 else if (basePositions != null && !basePositions.ContainsKey(kvp.Key))
                 {
-                    // New node not in the base zone  add to patch
+                    // New node not in the base zone — add to patch
                     CurrentPatch.Nodes[kvp.Key] = kvp.Value;
+                }
+                else if (basePositions != null && basePositions.TryGetValue(kvp.Key, out var basePos))
+                {
+                    // Base-game node — check if position was modified
+                    if (Mathf.Abs(kvp.Value.PosX - basePos.x) > 0.01f ||
+                        Mathf.Abs(kvp.Value.PosY - basePos.y) > 0.01f)
+                    {
+                        CurrentPatch.Nodes[kvp.Key] = kvp.Value;
+                    }
                 }
             }
 
@@ -117,24 +129,14 @@ namespace UnknownMod.Core
                     CurrentPatch.Roads[kvp.Key] = kvp.Value;
             }
 
-            // Events/encounters: sync any that exist in the patch
-            foreach (var kvp in CurrentZone.Events)
-            {
-                if (CurrentPatch.Events.ContainsKey(kvp.Key))
-                    CurrentPatch.Events[kvp.Key] = kvp.Value;
-            }
-            foreach (var kvp in CurrentZone.Combats)
-            {
-                if (CurrentPatch.Encounters.ContainsKey(kvp.Key))
-                    CurrentPatch.Encounters[kvp.Key] = kvp.Value;
-            }
+            // Events/encounters: now stored at mod-level, not in patch defs
 
-            // Update NextNodeNumber
-            string prefix = CurrentPatch.DetectedPrefix;
+            // Update NextNodeNumber (match AddNode's prefix parsing: trim trailing '_')
+            string prefix = CurrentPatch.DetectedPrefix.TrimEnd('_');
             int maxNum = CurrentPatch.NextNodeNumber;
             foreach (var nodeId in CurrentPatch.Nodes.Keys)
             {
-                if (nodeId.StartsWith(prefix) && int.TryParse(nodeId.Substring(prefix.Length), out int n))
+                if (nodeId.StartsWith(prefix + "_") && int.TryParse(nodeId.Substring(prefix.Length + 1), out int n))
                     maxNum = Math.Max(maxNum, n + 1);
             }
             CurrentPatch.NextNodeNumber = maxNum;
@@ -144,7 +146,7 @@ namespace UnknownMod.Core
 
         private static void SaveToFolder(ZoneDef def, string folder)
         {
-            foreach (string sub in new[] { "", "nodes", "combats", "events", "npcs", "cards", "items", "loot", "sprites" })
+            foreach (string sub in new[] { "", "nodes", "npcs", "cards", "items", "loot", "sprites" })
                 Directory.CreateDirectory(Path.Combine(folder, sub));
 
             var meta = new
@@ -152,18 +154,16 @@ namespace UnknownMod.Core
                 def.ZoneId, def.ZoneName, def.IdPrefix,
                 def.ObeliskLow, def.ObeliskHigh, def.ObeliskFinal,
                 def.DisableExperience, def.DisableMadness,
-                def.BackgroundImage
+                def.NodesOffsetX, def.NodesOffsetY,
+                def.RoadsOffsetX, def.RoadsOffsetY,
+                def.Sku, def.ChangeTeamOnEntrance, def.NewTeam,
+                def.RestoreTeamOnExit, def.CombatBackgroundSprite,
+                def.VisualLayers
             };
             WriteJson(Path.Combine(folder, "zone.json"), meta);
 
             SaveEntities(Path.Combine(folder, "nodes"), def.Nodes, kvp => kvp.Value.NodeId);
-            SaveEntities(Path.Combine(folder, "combats"), def.Combats, kvp => kvp.Value.CombatId);
-            SaveEntities(Path.Combine(folder, "events"), def.Events, kvp => kvp.Value.EventId);
-            SaveEntities(Path.Combine(folder, "npcs"), def.Npcs, kvp => kvp.Value.Id);
-            SaveEntities(Path.Combine(folder, "cards"), def.Cards, kvp => kvp.Value.Id);
-            SaveEntities(Path.Combine(folder, "items"), def.Items, kvp => kvp.Value.Id);
-            SaveEntities(Path.Combine(folder, "loot"), def.Loot, kvp => kvp.Value.Id);
-            SaveEntities(Path.Combine(folder, "sprites"), def.Sprites, kvp => kvp.Value.NpcId);
+            // Cards, NPCs, Items, Loot, SpriteSkins, Events, Combats are all saved at mod-level
 
             WriteJson(Path.Combine(folder, "roads.json"), def.Roads);
         }

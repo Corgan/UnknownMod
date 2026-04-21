@@ -13,6 +13,7 @@
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
     <RootNamespace>UnknownMod</RootNamespace>
+    <DefaultItemExcludes>$(DefaultItemExcludes);Data\**\scripts\**</DefaultItemExcludes>
   </PropertyGroup>
   
   <ItemGroup>
@@ -62,6 +63,12 @@
     </Reference>
     <Reference Include="Unity.2D.Common.Runtime">
       <HintPath>../!libs/Unity.2D.Common.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.RenderPipelines.Universal.Runtime">
+      <HintPath>../!libs/Unity.RenderPipelines.Universal.Runtime.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.RenderPipelines.Core.Runtime">
+      <HintPath>../!libs/Unity.RenderPipelines.Core.Runtime.dll</HintPath>
     </Reference>
   </ItemGroup>
 

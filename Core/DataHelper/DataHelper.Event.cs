@@ -28,6 +28,16 @@ namespace UnknownMod.Core
             return evt;
         }
 
+        /// <summary>Create a fully wired EventData from an EventDef.</summary>
+        public static EventData MakeFullEvent(EventDef d, EventReplyData[] replies)
+        {
+            var evt = MakeEvent(d.EventId, d.EventName, d.Description,
+                d.DescriptionAction, replies, d.EventTier, d.ReplyRandom);
+            if (!string.IsNullOrEmpty(d.EventUniqueId))
+                evt.EventUniqueId = d.EventUniqueId;
+            return evt;
+        }
+
         /// <summary>Create a fully wired EventReplyData from a ReplyDef.</summary>
         public static EventReplyData MakeReply(ReplyDef r,
             System.Func<string, CombatData> getCombat = null,
@@ -88,6 +98,14 @@ namespace UnknownMod.Core
             reply.SscUnlockSteamAchievement = "";
             reply.FlcUnlockSteamAchievement = "";
             reply.SsSteamStat = "";
+
+            // New reply-level fields from game update
+            if (!string.IsNullOrEmpty(r.RequiredClassForBlockedId))
+                Traverse.Create(reply).Field("requiredClassForBlocked").SetValue(GetSubClass(r.RequiredClassForBlockedId));
+            if (!string.IsNullOrEmpty(r.RequirementSku))
+                reply.RequirementSku = r.RequirementSku;
+            if (r.ChooseReplacementHero)
+                Traverse.Create(reply).Field("chooseReplacementHero").SetValue(true);
 
             // Roll
             if (r.HasRoll)
@@ -175,6 +193,31 @@ namespace UnknownMod.Core
                 if (!string.IsNullOrEmpty(o.CharacterReplacementId))
                     t.Field($"{p}CharacterReplacement").SetValue(GetSubClass(o.CharacterReplacementId));
                 t.Field($"{p}CharacterReplacementPosition").SetValue(o.CharacterReplacementPosition);
+
+                if (!string.IsNullOrEmpty(o.PerkDataId))
+                {
+                    var perk = GetPerk(o.PerkDataId);
+                    if (perk != null) t.Field($"{p}PerkData").SetValue(perk);
+                }
+                if (!string.IsNullOrEmpty(o.PerkData1Id))
+                {
+                    var perk1 = GetPerk(o.PerkData1Id);
+                    if (perk1 != null) t.Field($"{p}PerkData1").SetValue(perk1);
+                }
+                if (!string.IsNullOrEmpty(o.SteamStat))
+                    t.Field($"{p}SteamStat").SetValue(o.SteamStat);
+                if (!string.IsNullOrEmpty(o.UnlockSkinId))
+                {
+                    var skin = GetSkin(o.UnlockSkinId);
+                    if (skin != null) t.Field($"{p}UnlockSkin").SetValue(skin);
+                }
+            }
+
+            // Ss and Ssc: FinishEarlyAccess
+            if (p == "ss" || p == "ssc")
+            {
+                if (o.FinishEarlyAccess)
+                    t.Field($"{p}FinishEarlyAccess").SetValue(true);
             }
 
             // Object references (resolved from string IDs)

@@ -89,6 +89,21 @@ namespace UnknownMod.Core
             // Misc
             trait.MaxBleedDamagePerTurn = d.MaxBleedDamagePerTurn;
 
+            // HideTimesPerTurnText (private field)
+            Traverse.Create(trait).Field("hideTimesPerTurnText").SetValue(d.HideTimesPerTurnText);
+
+            // KeyNotes
+            if (d.KeyNotes != null && d.KeyNotes.Count > 0)
+            {
+                var knList = new List<KeyNotesData>();
+                foreach (var knId in d.KeyNotes)
+                {
+                    var kn = Globals.Instance?.GetKeyNotesData(knId);
+                    if (kn != null) knList.Add(kn);
+                }
+                Traverse.Create(trait).Field("keyNotes").SetValue(knList);
+            }
+
             return trait;
         }
 
@@ -160,6 +175,14 @@ namespace UnknownMod.Core
 
             // Misc
             d.MaxBleedDamagePerTurn = trait.MaxBleedDamagePerTurn;
+            d.HideTimesPerTurnText = Traverse.Create(trait).Field<bool>("hideTimesPerTurnText").Value;
+
+            // KeyNotes
+            var kn = trait.KeyNotes;
+            d.KeyNotes = new List<string>();
+            if (kn != null)
+                foreach (var k in kn)
+                    if (k != null) d.KeyNotes.Add(k.Id ?? "");
 
             return d;
         }
@@ -248,6 +271,10 @@ namespace UnknownMod.Core
             perk.ResistModified = d.ResistModified;
             perk.ResistModifiedValue = d.ResistModifiedValue;
 
+            // Copy icon from source perk
+            if (!string.IsNullOrEmpty(d.SpriteSource))
+                CopyPerkVisuals(perk, d.SpriteSource);
+
             perk.Init(); // lowercases id
 
             return perk;
@@ -277,6 +304,7 @@ namespace UnknownMod.Core
             d.AuracurseBonusValue = perk.AuracurseBonusValue;
             d.ResistModified = perk.ResistModified;
             d.ResistModifiedValue = perk.ResistModifiedValue;
+            d.SpriteSource = d.Id;
             return d;
         }
 
@@ -319,6 +347,10 @@ namespace UnknownMod.Core
                 node.PerksConnected = new PerkNodeData[0];
             }
 
+            // Copy sprite from source perk node
+            if (!string.IsNullOrEmpty(d.SpriteSource))
+                CopyPerkNodeVisuals(node, d.SpriteSource);
+
             return node;
         }
 
@@ -346,6 +378,8 @@ namespace UnknownMod.Core
                         d.PerksConnected.Add(cn.Id);
                 }
             }
+
+            d.SpriteSource = d.Id;
 
             return d;
         }

@@ -102,12 +102,14 @@ namespace UnknownMod.Core
             if (!string.IsNullOrEmpty(auraSelf))
             {
                 t.Field("auraSelf").SetValue(GetAuraCurse(auraSelf));
-                t.Field("auraCharges").SetValue(System.Math.Max(auraCharges, auraSelfCharges));
+                if (auraSelfCharges > 0 && auraCharges == 0)
+                    t.Field("auraCharges").SetValue(auraSelfCharges);
             }
             if (!string.IsNullOrEmpty(curseSelf))
             {
                 t.Field("curseSelf").SetValue(GetAuraCurse(curseSelf));
-                t.Field("curseCharges").SetValue(System.Math.Max(curseCharges, curseSelfCharges));
+                if (curseSelfCharges > 0 && curseCharges == 0)
+                    t.Field("curseCharges").SetValue(curseSelfCharges);
             }
 
             // Heal
@@ -264,6 +266,9 @@ namespace UnknownMod.Core
 
             // ── Lifesteal ──
             if (d.HealSelfPerDamageDonePercent != 0f) t.Field("healSelfPerDamageDonePercent").SetValue(d.HealSelfPerDamageDonePercent);
+
+            // ── Debuff conversion ──
+            if (d.ConvertAllDebuffsIntoCurse) t.Field("convertAllDebuffsIntoCurse").SetValue(true);
 
             // ── AC manipulation ──
             if (d.TransferCurses != 0) t.Field("transferCurses").SetValue(d.TransferCurses);
@@ -457,48 +462,42 @@ namespace UnknownMod.Core
             return card;
         }
 
-        /// <summary>Create the paired CardData (equipment card) for an ItemDef + ItemData.</summary>
+        /// <summary>
+        /// Create the paired CardData (equipment card) for an ItemDef + ItemData.
+        /// Identity fields are synced from the ItemDef, then MakeFullCard builds
+        /// the complete CardData from the embedded CardDef.
+        /// </summary>
         public static CardData MakeItemCard(ItemDef d, ItemData itemData)
         {
-            var card = ScriptableObject.CreateInstance<CardData>();
-            var t = Traverse.Create(card);
+            // Clone the paired CardDef so mutations don't corrupt the project's original
+            var cardJson = Newtonsoft.Json.JsonConvert.SerializeObject(d.Card);
+            var cardCopy = Newtonsoft.Json.JsonConvert.DeserializeObject<Definitions.CardDef>(cardJson);
 
-            t.Field("id").SetValue(d.Id);
-            t.Field("cardName").SetValue(d.Name);
-            t.Field("cardClass").SetValue(Enums.CardClass.Item);
-            t.Field("cardRarity").SetValue(d.Rarity);
-            t.Field("cardType").SetValue(d.CardType);
-            t.Field("cardUpgraded").SetValue(Enums.CardUpgraded.No);
-            t.Field("playable").SetValue(false);
-            t.Field("visible").SetValue(true);
-            t.Field("showInTome").SetValue(false);
-            t.Field("energyCost").SetValue(0);
-            t.Field("item").SetValue(itemData);
+            // ── Sync identity fields from item → card copy ──────
+            cardCopy.Id = d.Id;
+            cardCopy.Name = d.Name;
+            cardCopy.CardClass = Enums.CardClass.Item;
+            cardCopy.CardRarity = d.Rarity;
+            cardCopy.CardType = d.CardType;
+            cardCopy.CardUpgraded = Enums.CardUpgraded.No;
+            cardCopy.SpriteSource = d.SpriteSource;
+            cardCopy.SoundSource = d.SoundSource;
+            cardCopy.PetModelSource = d.PetModelSource;
 
-            // Prevent NREs
-            t.Field("internalId").SetValue(d.Id);
-            t.Field("sku").SetValue("");
-            t.Field("relatedCard").SetValue("");
-            t.Field("relatedCard2").SetValue("");
-            t.Field("relatedCard3").SetValue("");
-            t.Field("cardTypeAux").SetValue(new Enums.CardType[0]);
-            t.Field("discardCardTypeAux").SetValue(new Enums.CardType[0]);
-            t.Field("addCardTypeAux").SetValue(new Enums.CardType[0]);
-            t.Field("addCardList").SetValue(new CardData[0]);
-            t.Field("preDescriptionArgs").SetValue(new string[0]);
-            t.Field("descriptionArgs").SetValue(new string[0]);
-            t.Field("postDescriptionArgs").SetValue(new string[0]);
-            t.Field("targetSide").SetValue(Enums.CardTargetSide.Anyone);
-            t.Field("targetType").SetValue(Enums.CardTargetType.Single);
-            t.Field("targetPosition").SetValue(Enums.CardTargetPosition.Anywhere);
+            // ── Build the full card from the synced copy ─────────
+            var card = ModProjectBuilder.MakeFullCard(cardCopy);
 
-            // Copy card art sprite from an existing card
-            if (!string.IsNullOrEmpty(d.SpriteSource))
-                CopyCardVisuals(card, d.SpriteSource);
+            // ── Set item reference ───────────────────────────────
+            Traverse.Create(card).Field("item").SetValue(itemData);
 
-            // Auto-generate item description
-            try { card.SetDescriptionNew(forceDescription: true); }
-            catch { /* Texts not ready — description will be empty until next rebuild */ }
+            // ── Re-init now that item is linked ──────────────────
+            // InitClone sets enchantDamagePreCalculated from item data.
+            // InitClone2 regenerates description with AppendItemDescription.
+            try { card.InitClone(d.Id); }
+            catch { /* KeyNotes/Globals not ready */ }
+            Globals.Instance?.CardsDescriptionNormalized?.Remove(d.Id);
+            try { card.InitClone2(); }
+            catch { /* Texts not ready */ }
 
             return card;
         }

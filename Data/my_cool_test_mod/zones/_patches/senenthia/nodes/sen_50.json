@@ -1,0 +1,23 @@
+{
+  "NodeId": "sen_50",
+  "NodeName": "",
+  "Description": "",
+  "PosX": 0.0,
+  "PosY": 0.0,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "None",
+  "NodeRequirementId": "",
+  "CombatTier": "T0",
+  "CombatPercent": -1,
+  "EventIds": [
+    "e_nec_2"
+  ],
+  "EventPercent": 0,
+  "NodeEventTier": "T0",
+  "Connections": []
+}

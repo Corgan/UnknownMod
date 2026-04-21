@@ -1,0 +1,35 @@
+{
+  "EventId": "e_myc_13",
+  "EventName": "The Assimilated Merchant",
+  "Description": "A squat figure sits behind a makeshift counter of mushroom-wood, wares spread before him on fungal cloth. As you approach, you see it is a dwarf — but mushrooms sprout from his shoulders and neck, their caps pulsing faintly. He speaks in two voices at once: his own, and something deeper.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Trade with the merchant.",
+      "Action": 29,
+      "SsText": "The merchant grins with too many teeth. His wares are surprisingly good — salvaged gear and rare fungi, offered at prices that seem almost generous. Perhaps the Mycelium wants you well-equipped for what lies ahead.",
+      "SsDiscount": 20,
+      "SsMerchantUI": true
+    },
+    {
+      "ReplyText": "Try to free the dwarf from the fungal infection.",
+      "Action": 30,
+      "HasRoll": true,
+      "RollDC": 6,
+      "SsText": "With combined effort, you manage to pry the fungal growths from the dwarf's body. He gasps, suddenly speaking in only one voice, and presses a reward into your hands with trembling fingers.",
+      "SsGold": 50,
+      "FlText": "Your attempt to remove the fungus triggers a violent reaction. The dwarf's eyes go dark as the Mycelium takes full control, and he lunges at you with inhuman strength.",
+      "FlCombatId": "cmyc_4"
+    },
+    {
+      "ReplyText": "Leave him be.",
+      "Action": 29,
+      "SsText": "You back away slowly. Some things are better left alone in these depths. The merchant watches you go, both voices humming the same sad tune.",
+      "SsXP": 20
+    }
+  ]
+}

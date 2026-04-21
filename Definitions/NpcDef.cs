@@ -17,6 +17,13 @@ namespace UnknownMod.Definitions
         public string Description = "";
         public string SpriteSource = "";
 
+        /// <summary>Optional CharacterOverrideDef ID for visual overrides (bone grafts, sprite swaps, tint, etc.).
+        /// When set, the runtime builds a custom prefab with these overrides applied.
+        /// The CharacterOverrideDef's BaseSprite must match this NPC's SpriteSource.
+        /// Leave empty to use the base model as-is with no overrides.</summary>
+        public string SpriteSkinId = "";
+        public bool ShouldSerializeSpriteSkinId() => !string.IsNullOrEmpty(SpriteSkinId);
+
         public int Hp = 100;
         public int Speed = 10;
         public int Energy = 10;

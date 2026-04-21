@@ -29,6 +29,10 @@ namespace UnknownMod.Definitions
         public bool DisableRandom = false;
         public bool VisibleIfNotRequirement = false;
 
+        /// <summary>SubClass ID — disable this node when this hero is unlocked.</summary>
+        public string HeroToDisableNodeWhenUnlockedId = "";
+        public bool ShouldSerializeHeroToDisableNodeWhenUnlockedId() => !string.IsNullOrEmpty(HeroToDisableNodeWhenUnlockedId);
+
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.NodeGround NodeGround = Enums.NodeGround.None;
 

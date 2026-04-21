@@ -1,0 +1,35 @@
+{
+  "EventId": "e_myc_24",
+  "EventName": "The Hivemind Nexus",
+  "Description": "The passage widens into a pulsing organic chamber. At its center, a massive fungal brain — easily the size of a cart — throbs with bioluminescent energy. Thick tendrils extend from it into the walls, floor, and ceiling, connecting to the entire network around you. This is a nexus point of the Mycelium's consciousness.",
+  "DescriptionAction": "What is your approach?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Attempt to commune with the hivemind.",
+      "Action": 30,
+      "HasRoll": true,
+      "RollDC": 6,
+      "RollCard": 3,
+      "SsText": "Your consciousness touches the vast alien intelligence of the Mycelium. For a terrifying moment, you see through a million eyes — and among the visions, you glimpse the weak points of its strongest guardian.",
+      "SsXP": 50,
+      "FlText": "The hivemind's consciousness is overwhelming. Alien thoughts flood your brain in an unstoppable torrent, leaving you dazed and disoriented as you wrench free.",
+      "FlHealFlat": -20
+    },
+    {
+      "ReplyText": "Attack the nexus directly.",
+      "Action": 29,
+      "SsText": "You charge the pulsing mass, weapons raised. The tendrils lash out in defense as the hivemind screams silently, summoning its guardians.",
+      "SsCombatId": "cmyc_8"
+    },
+    {
+      "ReplyText": "Sever the tendrils. [Warrior]",
+      "Action": 29,
+      "SsText": "With powerful, precise strikes, you hack through the thick tendrils connecting the nexus to the walls. The fungal brain shudders and dims as its connections are severed, weakening the network around you.",
+      "SsXP": 30
+    }
+  ]
+}

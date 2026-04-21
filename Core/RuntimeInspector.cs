@@ -103,11 +103,23 @@ namespace UnknownMod.Core
         {
             string id = Path.GetFileNameWithoutExtension(cmdFilePath);
             string responseJson;
+
+            // Read file first — if the external tool is still writing, skip and retry next poll
+            string cmdJson;
             try
             {
-                string cmdJson = File.ReadAllText(cmdFilePath, Encoding.UTF8);
+                cmdJson = File.ReadAllText(cmdFilePath, Encoding.UTF8);
+            }
+            catch (IOException)
+            {
+                return; // file still being written — retry next poll
+            }
+
+            try
+            {
                 var cmd = JObject.Parse(cmdJson);
                 string path = cmd["path"]?.ToString()?.TrimEnd('/').ToLower() ?? "/";
+                Plugin.Log.LogInfo($"[Inspector] Got command '{id}': {path}");
                 var qParams = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 if (cmd["params"] is JObject pObj)
                 {
@@ -118,6 +130,7 @@ namespace UnknownMod.Core
             }
             catch (Exception ex)
             {
+                Plugin.Log.LogError($"[Inspector] Command '{id}' threw: {ex.Message}");
                 responseJson = JsonConvert.SerializeObject(new { error = ex.Message, stack = ex.StackTrace });
             }
 
@@ -126,6 +139,7 @@ namespace UnknownMod.Core
             try
             {
                 File.WriteAllText(resFile, responseJson, Encoding.UTF8);
+                Plugin.Log.LogInfo($"[Inspector] Wrote response '{id}' ({responseJson.Length} chars)");
             }
             catch (Exception ex)
             {
@@ -369,14 +383,24 @@ public class {className}
                     CreateNoWindow = true,
                 };
                 var proc = System.Diagnostics.Process.Start(psi);
+                // Read stderr asynchronously to avoid deadlock when the child
+                // fills the stderr pipe buffer before completing stdout output.
+                var stderrSb = new StringBuilder();
+                proc.ErrorDataReceived += (s, e) => { if (e.Data != null) stderrSb.AppendLine(e.Data); };
+                proc.BeginErrorReadLine();
                 string stdout = proc.StandardOutput.ReadToEnd();
-                string stderr = proc.StandardError.ReadToEnd();
                 proc.WaitForExit(15000);
+                string stderr = stderrSb.ToString();
 
                 if (proc.ExitCode != 0 || !File.Exists(dllFile))
+                {
+                    Plugin.Log.LogWarning($"[Inspector] /run compile failed (exit {proc.ExitCode}): {stderr}");
                     return Json(new { error = "Compilation failed", exitCode = proc.ExitCode, stdout, stderr, source = fullSource });
+                }
 
-                // Load and execute
+                // Load and execute (.NET 4.x: assemblies cannot be unloaded)
+                if (_runCounter > 50)
+                    Plugin.Log.LogWarning($"[Inspector] /run invoked {_runCounter} times — each call leaks an assembly. Consider restarting the game.");
                 var asm = System.Reflection.Assembly.LoadFrom(dllFile);
                 var type = asm.GetType(className);
                 var method = type.GetMethod("Run", BindingFlags.Public | BindingFlags.Static);

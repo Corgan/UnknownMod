@@ -146,8 +146,13 @@
   "IsNamed": false,
   "FinishCombatOnDead": true,
   "BigModel": true,
+  "Female": false,
+  "OnlyKillBossWhenHpZero": false,
   "Difficulty": -1,
   "PreferredPos": "Front",
+  "FluffOffsetX": 0.0,
+  "FluffOffsetY": 0.0,
+  "PosBottom": 0.0,
   "Immunities": [
     "paralyze",
     "stun",

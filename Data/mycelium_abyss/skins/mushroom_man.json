@@ -1,0 +1,15 @@
+{
+  "Id": "mushroom_man",
+  "SkinName": "Mushroom Man",
+  "SkinSubclass": "mushroom_man",
+  "BaseSkin": true,
+  "SkinOrder": 0,
+  "PerkLevel": 0,
+  "Sku": "",
+  "SteamStat": "",
+  "SkinTextId": "mushroom_man",
+  "SpriteSource": "archer",
+  "OverrideId": "mycelium_abyss_hero_sprite",
+  "HeroSelectionScreenScale": 1.0,
+  "HeroSelectionScreenOffsetX": 0.0
+}

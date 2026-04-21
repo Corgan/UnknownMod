@@ -13,8 +13,12 @@ namespace UnknownMod.Core
 
             // ── Activation / Requisite ───────────────────────────
             new FieldMapping("Activation",              "Activation"),
+            new FieldMapping("activationManual",         "ActivationManual"),
             new FieldMapping("activationOnlyOnHeroes",  "ActivationOnlyOnHeroes"),  // private field
+            new FieldMapping("activateOnReceive",        "ActivateOnReceive"),       // private field
+            new FieldMapping("preventApplyForHeroTarget","PreventApplyForHeroTarget"), // private field
             new FieldMapping("ItemTarget",              "ItemTarget"),
+            new FieldMapping("overrideTargetText",       "OverrideTargetText"),      // private field
             new FieldMapping("dontTargetBoss",          "DontTargetBoss"),           // private field
             new FieldMapping("TimesPerTurn",            "TimesPerTurn"),
             new FieldMapping("TimesPerCombat",          "TimesPerCombat"),
@@ -190,6 +194,10 @@ namespace UnknownMod.Core
             new FieldMapping("EffectCasterDelay","EffectCasterDelay"),
             new FieldMapping("EffectTarget",     "EffectTarget"),
             new FieldMapping("EffectTargetDelay","EffectTargetDelay"),
+
+            // ── Debuff Conversion ───────────────────────────────
+            new FieldMapping("convertReceivedDebuffsIntoDamage","ConvertReceivedDebuffsIntoDamage"), // private field
+            new FieldMapping("convertReceivedDebuffsIntoCurse", "ConvertReceivedDebuffsIntoCurse"),  // private field
         };
     }
 }

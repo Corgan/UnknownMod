@@ -23,9 +23,17 @@ namespace UnknownMod.Definitions
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CombatBackground Background = Enums.CombatBackground.Spider_Lair;
 
+        /// <summary>Custom background ID (from zone's Backgrounds dict). Overrides Background enum when set.</summary>
+        public string CustomBackgroundId = "";
+        public bool ShouldSerializeCustomBackgroundId() => !string.IsNullOrEmpty(CustomBackgroundId);
+
         public int NpcRemoveInMadness0Index = -1;
         public bool HealHeroes = false;
         public bool IsRift = false;
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.CombatStepSound StepSound = Enums.CombatStepSound.None;
+        public bool ShouldSerializeStepSound() => StepSound != Enums.CombatStepSound.None;
 
         /// <summary>Prevent randomizing enemy positions in this combat.</summary>
         public bool NeverRandomizeEnemies = false;

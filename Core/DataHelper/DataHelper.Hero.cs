@@ -122,6 +122,24 @@ namespace UnknownMod.Core
             SetPack(t, "challengePack5", d.ChallengePack5);
             SetPack(t, "challengePack6", d.ChallengePack6);
 
+            // Character replacement
+            if (d.CardsOnReplaceCharacter != null && d.CardsOnReplaceCharacter.Count > 0)
+            {
+                var rcArr = new HeroCards[d.CardsOnReplaceCharacter.Count];
+                for (int i = 0; i < d.CardsOnReplaceCharacter.Count; i++)
+                {
+                    rcArr[i] = new HeroCards();
+                    if (!string.IsNullOrEmpty(d.CardsOnReplaceCharacter[i].CardId))
+                        rcArr[i].Card = GetCard(d.CardsOnReplaceCharacter[i].CardId);
+                    rcArr[i].UnitsInDeck = d.CardsOnReplaceCharacter[i].UnitsInDeck;
+                }
+                t.Field("cardsOnReplaceCharacter").SetValue(rcArr);
+            }
+            if (!string.IsNullOrEmpty(d.PerksOnReplace))
+                t.Field("perksOnReplace").SetValue(d.PerksOnReplace);
+            if (d.UseXpFromOriginal)
+                t.Field("useXpFromOriginal").SetValue(true);
+
             return sc;
         }
 
@@ -204,6 +222,22 @@ namespace UnknownMod.Core
                 ChallengePack5 = GetPackId(sc.ChallengePack5),
                 ChallengePack6 = GetPackId(sc.ChallengePack6),
             };
+
+            // Character replacement
+            var cardsOnReplace = t.Field<HeroCards[]>("cardsOnReplaceCharacter").Value;
+            if (cardsOnReplace != null)
+            {
+                foreach (var hc in cardsOnReplace)
+                {
+                    d.CardsOnReplaceCharacter.Add(new HeroCardDef
+                    {
+                        CardId = hc.Card != null ? hc.Card.Id ?? "" : "",
+                        UnitsInDeck = hc.UnitsInDeck,
+                    });
+                }
+            }
+            d.PerksOnReplace = t.Field<string>("perksOnReplace").Value ?? "";
+            d.UseXpFromOriginal = t.Field<bool>("useXpFromOriginal").Value;
 
             // MaxHp
             if (sc.MaxHp != null && sc.MaxHp.Length > 0)

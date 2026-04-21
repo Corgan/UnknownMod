@@ -21,6 +21,12 @@ namespace UnknownMod.Definitions
         public float PercentRare = 0f;
         public float PercentEpic = 0f;
         public float PercentMythic = 0f;
+        public float ShadyScaleX = 1f;
+        public float ShadyScaleY = 1f;
+        public float ShadyOffsetX = 0f;
+        public float ShadyOffsetY = 0f;
+        /// <summary>ID of an existing LootData to copy the shadyModel GameObject from.</summary>
+        public string ShadyModelSource = "";
         public List<LootItemDef> Items = new();
     }
 

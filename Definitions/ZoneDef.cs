@@ -43,20 +43,8 @@ namespace UnknownMod.Definitions
         public string CombatBackgroundSprite = "";
         public bool ShouldSerializeCombatBackgroundSprite() => !string.IsNullOrEmpty(CombatBackgroundSprite);
 
-        /// <summary>Filename of the background image (relative to zone folder).</summary>
-        public string BackgroundImage = "background.jpeg";
-
         public Dictionary<string, NodeDef> Nodes = new();
-        public Dictionary<string, CombatDef> Combats = new();
-        public Dictionary<string, EventDef> Events = new();
-        public Dictionary<string, NpcDef> Npcs = new();
-        public Dictionary<string, CardDef> Cards = new();
-        public Dictionary<string, ItemDef> Items = new();
-        public Dictionary<string, LootDef> Loot = new();
         public Dictionary<string, RoadDef> Roads = new();
-
-        /// <summary>Reusable sprite definitions. Key = sprite def ID, referenced by NpcDef.SpriteSource.</summary>
-        public Dictionary<string, SpriteOverrideDef> Sprites = new();
 
         /// <summary>Visual layers (backgrounds, overlays, decorations) rendered in the map viewport.
         /// When overriding a base-game zone, only layers explicitly listed here are changed;
@@ -73,9 +61,19 @@ namespace UnknownMod.Definitions
         public bool ShouldSerializeRoadsOffsetX() => Mathf.Abs(RoadsOffsetX) > 0.001f;
         public bool ShouldSerializeRoadsOffsetY() => Mathf.Abs(RoadsOffsetY) > 0.001f;
 
-        /// <summary>DEPRECATED: per-NPC overrides from old format. Migrated into Sprites on load.</summary>
-        public Dictionary<string, SpriteOverrideDef> SpriteOverrides = new();
-        public bool ShouldSerializeSpriteOverrides() => false; // never write to JSON
+        /// <summary>Camera bounding box (world-space). Constrains the runtime camera to this area.
+        /// When all zeros, defaults to the background sprite bounds.</summary>
+        public float CameraBoundsMinX, CameraBoundsMinY;
+        public float CameraBoundsMaxX, CameraBoundsMaxY;
+        public bool ShouldSerializeCameraBoundsMinX() => Mathf.Abs(CameraBoundsMinX) > 0.001f;
+        public bool ShouldSerializeCameraBoundsMinY() => Mathf.Abs(CameraBoundsMinY) > 0.001f;
+        public bool ShouldSerializeCameraBoundsMaxX() => Mathf.Abs(CameraBoundsMaxX) > 0.001f;
+        public bool ShouldSerializeCameraBoundsMaxY() => Mathf.Abs(CameraBoundsMaxY) > 0.001f;
+
+        /// <summary>Whether camera bounds have been explicitly set.</summary>
+        public bool HasCameraBounds => Mathf.Abs(CameraBoundsMaxX - CameraBoundsMinX) > 0.01f
+                                   || Mathf.Abs(CameraBoundsMaxY - CameraBoundsMinY) > 0.01f;
+
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -135,6 +133,105 @@ namespace UnknownMod.Definitions
 
         public bool FlipX = false;
         public bool FlipY = false;
+
+        // ── Light2D properties ──────────────────────────────────────
+        /// <summary>Light2D light type: Parametric=0, Freeform=1, Sprite=2, Point=3, Global=4.</summary>
+        public int LightType = 3;
+        public float Intensity = 1f;
+        public float FalloffIntensity = 0.5f;
+        public float PointLightInnerAngle = 360f;
+        public float PointLightOuterAngle = 360f;
+        public float PointLightInnerRadius = 0f;
+        public float PointLightOuterRadius = 1f;
+        public float ShapeLightFalloffSize = 0.5f;
+        public int LightOrder = 0;
+        public int BlendStyleIndex = 0;
+        public bool ShadowsEnabled = false;
+        public float ShadowIntensity = 0.5f;
+
+        // ── ParticleSystem properties ────────────────────────────────
+        public float Duration = 5f;
+        public bool Loop = true;
+        public bool Prewarm = false;
+        public float StartLifetime = 5f;
+        public float StartSpeed = 5f;
+        public float StartSize = 1f;
+        public int MaxParticles = 1000;
+        public float SimulationSpeed = 1f;
+        public bool PlayOnAwake = true;
+        public float GravityModifier = 0f;
+        public float EmissionRate = 10f;
+
+        // ── PrefabEffect properties ──────────────────────────────────
+        /// <summary>Name of a prefab in Resources/Effects/ (e.g. "smoke", "burn", "lightningstrike").</summary>
+        public string EffectName = "";
+
+        // ── SpriteMask properties ────────────────────────────────────
+        public float AlphaCutoff = 0.5f;
+        public bool CustomRange = false;
+        public int FrontSortingOrder = 0;
+        public int BackSortingOrder = 0;
+
+        // ── Shader properties ────────────────────────────────────────
+        /// <summary>Unity shader name (e.g. "Sprites/Default"). Applied to the quad's material.</summary>
+        public string ShaderName = "Sprites/Default";
+        /// <summary>SpriteMaskInteraction: 0=None, 1=VisibleInsideMask, 2=VisibleOutsideMask.</summary>
+        public int MaskInteraction = 0;
+
+        /// <summary>Shader preset (procedural texture pattern).</summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        public ShaderPreset Preset = ShaderPreset.None;
+        /// <summary>Preset-specific parameter 1 (e.g. line width, intensity).</summary>
+        public float PresetParam1 = 1f;
+        /// <summary>Preset-specific parameter 2 (e.g. gap width, softness).</summary>
+        public float PresetParam2 = 1f;
+
+        /// <summary>Shader keywords to enable on the material (e.g. "HOLOGRAM_ON").</summary>
+        public List<string> ShaderKeywords = new List<string>();
+        /// <summary>Shader float properties to set on the material (e.g. "_HologramStripesAmount": 0.2).</summary>
+        public Dictionary<string, float> ShaderFloats = new Dictionary<string, float>();
+
+        // ── Shared ───────────────────────────────────────────────────
+        /// <summary>Component enabled state (applies to all renderable types).</summary>
+        public bool Enabled = true;
+
+        // ── Conditional serialization (keep JSON clean per type) ─────
+        public bool ShouldSerializeLightType() => Type == VisualLayerType.Light;
+        public bool ShouldSerializeIntensity() => Type == VisualLayerType.Light;
+        public bool ShouldSerializeFalloffIntensity() => Type == VisualLayerType.Light;
+        public bool ShouldSerializePointLightInnerAngle() => Type == VisualLayerType.Light;
+        public bool ShouldSerializePointLightOuterAngle() => Type == VisualLayerType.Light;
+        public bool ShouldSerializePointLightInnerRadius() => Type == VisualLayerType.Light;
+        public bool ShouldSerializePointLightOuterRadius() => Type == VisualLayerType.Light;
+        public bool ShouldSerializeShapeLightFalloffSize() => Type == VisualLayerType.Light;
+        public bool ShouldSerializeLightOrder() => Type == VisualLayerType.Light;
+        public bool ShouldSerializeBlendStyleIndex() => Type == VisualLayerType.Light;
+        public bool ShouldSerializeShadowsEnabled() => Type == VisualLayerType.Light;
+        public bool ShouldSerializeShadowIntensity() => Type == VisualLayerType.Light && ShadowsEnabled;
+        public bool ShouldSerializeDuration() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializeLoop() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializePrewarm() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializeStartLifetime() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializeStartSpeed() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializeStartSize() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializeMaxParticles() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializeSimulationSpeed() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializePlayOnAwake() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializeGravityModifier() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializeEmissionRate() => Type == VisualLayerType.ParticleSystem;
+        public bool ShouldSerializeAlphaCutoff() => Type == VisualLayerType.SpriteMask;
+        public bool ShouldSerializeCustomRange() => Type == VisualLayerType.SpriteMask;
+        public bool ShouldSerializeFrontSortingOrder() => Type == VisualLayerType.SpriteMask && CustomRange;
+        public bool ShouldSerializeBackSortingOrder() => Type == VisualLayerType.SpriteMask && CustomRange;
+        public bool ShouldSerializeShaderName() => Type == VisualLayerType.Shader;
+        public bool ShouldSerializeMaskInteraction() => (Type == VisualLayerType.Shader || Type == VisualLayerType.Sprite) && MaskInteraction != 0;
+        public bool ShouldSerializePreset() => Type == VisualLayerType.Shader && Preset != ShaderPreset.None;
+        public bool ShouldSerializePresetParam1() => Type == VisualLayerType.Shader && Preset != ShaderPreset.None;
+        public bool ShouldSerializePresetParam2() => Type == VisualLayerType.Shader && Preset != ShaderPreset.None;
+        public bool ShouldSerializeShaderKeywords() => Type == VisualLayerType.Shader && ShaderKeywords != null && ShaderKeywords.Count > 0;
+        public bool ShouldSerializeShaderFloats() => Type == VisualLayerType.Shader && ShaderFloats != null && ShaderFloats.Count > 0;
+        public bool ShouldSerializeEffectName() => Type == VisualLayerType.PrefabEffect;
+        public bool ShouldSerializeEnabled() => !Enabled;
     }
 
     public enum VisualLayerType
@@ -144,6 +241,18 @@ namespace UnknownMod.Definitions
         Light,          // Light2D
         SpriteMask,     // SpriteMask (used for cloud masking in Uprising/Void)
         Container,      // Empty transform with children (thunder group, Castle Zoom, etc.)
+        Shader,         // Procedural shader quad (resizable, maskable via SpriteMask)
+        PrefabEffect,   // Cloned VFX prefab from Resources/Effects/ (EpicToonFX, combat VFX, etc.)
+    }
+
+    public enum ShaderPreset
+    {
+        None,           // White quad, shader name only
+        Scanlines,      // Horizontal dark lines
+        Vignette,       // Dark edges, bright center
+        Noise,          // Random static grain
+        Gradient,       // Linear gradient
+        Checkerboard,   // Alternating squares
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -170,12 +279,6 @@ namespace UnknownMod.Definitions
 
         /// <summary>Added or modified nodes.</summary>
         public Dictionary<string, NodeDef> Nodes = new();
-
-        /// <summary>Added or modified encounters.</summary>
-        public Dictionary<string, CombatDef> Encounters = new();
-
-        /// <summary>Added or modified events.</summary>
-        public Dictionary<string, EventDef> Events = new();
 
         /// <summary>Modified roads.</summary>
         public Dictionary<string, RoadDef> Roads = new();

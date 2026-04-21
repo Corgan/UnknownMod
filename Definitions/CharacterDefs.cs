@@ -89,6 +89,8 @@ namespace UnknownMod.Definitions
 
         // ── Misc ─────────────────────────────────────────────────
         public int MaxBleedDamagePerTurn = -1;
+        public bool HideTimesPerTurnText = false;
+        public List<string> KeyNotes = new();
     }
 
     // ───────────────────────────────────────────────────────────────
@@ -115,88 +117,19 @@ namespace UnknownMod.Definitions
         // ── Visual Source ────────────────────────────────────────
         public string SpriteSource = "";
 
+        /// <summary>
+        /// Optional: ID of a CharacterOverrideDef for runtime bone/sprite overrides.
+        /// The def is resolved from ModProject.SpriteSkins at build time.
+        /// At build: builds a custom prefab (removed bones, added sprites, tint, etc.)
+        /// At runtime: attaches CharacterOverrideDriver component for per-frame LateUpdate work
+        /// (bone transforms, model offset/flip, animation keyframes, graft puppets).
+        /// </summary>
+        [JsonProperty("OverrideId")]
+        public string OverrideId = "";
+        public bool ShouldSerializeOverrideId() => !string.IsNullOrEmpty(OverrideId);
+
         // ── Selection Screen ─────────────────────────────────────
         public float HeroSelectionScreenScale = 1f;
         public float HeroSelectionScreenOffsetX = 0f;
-    }
-
-    // ───────────────────────────────────────────────────────────────
-    //  PERK
-    // ───────────────────────────────────────────────────────────────
-
-    [Serializable]
-    public class PerkDef : IModEntity
-    {
-        // ── Identity ─────────────────────────────────────────────
-        public string Id = "";
-        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
-        public string CustomDescription = "";
-
-        // ── Classification ───────────────────────────────────────
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.CardClass CardClass = Enums.CardClass.None;
-        public bool MainPerk = false;
-        public bool ObeliskPerk = false;
-
-        // ── Position ─────────────────────────────────────────────
-        public int Level = 0;
-        public int Row = 0;
-
-        // ── Icon ─────────────────────────────────────────────────
-        public string IconTextValue = "";
-
-        // ── Currency ─────────────────────────────────────────────
-        public int AdditionalCurrency = 0;
-        public int AdditionalShards = 0;
-
-        // ── Stats ────────────────────────────────────────────────
-        public int MaxHealth = 0;
-        public int EnergyBegin = 0;
-        public int SpeedQuantity = 0;
-        public int HealQuantity = 0;
-
-        // ── Damage Bonus ─────────────────────────────────────────
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.DamageType DamageFlatBonus = Enums.DamageType.None;
-        public int DamageFlatBonusValue = 0;
-
-        // ── AuraCurse Bonus ──────────────────────────────────────
-        public string AuracurseBonus = "";   // AC ID
-        public int AuracurseBonusValue = 0;
-
-        // ── Resist Modification ──────────────────────────────────
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.DamageType ResistModified = Enums.DamageType.None;
-        public int ResistModifiedValue = 0;
-    }
-
-    // ───────────────────────────────────────────────────────────────
-    //  PERK NODE
-    // ───────────────────────────────────────────────────────────────
-
-    [Serializable]
-    public class PerkNodeDef : IModEntity
-    {
-        // ── Identity ─────────────────────────────────────────────
-        public string Id = "";
-        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
-
-        // ── Layout ───────────────────────────────────────────────
-        public int Type = 0;
-        public int Column = 0;
-        public int Row = 0;
-
-        // ── Flags ────────────────────────────────────────────────
-        public bool LockedInTown = false;
-        public bool NotStack = false;
-
-        // ── Cost ─────────────────────────────────────────────────
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.PerkCost Cost = Enums.PerkCost.PerkCostBase;
-
-        // ── References ───────────────────────────────────────────
-        public string Perk = "";              // PerkData ID
-        public string PerkRequired = "";      // PerkNodeData ID
-        public List<string> PerksConnected = new(); // PerkNodeData IDs
     }
 }

@@ -1,0 +1,34 @@
+{
+  "EventId": "e_myc_5",
+  "EventName": "The Breathing Walls",
+  "Description": "The tunnel narrows ahead, its walls pulsing rhythmically like the inside of some vast living thing. Glowing fluid courses through vein-like channels in the rock, casting an eerie bioluminescent light. The air is thick and warm, carrying the faint scent of decay.",
+  "DescriptionAction": "How do you proceed?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Walk through the pulsing corridor.",
+      "Action": 29,
+      "SsText": "You push through the fleshy tunnel. The walls constrict around you, their bioluminescent veins flaring with each pulse. Spore-laden fluid drips onto your skin, stinging wherever it touches.",
+      "SsHealFlat": -15
+    },
+    {
+      "ReplyText": "Climb over the rubble to find another way.",
+      "Action": 30,
+      "HasRoll": true,
+      "RollDC": 4,
+      "RollCard": 1,
+      "SsText": "With careful footing and strong arms, you haul yourselves over the collapsed section and find a dry passage beyond. A stash of coins glints among the rubble.",
+      "SsGold": 40,
+      "FlText": "The rubble shifts beneath you. Rocks tumble down, battering your party as the unstable passage collapses around your feet.",
+      "FlHealFlat": -25
+    },
+    {
+      "ReplyText": "Search for an air pocket route. [Scout]",
+      "Action": 29,
+      "SsText": "Your keen eyes spot a narrow crack where fresh air flows. You guide the party through a hidden passage that bypasses the worst of the spores, emerging on the other side unscathed."
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "BackgroundId": "my_cool_test_mod_new_zone_bg_0",
+  "DisplayName": "New Background",
+  "Layers": [
+    {
+      "Name": "street",
+      "SpriteName": "sfz-ryu",
+      "SortingOrder": -1350,
+      "SortingLayer": "Background",
+      "PosX": 0.0,
+      "PosY": 4.63,
+      "ScaleX": 3.52,
+      "ScaleY": 4.17
+    },
+    {
+      "Name": "scanline",
+      "Type": "Shader",
+      "SpriteName": "",
+      "SortingOrder": 10000,
+      "SortingLayer": "Characters",
+      "PosX": 0.0,
+      "PosY": 0.0,
+      "ScaleX": 35.23,
+      "ScaleY": 19.81,
+      "ColorR": 0.0,
+      "ColorG": 0.0,
+      "ColorB": 0.0,
+      "ColorA": 0.3,
+      "ShaderName": "Sprites/Default",
+      "MaskInteraction": 2,
+      "Preset": "Scanlines",
+      "PresetParam1": 2.0,
+      "PresetParam2": 2.0
+    },
+    {
+      "Name": "tv",
+      "SpriteName": "tv",
+      "SortingOrder": 10050,
+      "SortingLayer": "Characters",
+      "PosX": -0.54,
+      "PosY": 0.57,
+      "ScaleX": 4.01094151,
+      "ScaleY": 3.52
+    }
+  ]
+}

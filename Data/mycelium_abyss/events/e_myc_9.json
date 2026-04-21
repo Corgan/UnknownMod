@@ -1,0 +1,31 @@
+{
+  "EventId": "e_myc_9",
+  "EventName": "The Fungal Laboratory",
+  "Description": "You stumble upon a pre-collapse druid's alchemy station, somehow still functioning after centuries. Glass vessels bubble with strange green and amber concoctions, and vine-wrapped shelves hold crumbling journals. Notes scattered across the bench describe experiments merging plant and animal life.",
+  "DescriptionAction": "What catches your interest?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Drink the green potion.",
+      "Action": 30,
+      "HasRoll": true,
+      "RollDC": 4,
+      "SsText": "The potion tastes of pine and honey. A fortifying warmth spreads through your limbs, hardening your skin against further corruption. You feel resilient and protected.",
+      "FlText": "The concoction burns like acid going down. Your vision swims and your muscles weaken as the failed formula attacks your body. Poison courses through your veins."
+    },
+    {
+      "ReplyText": "Take the research notes.",
+      "Action": 29,
+      "SsText": "You carefully gather the druid's journals and loose pages. The research within is invaluable — detailed observations of the Mycelium's behavior and weaknesses. A loose card falls from between the pages.",
+      "SsXP": 60
+    },
+    {
+      "ReplyText": "Reverse-engineer the formula. [Mage]",
+      "Action": 29,
+      "SsText": "Your arcane training allows you to decipher the druid's formulas. You synthesize a potent antifungal compound from the remaining ingredients — it could prove invaluable deeper in the Mycelium."
+    }
+  ]
+}

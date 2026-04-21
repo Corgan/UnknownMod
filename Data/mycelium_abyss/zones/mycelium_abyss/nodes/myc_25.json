@@ -12,14 +12,17 @@
   "VisibleIfNotRequirement": false,
   "NodeGround": "PoisonousAir",
   "NodeRequirementId": "",
-  "CombatId": "cmyc_7",
+  "CombatIds": [
+    "cmyc_7"
+  ],
   "CombatTier": "T4",
   "CombatPercent": 50,
-  "EventId": "e_myc_25",
+  "EventIds": [
+    "e_myc_25"
+  ],
   "EventPercent": 50,
   "NodeEventTier": "T0",
   "Connections": [
     "myc_28"
-  ],
-  "ConnectionRequirements": []
+  ]
 }

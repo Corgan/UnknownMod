@@ -1,0 +1,25 @@
+﻿{
+    "Id":  "myc_mycelarch",
+    "BaseSprite":  "archonnihr",
+    "Grafts":  [
+                   {
+                       "TargetBone":  "Head",
+                       "Source":  "ariel/Head",
+                       "ReplaceTarget":  true
+                   }
+               ],
+    "BoneOverrides":  {
+                          "bone_30":  {
+                                          "PosX":  -0.16,
+                                          "PosY":  0.03,
+                                          "Rotation":  0.4,
+                                          "SortingOffset":  5
+                                      }
+                      },
+    "RemovedBones":  [
+                         "MageHat",
+                         "LegRight",
+                         "ArmLeft",
+                         "ArmRight"
+                     ]
+}

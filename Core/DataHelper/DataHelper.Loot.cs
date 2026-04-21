@@ -17,6 +17,10 @@ namespace UnknownMod.Core
             loot.DefaultPercentRare = d.PercentRare;
             loot.DefaultPercentEpic = d.PercentEpic;
             loot.DefaultPercentMythic = d.PercentMythic;
+            loot.ShadyScaleX = d.ShadyScaleX;
+            loot.ShadyScaleY = d.ShadyScaleY;
+            loot.ShadyOffsetX = d.ShadyOffsetX;
+            loot.ShadyOffsetY = d.ShadyOffsetY;
 
             if (d.Items != null && d.Items.Count > 0)
             {
@@ -38,6 +42,10 @@ namespace UnknownMod.Core
                 loot.LootItemTable = new LootItem[0];
             }
 
+            // Copy shady model from source loot
+            if (!string.IsNullOrEmpty(d.ShadyModelSource))
+                CopyLootVisuals(loot, d.ShadyModelSource);
+
             return loot;
         }
 
@@ -54,6 +62,10 @@ namespace UnknownMod.Core
                 PercentRare = loot.DefaultPercentRare,
                 PercentEpic = loot.DefaultPercentEpic,
                 PercentMythic = loot.DefaultPercentMythic,
+                ShadyScaleX = loot.ShadyScaleX,
+                ShadyScaleY = loot.ShadyScaleY,
+                ShadyOffsetX = loot.ShadyOffsetX,
+                ShadyOffsetY = loot.ShadyOffsetY,
             };
             if (loot.LootItemTable != null)
             {
@@ -69,6 +81,7 @@ namespace UnknownMod.Core
                     });
                 }
             }
+            d.ShadyModelSource = d.Id;
             return d;
         }
     }

@@ -1,0 +1,18 @@
+{
+  "CombatId": "cmyc_1",
+  "Description": "Fungal scouts emerge from the cavern walls.",
+  "NpcIds": [
+    "myc_shambler",
+    "",
+    "myc_spitter",
+    "myc_blightcaller"
+  ],
+  "CombatTier": "T3",
+  "Background": "Senenthia_BosqueEntrada_Nightmare",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

@@ -203,6 +203,7 @@ namespace UnknownMod.Core
             new FieldMapping("Stealth",        "Stealth"),
             new FieldMapping("Taunt",          "Taunt"),
             new FieldMapping("SkipsNextTurn",  "SkipsNextTurn"),
+            new FieldMapping("skipEndTurnRemovalIfNoBegin", "SkipEndTurnRemovalIfNoBegin"),
             // DisabledCardTypes: array — edge case
             // ACBonusData: list of structs — edge case
             // AuraDamageConditionalBonuses: array of structs — edge case

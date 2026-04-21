@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>scripts</AssemblyName>
+    <RootNamespace>MyceliumAbyss</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Output scripts.dll to the mod folder (parent of scripts/) -->
+    <OutputPath>..\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="UnityEngine.Modules" Version="2022.2.13" IncludeAssets="compile" />
+  </ItemGroup>
+
+  <!-- Game assemblies -->
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>../../../../!libs/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- UnknownMod (for IBossController and other scripting interfaces) -->
+  <ItemGroup>
+    <Reference Include="com.corgan.UnknownMod">
+      <HintPath>../../../bin/Debug/net472/com.corgan.UnknownMod.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>

@@ -35,6 +35,10 @@ namespace UnknownMod.Core
             if (!string.IsNullOrEmpty(d.TrackCard))
                 req.TrackCard = GetCard(d.TrackCard);
 
+            // Copy sprites from source requirement
+            if (!string.IsNullOrEmpty(d.SpriteSource))
+                CopyRequirementVisuals(req, d.SpriteSource);
+
             return req;
         }
 
@@ -54,6 +58,9 @@ namespace UnknownMod.Core
                 .Field<Enums.Zone>("requirementZoneFinishTrackAlternateFinalAct").Value;
 
             d.TrackCard = req.TrackCard != null ? GetCardId(req.TrackCard) : "";
+
+            // Self as sprite source for overrides
+            d.SpriteSource = d.Id;
 
             return d;
         }

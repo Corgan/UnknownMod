@@ -20,9 +20,9 @@ namespace UnknownMod.Definitions
         public int MaxCharges = -1;
         public int MaxMadnessCharges = -1;
         public int AuraConsumed = 1;
-        public int ChargesMultiplierDescription = 0;
-        public float ChargesAuxNeedForOne1 = 0f;
-        public int ChargesAuxNeedForOne2 = 0;
+        public int ChargesMultiplierDescription = 1;
+        public float ChargesAuxNeedForOne1 = 1f;
+        public int ChargesAuxNeedForOne2 = 1;
         public string Sprite = "";           // sprite name/path
         public string EffectTick = "";
         public string EffectTickSides = "";
@@ -121,7 +121,7 @@ namespace UnknownMod.Definitions
         // Damage Received (2 slots)
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.DamageType IncreasedDamageReceivedType = Enums.DamageType.None;
-        public int IncreasedDirectDamageChargesMultiplierNeededForOne = 0;
+        public int IncreasedDirectDamageChargesMultiplierNeededForOne = 1;
         public int IncreasedDirectDamageReceivedPerTurn = 0;
         public float IncreasedDirectDamageReceivedPerStack = 0f;
         public int IncreasedPercentDamageReceivedPerTurn = 0;
@@ -129,7 +129,7 @@ namespace UnknownMod.Definitions
 
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.DamageType IncreasedDamageReceivedType2 = Enums.DamageType.None;
-        public int IncreasedDirectDamageChargesMultiplierNeededForOne2 = 0;
+        public int IncreasedDirectDamageChargesMultiplierNeededForOne2 = 1;
         public int IncreasedDirectDamageReceivedPerTurn2 = 0;
         public float IncreasedDirectDamageReceivedPerStack2 = 0f;
         public int IncreasedPercentDamageReceivedPerTurn2 = 0;
@@ -147,7 +147,7 @@ namespace UnknownMod.Definitions
         // Character Stat Modification
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CharacterStat CharacterStatModified = Enums.CharacterStat.None;
-        public int CharacterStatChargesMultiplierNeededForOne = 0;
+        public int CharacterStatChargesMultiplierNeededForOne = 1;
         public int CharacterStatModifiedValue = 0;
         public float CharacterStatModifiedValuePerStack = 0f;
         public bool CharacterStatAbsolute = false;
@@ -220,6 +220,7 @@ namespace UnknownMod.Definitions
         public bool Stealth = false;
         public bool Taunt = false;
         public bool SkipsNextTurn = false;
+        public bool SkipEndTurnRemovalIfNoBegin = false;
 
         // Charge bonuses (complex nested types — simplified for DTO)
         public List<AuraCurseChargesBonusDef> ACBonusData = new();

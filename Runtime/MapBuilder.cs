@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnknownMod.Core;
 using UnknownMod.Definitions;
 using UnknownMod.Editor;
@@ -14,55 +15,13 @@ namespace UnknownMod.Runtime
     /// </summary>
     public static class MapBuilder
     {
-        private static readonly Dictionary<string, Sprite> _backgroundSprites = new();
         private static string _nodeSortingLayer = "Default";
         private static int _nodeSortingLayerID = 0;
 
-        /// <summary>Clear cached background sprites. Called during full rebuild.</summary>
+        /// <summary>Clear cached sprites. Called during full rebuild.</summary>
         public static void ClearCache()
         {
-            _backgroundSprites.Clear();
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        //  BACKGROUND SPRITE
-        // ═══════════════════════════════════════════════════════════════
-
-        public static Sprite GetBackgroundSprite(string zoneId)
-        {
-            if (_backgroundSprites.TryGetValue(zoneId, out var cached) && cached != null)
-                return cached;
-
-            if (!ModRegistry.LoadedZones.TryGetValue(zoneId, out var zoneDef))
-            {
-                Plugin.Log.LogError($"[MapBuilder] GetBackgroundSprite: zone '{zoneId}' not loaded!");
-                return null;
-            }
-
-            string folder = ModRegistry.GetZoneFolder(zoneId);
-            string bgName = zoneDef.BackgroundImage ?? "background.jpeg";
-            string bgFile = ResolveTexturePath(folder, bgName);
-
-            if (bgFile == null)
-            {
-                Plugin.Log.LogError($"[MapBuilder] Background image not found: {bgName} (searched textures/ in mod root for {folder})");
-                return null;
-            }
-
-            byte[] data = File.ReadAllBytes(bgFile);
-            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-            tex.LoadImage(data);
-            tex.filterMode = FilterMode.Bilinear;
-
-            float ppuH = tex.width / 19.2f;
-            float ppuV = tex.height / 10.8f;
-            float ppu = Mathf.Min(ppuH, ppuV);
-
-            var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height),
-                new Vector2(0.5f, 0.5f), ppu);
-
-            _backgroundSprites[zoneId] = sprite;
-            return sprite;
+            _mapPieceSpriteCache.Clear();
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -71,7 +30,7 @@ namespace UnknownMod.Runtime
 
         /// <summary>
         /// Resolve a texture filename to an absolute path on disk.
-        /// Looks in {modRoot}/textures/{filename} only.
+        /// Looks in {modRoot}/sprites/{filename} only.
         /// Returns null if not found.
         /// </summary>
         public static string ResolveTexturePath(string folder, string filename)
@@ -82,11 +41,11 @@ namespace UnknownMod.Runtime
             if (Path.IsPathRooted(filename) && File.Exists(filename))
                 return filename;
 
-            // Mod-root textures/ folder: walk up from zone folder (zones/{zoneId}/) to mod root
+            // Mod-root sprites/ folder: walk up from zone folder (zones/{zoneId}/) to mod root
             string modRoot = Path.GetDirectoryName(Path.GetDirectoryName(folder));
             if (modRoot != null)
             {
-                string path = Path.Combine(modRoot, "textures", filename);
+                string path = Path.Combine(modRoot, "sprites", filename);
                 if (File.Exists(path)) return path;
             }
 
@@ -112,8 +71,9 @@ namespace UnknownMod.Runtime
                     return false;
             }
 
-            // Set CurrentZone for editor integration
-            ZoneEditingService.CurrentZone = zoneDef;
+            // Set CurrentZone for editor integration (only if not already editing another zone)
+            if (ZoneEditingService.CurrentZone == null)
+                ZoneEditingService.CurrentZone = zoneDef;
 
             GameObject nodeTemplate = FindNodeTemplate();
             if (nodeTemplate == null)
@@ -132,18 +92,8 @@ namespace UnknownMod.Runtime
             var root = new GameObject(zoneId);
             root.transform.SetParent(worldTransform, false);
 
-            var bgSprite = GetBackgroundSprite(zoneId);
-            if (bgSprite != null)
-            {
-                var bgGO = new GameObject("Background");
-                bgGO.transform.SetParent(root.transform, false);
-                bgGO.transform.localPosition = Vector3.zero;
-                var sr = bgGO.AddComponent<SpriteRenderer>();
-                sr.sprite = bgSprite;
-                sr.color = Color.white;
-                sr.sortingLayerName = _nodeSortingLayer;
-                sr.sortingOrder = -10;
-            }
+            // Spawn visual layers (background + map pieces)
+            SpawnRuntimeVisualLayers(root.transform, zoneDef);
 
             var nodesGO = new GameObject("Nodes");
             nodesGO.transform.SetParent(root.transform, false);
@@ -194,11 +144,185 @@ namespace UnknownMod.Runtime
             roadsGO.transform.localPosition = new Vector3(zoneDef.RoadsOffsetX, zoneDef.RoadsOffsetY, 0f);
             CreateMapRoads(roadsGO.transform, nodePositions, zoneDef);
 
-            // Attach MapEditor to the zone map root (ModEditor is persistent)
-            ModEditor.Instance?.AttachMapEditor(root);
-
             Plugin.Log.LogInfo($"[MapBuilder] Map built: {zoneId} ({nodePositions.Count} nodes).");
             return true;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  VISUAL LAYERS (runtime)
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Spawn all visual layers from the zone definition at runtime.
+        /// Handles all layer types: Sprite, SpriteMask, Light, ParticleSystem, Container.
+        /// </summary>
+        private static void SpawnRuntimeVisualLayers(Transform root, ZoneDef zoneDef)
+        {
+            if (zoneDef.VisualLayers == null || zoneDef.VisualLayers.Count == 0)
+                return;
+
+            foreach (var layer in zoneDef.VisualLayers)
+            {
+                if (!layer.Visible || layer.Hidden) continue;
+
+                var go = new GameObject(layer.Name);
+                go.transform.SetParent(root, false);
+                go.transform.localPosition = new Vector3(layer.PosX, layer.PosY, layer.PosZ);
+                go.transform.localScale = new Vector3(layer.ScaleX, layer.ScaleY, 1f);
+
+                switch (layer.Type)
+                {
+                    case VisualLayerType.Sprite:
+                    {
+                        Sprite sprite = ResolveLayerSprite(layer.SpriteName);
+                        if (sprite == null)
+                        {
+                            Object.Destroy(go);
+                            continue;
+                        }
+                        var sr = go.AddComponent<SpriteRenderer>();
+                        sr.sprite = sprite;
+                        sr.color = new Color(layer.ColorR, layer.ColorG, layer.ColorB, layer.ColorA);
+                        sr.sortingOrder = layer.SortingOrder;
+                        sr.flipX = layer.FlipX;
+                        sr.flipY = layer.FlipY;
+                        sr.enabled = layer.Enabled;
+                        if (!string.IsNullOrEmpty(layer.SortingLayer))
+                            try { sr.sortingLayerName = layer.SortingLayer; } catch { }
+                        break;
+                    }
+
+                    case VisualLayerType.SpriteMask:
+                    {
+                        Sprite sprite = ResolveLayerSprite(layer.SpriteName);
+                        if (sprite == null)
+                        {
+                            Object.Destroy(go);
+                            continue;
+                        }
+                        var sm = go.AddComponent<SpriteMask>();
+                        sm.sprite = sprite;
+                        sm.alphaCutoff = layer.AlphaCutoff;
+                        sm.isCustomRangeActive = layer.CustomRange;
+                        if (layer.CustomRange)
+                        {
+                            sm.frontSortingOrder = layer.FrontSortingOrder;
+                            sm.backSortingOrder = layer.BackSortingOrder;
+                        }
+                        sm.sortingOrder = layer.SortingOrder;
+                        sm.enabled = layer.Enabled;
+                        break;
+                    }
+
+                    case VisualLayerType.Light:
+                    {
+                        var light = go.AddComponent<Light2D>();
+                        light.lightType = (Light2D.LightType)layer.LightType;
+                        light.color = new Color(layer.ColorR, layer.ColorG, layer.ColorB, layer.ColorA);
+                        light.intensity = layer.Intensity;
+                        light.falloffIntensity = layer.FalloffIntensity;
+                        light.lightOrder = layer.LightOrder;
+                        light.blendStyleIndex = layer.BlendStyleIndex;
+                        light.shadowsEnabled = layer.ShadowsEnabled;
+                        light.shadowIntensity = layer.ShadowIntensity;
+                        light.enabled = layer.Enabled;
+                        if (layer.LightType == 3) // Point
+                        {
+                            light.pointLightInnerAngle = layer.PointLightInnerAngle;
+                            light.pointLightOuterAngle = layer.PointLightOuterAngle;
+                            light.pointLightInnerRadius = layer.PointLightInnerRadius;
+                            light.pointLightOuterRadius = layer.PointLightOuterRadius;
+                        }
+                        if (layer.LightType == 0 || layer.LightType == 1) // Parametric / Freeform
+                            light.shapeLightFalloffSize = layer.ShapeLightFalloffSize;
+                        break;
+                    }
+
+                    case VisualLayerType.ParticleSystem:
+                    {
+                        var ps = go.AddComponent<ParticleSystem>();
+                        var main = ps.main;
+                        main.duration = layer.Duration;
+                        main.loop = layer.Loop;
+                        main.prewarm = layer.Prewarm;
+                        main.startLifetime = layer.StartLifetime;
+                        main.startSpeed = layer.StartSpeed;
+                        main.startSize = layer.StartSize;
+                        main.maxParticles = layer.MaxParticles;
+                        main.simulationSpeed = layer.SimulationSpeed;
+                        main.playOnAwake = layer.PlayOnAwake;
+                        main.gravityModifier = layer.GravityModifier;
+                        main.startColor = new Color(layer.ColorR, layer.ColorG, layer.ColorB, layer.ColorA);
+
+                        var emission = ps.emission;
+                        emission.rateOverTime = layer.EmissionRate;
+
+                        var psr = go.GetComponent<ParticleSystemRenderer>();
+                        if (psr != null)
+                        {
+                            psr.sortingOrder = layer.SortingOrder;
+                            psr.enabled = layer.Enabled;
+                            if (psr.sharedMaterial == null)
+                            {
+                                var mat = new Material(Shader.Find("Particles/Standard Unlit"));
+                                mat.SetFloat("_Mode", 1); // Additive
+                                psr.sharedMaterial = mat;
+                            }
+                        }
+
+                        if (layer.PlayOnAwake)
+                            ps.Play();
+                        break;
+                    }
+
+                    case VisualLayerType.Container:
+                        // Empty container — just the transform
+                        break;
+
+                    case VisualLayerType.Shader:
+                    {
+                        var sr = go.AddComponent<SpriteRenderer>();
+                        sr.sprite = ShaderPresetGenerator.GetPresetSprite(layer.Preset, layer.PresetParam1, layer.PresetParam2);
+                        sr.sortingOrder = layer.SortingOrder;
+                        sr.color = new Color(layer.ColorR, layer.ColorG, layer.ColorB, layer.ColorA);
+                        sr.maskInteraction = (SpriteMaskInteraction)layer.MaskInteraction;
+                        sr.enabled = layer.Enabled;
+                        if (!string.IsNullOrEmpty(layer.SortingLayer))
+                            try { sr.sortingLayerName = layer.SortingLayer; } catch { }
+                        if (!string.IsNullOrEmpty(layer.ShaderName))
+                        {
+                            var shader = Shader.Find(layer.ShaderName) ?? Resources.Load<Shader>(layer.ShaderName);
+                            if (shader != null)
+                                sr.material = new Material(shader);
+                        }
+                        ShaderEffectRegistry.ApplyToMaterial(sr.material, layer.ShaderKeywords, layer.ShaderFloats);
+                        break;
+                    }
+
+                    case VisualLayerType.PrefabEffect:
+                    {
+                        if (!string.IsNullOrEmpty(layer.EffectName))
+                        {
+                            var prefab = Globals.Instance?.GetResourceEffect(layer.EffectName);
+                            if (prefab != null)
+                            {
+                                var clone = Object.Instantiate(prefab, go.transform);
+                                clone.name = layer.EffectName;
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>Resolve a sprite name to a Sprite object: mod images first, then game resources.</summary>
+        private static Sprite ResolveLayerSprite(string spriteName)
+        {
+            if (string.IsNullOrEmpty(spriteName)) return null;
+            if (ModRegistry.ModImageSprites.TryGetValue(spriteName, out var modSprite))
+                return modSprite;
+            return FindMapPieceSprite(spriteName);
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -239,6 +363,9 @@ namespace UnknownMod.Runtime
         {
             Material roadMat = FindRoadMaterial() ?? new Material(Shader.Find("Sprites/Default"));
 
+            // Track which connections already have explicit road data
+            var createdRoads = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+
             foreach (var kvp in zoneDef.Roads)
             {
                 var road = kvp.Value;
@@ -255,22 +382,44 @@ namespace UnknownMod.Runtime
                     pts = new Vector3[] { posA, posB };
                 }
 
-                var go = new GameObject(kvp.Key);
-                go.transform.SetParent(roadsParent, false);
-                go.SetActive(false);
-
-                var lr = go.AddComponent<LineRenderer>();
-                lr.useWorldSpace = false;
-                lr.positionCount = pts.Length;
-                for (int i = 0; i < pts.Length; i++) lr.SetPosition(i, pts[i]);
-                lr.startWidth = 0.06f;
-                lr.endWidth = 0.06f;
-                lr.material = roadMat;
-                lr.startColor = Color.white;
-                lr.endColor = Color.white;
-                lr.sortingLayerName = _nodeSortingLayer;
-                lr.sortingOrder = -5;
+                CreateRoadLR(roadsParent, kvp.Key, pts, roadMat);
+                createdRoads.Add(kvp.Key);
             }
+
+            // Create straight-line roads for node connections without explicit road data
+            foreach (var kvp in zoneDef.Nodes)
+            {
+                foreach (var conn in kvp.Value.Connections)
+                {
+                    string key = kvp.Key + "-" + conn;
+                    string reverseKey = conn + "-" + kvp.Key;
+                    if (createdRoads.Contains(key) || createdRoads.Contains(reverseKey)) continue;
+                    if (!nodePositions.ContainsKey(kvp.Key) || !nodePositions.ContainsKey(conn)) continue;
+
+                    Vector3 posA = nodePositions[kvp.Key];
+                    Vector3 posB = nodePositions[conn];
+                    CreateRoadLR(roadsParent, key, new[] { posA, posB }, roadMat);
+                    createdRoads.Add(key);
+                }
+            }
+        }
+
+        private static void CreateRoadLR(Transform parent, string name, Vector3[] pts, Material mat)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+
+            var lr = go.AddComponent<LineRenderer>();
+            lr.useWorldSpace = false;
+            lr.positionCount = pts.Length;
+            for (int i = 0; i < pts.Length; i++) lr.SetPosition(i, pts[i]);
+            lr.startWidth = 0.06f;
+            lr.endWidth = 0.06f;
+            lr.material = mat;
+            lr.startColor = Color.white;
+            lr.endColor = Color.white;
+            lr.sortingLayerName = _nodeSortingLayer;
+            lr.sortingOrder = -5;
         }
 
         private static Material FindRoadMaterial()
@@ -282,21 +431,55 @@ namespace UnknownMod.Runtime
                 var roadsT = z.Find("Roads");
                 if (roadsT == null || roadsT.childCount == 0) continue;
                 var lr = roadsT.GetChild(0).GetComponent<LineRenderer>();
-                if (lr?.material != null) return lr.material;
+                if (lr?.sharedMaterial != null) return new Material(lr.sharedMaterial);
             }
             return null;
         }
 
-        /// <summary>Find a sprite by name from game Resources for mapPiece rendering.</summary>
+        /// <summary>Check if a map for this zone already exists in worldTransform.</summary>
+        public static bool MapExists(string zoneId, Transform worldTransform)
+        {
+            if (worldTransform == null) return false;
+            for (int i = 0; i < worldTransform.childCount; i++)
+            {
+                if (worldTransform.GetChild(i).gameObject.name == zoneId)
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>Find a sprite by name from game Resources for mapPiece rendering (cached).</summary>
+        private static readonly Dictionary<string, Sprite> _mapPieceSpriteCache = new();
         private static Sprite FindMapPieceSprite(string spriteName)
         {
             if (string.IsNullOrEmpty(spriteName)) return null;
+            if (_mapPieceSpriteCache.TryGetValue(spriteName, out var cached)) return cached;
+            // Try mod-loaded image sprites first (exact match)
+            if (ModRegistry.ModImageSprites.TryGetValue(spriteName, out var modSprite))
+            {
+                _mapPieceSpriteCache[spriteName] = modSprite;
+                return modSprite;
+            }
+            // Try prefixed name ("<modId>_<name>")
+            string suffix = "_" + spriteName;
+            foreach (var kvp in ModRegistry.ModImageSprites)
+            {
+                if (kvp.Value != null && kvp.Key.EndsWith(suffix, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    _mapPieceSpriteCache[spriteName] = kvp.Value;
+                    return kvp.Value;
+                }
+            }
             // Search all loaded sprites for a name match
             foreach (var s in Resources.FindObjectsOfTypeAll<Sprite>())
             {
                 if (s != null && s.name == spriteName)
+                {
+                    _mapPieceSpriteCache[spriteName] = s;
                     return s;
+                }
             }
+            _mapPieceSpriteCache[spriteName] = null;
             return null;
         }
 

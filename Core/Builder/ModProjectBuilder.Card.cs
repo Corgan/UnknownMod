@@ -78,11 +78,26 @@ namespace UnknownMod.Core
             t.Field("descriptionArgs").SetValue(new string[0]);
             t.Field("postDescriptionArgs").SetValue(new string[0]);
 
-            // ── Edge cases: sprite + description ─────────────────
+            // ── Edge cases: sprite + sounds + pet model ─────────
             if (!string.IsNullOrEmpty(d.SpriteSource))
                 DataHelper.CopyCardVisuals(card, d.SpriteSource);
-            try { card.SetDescriptionNew(forceDescription: true); }
-            catch { /* Texts not ready — description will be empty until next rebuild */ }
+            if (!string.IsNullOrEmpty(d.SoundSource))
+                DataHelper.CopyCardSounds(card, d.SoundSource);
+            // Pet model from game card (SpriteSkin-based pets are wired in WirePetModels)
+            if (!string.IsNullOrEmpty(d.PetModelSource) && DataHelper.GetCard(d.PetModelSource) != null)
+                DataHelper.CopyPetModel(card, d.PetModelSource);
+
+            // ── Full card init (precalc fields, KeyNotes, description, target) ─
+            // InitClone sets: damagePreCalculated*, healPreCalculated*,
+            //   energyCostOriginal, damageTypeOriginal, effectRequired,
+            //   and all KeyNotes for auras/curses/innate/vanish/energy.
+            // InitClone2 sets: effectRequired KeyNote, description, target, rarity.
+            try { card.InitClone(d.Id); }
+            catch { /* KeyNotes/Globals not ready */ }
+            // Clear cached description so InitClone2 regenerates it
+            Globals.Instance?.CardsDescriptionNormalized?.Remove(d.Id);
+            try { card.InitClone2(); }
+            catch { /* Texts not ready */ }
 
             return card;
         }
@@ -128,7 +143,13 @@ namespace UnknownMod.Core
 
             // ── Edge cases: computed / alias fields ───────────────
             d.IsUpgraded = d.CardUpgraded != Enums.CardUpgraded.No;
-            d.BaseCardId = d.BaseCard;
+            // BaseCard from game data may be PascalCase; normalize to lowercase
+            d.BaseCardId = (d.BaseCard ?? "").ToLower();
+
+            // ── Edge case: sprite reference (not field-mapped) ───
+            var sprite = card.Sprite;
+            if (sprite != null && string.IsNullOrEmpty(d.SpriteSource))
+                d.SpriteSource = sprite.name;
 
             // ── Edge cases: CardData[] list ──────────────────────
             var addList = t.Field<CardData[]>("addCardList").Value;

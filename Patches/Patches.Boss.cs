@@ -1,16 +1,18 @@
 using HarmonyLib;
-using UnknownMod.Runtime;
+using UnknownMod.Core;
 
 namespace UnknownMod
 {
     /// <summary>
-    /// Boss-specific patches — custom boss handler activation.
+    /// Boss-specific patches — activates mod-provided boss controllers
+    /// discovered by <see cref="ScriptLoader"/> from scripts.dll files.
     /// </summary>
     public static partial class Patches
     {
         /// <summary>
         /// After MatchManager.UpdateBossNpc() checks vanilla bosses,
-        /// also check for the Mycelarch and create the custom handler.
+        /// check if any mod script provides a boss controller for an
+        /// NPC on the field.
         /// </summary>
         [HarmonyPatch(typeof(MatchManager), "UpdateBossNpc")]
         [HarmonyPostfix]
@@ -21,12 +23,16 @@ namespace UnknownMod
                 return;
 
             NPC[] team = __instance.GetTeamNPC();
+            if (team == null) return;
             foreach (NPC npc in team)
             {
-                if (npc != null && npc.NPCIsBoss() && npc.NpcData.Id.StartsWith("myc_mycelarch"))
+                if (npc == null || !npc.NPCIsBoss()) continue;
+
+                var controller = ScriptLoader.FindBossController(npc.NpcData.Id);
+                if (controller != null)
                 {
-                    __instance.BossNpc = new MycelarchBoss(npc);
-                    Plugin.Log.LogInfo("[Patches] Mycelarch boss handler activated.");
+                    __instance.BossNpc = controller.CreateBossNpc(npc);
+                    Plugin.Log.LogInfo($"[Patches] Boss controller '{controller.GetType().Name}' activated for '{npc.NpcData.Id}'");
                     break;
                 }
             }

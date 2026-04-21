@@ -6,134 +6,117 @@ using Newtonsoft.Json.Converters;
 namespace UnknownMod.Definitions
 {
     // ───────────────────────────────────────────────────────────────
-    //  SPRITE OVERRIDE (NPC visual customization)
+    //  CHARACTER OVERRIDE (NPC / Hero Skin visual customization)
     // ───────────────────────────────────────────────────────────────
 
-    [Serializable]
-    public class SpriteOverrideDef : IModEntity
-    {
-        /// <summary>Unique ID of this sprite definition.</summary>
-        public string NpcId = ""; // kept as "NpcId" for JSON backward compat
-        [JsonIgnore] public string EntityId { get => NpcId; set => NpcId = value; }
+    /// <summary>Whether a CharacterOverrideDef targets an NPC or a Hero Skin.</summary>
+    public enum SkinTargetType { NPC, HeroSkin, Item }
 
-        /// <summary>Base-game NPC ID providing the skeleton, animations, and default sprites.
-        /// When an NpcDef.SpriteSource points to this sprite def, BaseSprite is used
-        /// to clone the starting model via CopyVisuals.</summary>
+    /// <summary>
+    /// Top-level definition for all visual overrides on an NPC or Hero Skin.
+    /// Serialized as one JSON file per entity. Sections:
+    ///   - Grafts: ordered list of sprite branch imports from other NPCs/skins
+    ///   - BoneOverrides: per-bone transform/visual overrides on the host skeleton
+    ///   - RemovedBones: structural modifications
+    ///   - CustomSprites: texture replacements
+    ///   - Model: scale, offset, flip, tint, alpha
+    ///   - AnimOverrides: per-clip keyframe overrides (host skeleton only)
+    /// </summary>
+    [Serializable]
+    public class CharacterOverrideDef : IModEntity
+    {
+        // ── Identity ─────────────────────────────────────────────
+        public string Id = "";
+        [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public SkinTargetType SkinTarget = SkinTargetType.NPC;
+        public bool ShouldSerializeSkinTarget() => SkinTarget != SkinTargetType.NPC;
+
+        /// <summary>Base-game NPC/Skin ID providing the skeleton, animations, and default sprites.</summary>
         public string BaseSprite = "";
         public bool ShouldSerializeBaseSprite() => !string.IsNullOrEmpty(BaseSprite);
 
-        public Dictionary<string, BoneOverride> Bones = new();
-        public float ScaleMultiplier = 1f;
-        public float OffsetX = 0f;
-        public float OffsetY = 0f;
+        // ── Grafts ───────────────────────────────────────────────
+        /// <summary>Ordered list of sprite branch imports from other NPCs/skins.
+        /// Each graft clones the source sprite's bone branch as a GraftPuppet
+        /// with its own Animator synced via AnimatorStateMirror.</summary>
+        public List<GraftDef> Grafts = new();
+        public bool ShouldSerializeGrafts() => Grafts.Count > 0;
 
-        /// <summary>DEPRECATED: Mode is ignored. All features are always available.
-        /// Kept only for backward-compatible deserialization of old zone files.</summary>
-        [JsonConverter(typeof(StringEnumConverter))]
-        public SpriteMode Mode = SpriteMode.Override;
-        public bool ShouldSerializeMode() => false; // never write to JSON
+        // ── Host Bone Overrides ──────────────────────────────────
+        /// <summary>Per-bone transform/visual overrides for the host skeleton.
+        /// Additive for Animator-driven bones, absolute for added bones.</summary>
+        public Dictionary<string, BoneOverride> BoneOverrides = new();
 
-        public string Spritesheet = "";
-        public Dictionary<string, SpriteDef> CustomSprites = new();
-
-        // Model-wide visual overrides
-        public string ModelTintHex = "";
-        public float ModelAlpha = 1f;
-        public bool FlipX = false;
-        public bool FlipY = false;
-
-        // AllIn1SpriteShader effects (applied via material swap at runtime)
-        public bool UseShaderEffects = false;
-        public float HueShift = 0f;        // 0-1 (wraps 360°)
-        public float Saturation = 1f;      // 0-2, default 1 = no change
-        public float Brightness = 1f;      // 0-2, default 1 = no change
-        public bool GlowEnabled = false;
-        public string GlowColorHex = "#FFFFFF";
-        public float GlowIntensity = 1f;   // 0-10
-        public bool OutlineEnabled = false;
-        public string OutlineColorHex = "#000000";
-        public float OutlineSize = 1f;     // 0-10
-        public float GreyscaleBlend = 0f;  // 0-1
-        public float GhostTransparency = 0f; // 0-1, 0 = off
-
-        /// <summary>Per-animation-clip keyframe overrides. Key = clip name.</summary>
-        public Dictionary<string, AnimOverrideDef> AnimOverrides = new();
-
-        /// <summary>
-        /// Optional: NPC ID to source the AnimatorController from.
-        /// Uses AnimatorOverrideController to wrap the source NPC's controller,
-        /// keeping the state machine (idle/attack/cast/hit) but allowing clip swaps.
-        /// If empty, uses the skeleton donor's (SpriteSource) original controller.
-        /// </summary>
-        public string AnimationSource = "";
-        public bool ShouldSerializeAnimationSource() => !string.IsNullOrEmpty(AnimationSource);
-
-        /// <summary>
-        /// Sprites to add to the NPC that don't exist on the original model.
-        /// Key = a unique user-chosen name for the new sprite bone.
-        /// </summary>
-        public Dictionary<string, AddedSpriteDef> AddedSprites = new();
-        public bool ShouldSerializeAddedSprites() => AddedSprites.Count > 0;
-
-        /// <summary>
-        /// Bone names to completely remove (destroy the SpriteRenderer + SpriteSkin).
-        /// More aggressive than Hidden — the bone's sprite is fully destroyed at runtime.
-        /// </summary>
         public HashSet<string> RemovedBones = new();
         public bool ShouldSerializeRemovedBones() => RemovedBones.Count > 0;
 
-        /// <summary>
-        /// Rig bones to add to the NPC skeleton at runtime.
-        /// These are pure transform bones (no SpriteRenderer) that can
-        /// be referenced by SpriteSkin boneTransforms[] for mesh deformation.
-        /// Key = unique user-chosen name for the new bone.
-        /// </summary>
-        public Dictionary<string, AddedBoneDef> AddedBones = new();
-        public bool ShouldSerializeAddedBones() => AddedBones.Count > 0;
+        // ── Custom Sprites ───────────────────────────────────────
+        public string Spritesheet = "";
+        public Dictionary<string, SpriteDef> CustomSprites = new();
+
+        // ── Model ────────────────────────────────────────────────
+        public ModelOverrides Model = new();
+        public bool ShouldSerializeModel() => !Model.IsDefault();
+
+        // ── Animation Overrides (host skeleton only) ─────────────
+        /// <summary>Per-animation-clip keyframe overrides. Key = clip name.</summary>
+        public Dictionary<string, AnimOverrideDef> AnimOverrides = new();
+
     }
 
     // ───────────────────────────────────────────────────────────────
-    //  SPRITE HELPER TYPES
+    //  GRAFT DEFINITION (self-contained graft unit)
     // ───────────────────────────────────────────────────────────────
 
-    /// <summary>Defines a sprite to be added to the NPC at runtime on an existing parent bone.</summary>
+    /// <summary>
+    /// Defines a sprite branch import from another NPC/skin. At runtime, creates
+    /// a GraftPuppet with its own Animator synced to the host via AnimatorStateMirror.
+    /// All overrides within the graft are scoped to this GraftDef.
+    /// </summary>
     [Serializable]
-    public class AddedSpriteDef
+    public class GraftDef
     {
-        /// <summary>Name of the existing rig bone to attach this sprite to as a child.
-        /// All other properties (source, transform, visual) are stored in
-        /// SpriteOverrideDef.Bones[name] just like any existing bone.</summary>
-        public string ParentBone = "";
+        /// <summary>Host bone this graft attaches to.</summary>
+        public string TargetBone = "";
+
+        /// <summary>Source in "npc_id/bone_name" or "skin_id/bone_name" format.</summary>
+        public string Source = "";
+
+        /// <summary>Hide the original sprite at the target bone?</summary>
+        public bool ReplaceTarget = true;
+
+        // ── Scoped overrides (only affect bones within this graft) ──
+        public Dictionary<string, BoneOverride> BoneOverrides = new();
+        public bool ShouldSerializeBoneOverrides() => BoneOverrides.Count > 0;
+
+        public Dictionary<string, SpriteDef> CustomSprites = new();
+        public bool ShouldSerializeCustomSprites() => CustomSprites.Count > 0;
+
+        public Dictionary<string, AnimOverrideDef> AnimOverrides = new();
+        public bool ShouldSerializeAnimOverrides() => AnimOverrides.Count > 0;
     }
 
-    /// <summary>Defines a pure rig bone to add to the NPC skeleton at runtime.</summary>
+    // ───────────────────────────────────────────────────────────────
+    //  MODEL OVERRIDES (scale, offset, flip, tint, alpha)
+    // ───────────────────────────────────────────────────────────────
+
     [Serializable]
-    public class AddedBoneDef
+    public class ModelOverrides
     {
-        /// <summary>Name of the existing bone to attach this new bone to as a child.</summary>
-        public string ParentBone = "";
+        public float Scale = 1f;
+        public float OffsetX = 0f;
+        public float OffsetY = 0f;
+        public bool FlipX = false;
+        public bool FlipY = false;
+        public string TintHex = "";
+        public float Alpha = 1f;
 
-        /// <summary>Local position relative to parent.</summary>
-        public float PosX = 0f;
-        public float PosY = 0f;
-        /// <summary>Local rotation in degrees.</summary>
-        public float Rotation = 0f;
-        public float ScaleX = 1f;
-        public float ScaleY = 1f;
-        /// <summary>Bone length (visual hint in editor, used for auto-weight radius).</summary>
-        public float Length = 0.5f;
-
-        /// <summary>
-        /// Optional: list of sprite bone names that this new bone should influence.
-        /// For each sprite, auto-weight will assign vertex influence based on distance.
-        /// </summary>
-        public List<string> InfluenceSprites = new();
-        public bool ShouldSerializeInfluenceSprites() => InfluenceSprites.Count > 0;
-
-        /// <summary>Auto-weight radius: vertices within this distance get blended influence.</summary>
-        public float WeightRadius = 0.5f;
-        /// <summary>Auto-weight falloff: 0=sharp cutoff, 1=linear, 2=smooth quadratic.</summary>
-        public float WeightFalloff = 1f;
+        public bool IsDefault() =>
+            Scale == 1f && OffsetX == 0f && OffsetY == 0f &&
+            !FlipX && !FlipY &&
+            string.IsNullOrEmpty(TintHex) && Alpha >= 1f;
     }
 
     [Serializable]
@@ -147,22 +130,14 @@ namespace UnknownMod.Definitions
         public bool Visible = true;
         public int SortingOffset = 0;
         public string ColorHex = "";
-        public string SpriteFrom = "";
         public bool FlipX = false;
         public bool FlipY = false;
         public float Alpha = 1f;
-
-        /// <summary>
-        /// DEPRECATED: Kept for backward-compatible deserialization.
-        /// Branch grafting now imports source bones directly, making manual remap unnecessary.
-        /// </summary>
-        public Dictionary<string, string> BoneRemap = new();
-        public bool ShouldSerializeBoneRemap() => false; // never serialize
+        /// <summary>Pivot X override (0–1). -1 means use original sprite pivot.</summary>
+        public float PivotX = -1f;
+        /// <summary>Pivot Y override (0–1). -1 means use original sprite pivot.</summary>
+        public float PivotY = -1f;
     }
-
-    /// <summary>DEPRECATED: kept only for backward-compatible deserialization.
-    /// The mode system has been removed — all features are always available.</summary>
-    public enum SpriteMode { Override, Graft, CustomSprite }
 
     [Serializable]
     public class SpriteDef
@@ -194,5 +169,128 @@ namespace UnknownMod.Definitions
         public float Rotation = 0f;
         public float ScaleX = 1f;
         public float ScaleY = 1f;
+    }
+
+    // ───────────────────────────────────────────────────────────────
+    //  VALIDATION
+    // ───────────────────────────────────────────────────────────────
+
+    public enum DiagSeverity { Error, Warning, Info }
+
+    [Serializable]
+    public class DiagMessage
+    {
+        public DiagSeverity Severity;
+        public string Message;
+        public DiagMessage(DiagSeverity sev, string msg) { Severity = sev; Message = msg; }
+        public override string ToString() => $"[{Severity}] {Message}";
+    }
+
+    public static class OverrideValidator
+    {
+        /// <summary>Validate a CharacterOverrideDef and return a list of diagnostics.</summary>
+        public static List<DiagMessage> Validate(CharacterOverrideDef ovr, ICollection<string> knownBoneNames = null)
+        {
+            var diags = new List<DiagMessage>();
+            if (ovr == null) { diags.Add(new DiagMessage(DiagSeverity.Error, "Override definition is null.")); return diags; }
+
+            // ── Identity ──
+            if (string.IsNullOrEmpty(ovr.Id))
+                diags.Add(new DiagMessage(DiagSeverity.Error, "Id is empty."));
+
+            // ── Grafts ──
+            for (int i = 0; i < ovr.Grafts.Count; i++)
+            {
+                var g = ovr.Grafts[i];
+                string prefix = $"Graft #{i + 1}";
+                if (string.IsNullOrEmpty(g.TargetBone))
+                    diags.Add(new DiagMessage(DiagSeverity.Error, $"{prefix}: TargetBone is empty."));
+                else if (knownBoneNames != null && !knownBoneNames.Contains(g.TargetBone))
+                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{prefix}: TargetBone '{g.TargetBone}' not found in host skeleton."));
+                if (string.IsNullOrEmpty(g.Source))
+                    diags.Add(new DiagMessage(DiagSeverity.Error, $"{prefix}: Source is empty."));
+                ValidateBoneOverrides(g.BoneOverrides, $"{prefix} BoneOverrides", diags);
+                ValidateCustomSprites(g.CustomSprites, $"{prefix} CustomSprites", diags);
+            }
+
+            // Check duplicate graft targets
+            var graftTargets = new HashSet<string>();
+            for (int i = 0; i < ovr.Grafts.Count; i++)
+            {
+                var tb = ovr.Grafts[i].TargetBone;
+                if (!string.IsNullOrEmpty(tb) && !graftTargets.Add(tb))
+                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"Graft #{i + 1}: duplicate TargetBone '{tb}' (multiple grafts on same bone)."));
+            }
+
+            // ── Host BoneOverrides ──
+            ValidateBoneOverrides(ovr.BoneOverrides, "BoneOverrides", diags);
+
+            // ── CustomSprites ──
+            ValidateCustomSprites(ovr.CustomSprites, "CustomSprites", diags);
+
+            // ── RemovedBones ──
+            if (knownBoneNames != null)
+            {
+                foreach (var rb in ovr.RemovedBones)
+                {
+                    if (!knownBoneNames.Contains(rb))
+                        diags.Add(new DiagMessage(DiagSeverity.Info, $"RemovedBone '{rb}' not found in current skeleton (may be from a different base)."));
+                }
+            }
+
+            // ── Model ──
+            if (ovr.Model.Scale <= 0f)
+                diags.Add(new DiagMessage(DiagSeverity.Warning, "Model.Scale is <= 0."));
+            if (ovr.Model.Alpha < 0f || ovr.Model.Alpha > 1f)
+                diags.Add(new DiagMessage(DiagSeverity.Warning, $"Model.Alpha ({ovr.Model.Alpha}) is outside [0, 1]."));
+            if (!string.IsNullOrEmpty(ovr.Model.TintHex))
+            {
+                if (!ovr.Model.TintHex.StartsWith("#"))
+                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"Model.TintHex '{ovr.Model.TintHex}' should start with '#'."));
+            }
+
+            // ── AnimOverrides ──
+            foreach (var kvp in ovr.AnimOverrides)
+            {
+                if (string.IsNullOrEmpty(kvp.Key))
+                    diags.Add(new DiagMessage(DiagSeverity.Error, "AnimOverride has empty clip name key."));
+                foreach (var bkvp in kvp.Value.BoneKeyframes)
+                {
+                    for (int k = 1; k < bkvp.Value.Count; k++)
+                    {
+                        if (bkvp.Value[k].Time <= bkvp.Value[k - 1].Time)
+                            diags.Add(new DiagMessage(DiagSeverity.Warning,
+                                $"AnimOverride '{kvp.Key}' bone '{bkvp.Key}': keyframes not sorted by time at index {k}."));
+                    }
+                }
+            }
+
+            return diags;
+        }
+
+        private static void ValidateBoneOverrides(Dictionary<string, BoneOverride> overrides, string context, List<DiagMessage> diags)
+        {
+            foreach (var kvp in overrides)
+            {
+                var bo = kvp.Value;
+                if (bo.ScaleX == 0f || bo.ScaleY == 0f)
+                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: scale is zero (bone will be invisible)."));
+                if (bo.Alpha < 0f || bo.Alpha > 1f)
+                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: Alpha ({bo.Alpha}) is outside [0, 1]."));
+                if (!string.IsNullOrEmpty(bo.ColorHex) && !bo.ColorHex.StartsWith("#"))
+                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: ColorHex '{bo.ColorHex}' should start with '#'."));
+            }
+        }
+
+        private static void ValidateCustomSprites(Dictionary<string, SpriteDef> custom, string context, List<DiagMessage> diags)
+        {
+            foreach (var kvp in custom)
+            {
+                if (string.IsNullOrEmpty(kvp.Value.ImagePath))
+                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: ImagePath is empty."));
+                if (kvp.Value.PPU < 0f)
+                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: PPU ({kvp.Value.PPU}) is negative."));
+            }
+        }
     }
 }

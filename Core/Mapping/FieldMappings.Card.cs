@@ -24,6 +24,7 @@ namespace UnknownMod.Core
             new FieldMapping("cardClass",   "CardClass"),
             new FieldMapping("cardNumber",  "CardNumber"),
             new FieldMapping("maxInDeck",   "MaxInDeck"),
+            new FieldMapping("specialCardEnum", "SpecialCardEnum"),
 
             // ── Cost / Economy ───────────────────────────────────
             new FieldMapping("energyCost",                    "EnergyCost"),
@@ -92,6 +93,9 @@ namespace UnknownMod.Core
             new FieldMapping("selfHealthLossSpecialValue1",   "SelfHealthLossSpecialValue1"),
             new FieldMapping("selfHealthLossSpecialValue2",   "SelfHealthLossSpecialValue2"),
             new FieldMapping("selfKillHiddenSeconds",         "SelfKillHiddenSeconds"),
+
+            // ── Debuff Conversion ─────────────────────────────────
+            new FieldMapping("convertAllDebuffsIntoCurse",    "ConvertAllDebuffsIntoCurse"),
 
             // ── Curses (target) ──────────────────────────────────
             new FieldMapping("curse",     "Curse",     RefType.AuraCurse),

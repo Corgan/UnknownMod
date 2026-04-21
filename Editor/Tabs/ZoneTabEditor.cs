@@ -9,15 +9,17 @@ using UnknownMod.Editor;
 namespace UnknownMod.Editor.Tabs
 {
     /// <summary>
-    /// Manages the Zones category tab with zone selector and sub-tabs:
-    /// Map, Nodes, Events, Encounters, Roads.
+    /// Manages the World category tab with sub-tabs:
+    /// Zones (Map/Nodes/Roads), Events, Encounters, Backgrounds.
     /// Supports mod-project scoped new zones and base-game zone patches.
     /// </summary>
     public class ZoneTabEditor
     {
         private readonly ModEditor _editor;
-        public enum SubTab { Map, Node, Event, Encounter, Road }
-        public SubTab ActiveSubTab { get; set; } = SubTab.Map;
+        public enum SubTab { Zones, Event, Encounter, Background }
+        public enum ZoneInnerTab { Map, Node, Road }
+        public SubTab ActiveSubTab { get; set; } = SubTab.Zones;
+        public ZoneInnerTab ActiveZoneInnerTab { get; set; } = ZoneInnerTab.Map;
 
         // ── Zone selector state ──────────────────────────────────
         public string SelectedZoneId { get; set; }
@@ -43,9 +45,32 @@ namespace UnknownMod.Editor.Tabs
                 return;
             }
 
+            DrawSubTabBar();
+            GUILayout.Space(4);
+
+            switch (ActiveSubTab)
+            {
+                case SubTab.Zones:
+                    DrawZonesPanel(proj);
+                    break;
+                case SubTab.Event:
+                    _editor.EventEdit?.DrawPanel();
+                    break;
+                case SubTab.Encounter:
+                    _editor.EncounterEdit?.DrawPanel();
+                    break;
+                case SubTab.Background:
+                    _editor.BackgroundEdit?.DrawPanel();
+                    break;
+            }
+        }
+
+        /// <summary>Draw the Zones sub-panel with zone selector + inner tabs (Map/Nodes/Roads).</summary>
+        private void DrawZonesPanel(ModProject proj)
+        {
             DrawZoneSelector(proj);
             EditorStyles.Separator();
-            DrawSubTabBar();
+            DrawZoneInnerTabBar();
             GUILayout.Space(4);
 
             // Resolve current zone/patch
@@ -92,23 +117,16 @@ namespace UnknownMod.Editor.Tabs
                 }
             }
 
-            switch (ActiveSubTab)
+            switch (ActiveZoneInnerTab)
             {
-                case SubTab.Map:
-                    _editor.MapView?.DrawPanel();
+                case ZoneInnerTab.Map:
+                    _editor.MapEdit?.DrawPanel();
                     break;
-                case SubTab.Node:
+                case ZoneInnerTab.Node:
                     _editor.NodeEdit?.DrawPanel();
                     break;
-                case SubTab.Event:
-                    _editor.EventEdit?.DrawPanel();
-                    break;
-                case SubTab.Encounter:
-                    _editor.EncounterEdit?.DrawPanel();
-                    break;
-                case SubTab.Road:
-                    GUILayout.Label("<color=#888>Road Editor — use Map tab for visual road editing</color>",
-                        EditorStyles.RichLabel);
+                case ZoneInnerTab.Road:
+                    DrawRoadPanel();
                     break;
             }
         }
@@ -116,24 +134,67 @@ namespace UnknownMod.Editor.Tabs
         /// <summary>Returns true if the active sub-tab shows a viewport.</summary>
         public bool HasViewport => true;
 
+        // ═══════════════════════════════════════════════════════════════
+        //  ROAD TAB PANEL
+        // ═══════════════════════════════════════════════════════════════
+
+        private void DrawRoadPanel()
+        {
+            var zone = ZoneEditingService.CurrentZone;
+            if (zone == null) { GUILayout.Label("No zone loaded."); return; }
+
+            GUILayout.Label("<b>Road Controls</b>", EditorStyles.RichLabel);
+            GUILayout.Space(2);
+            GUILayout.Label("<color=#888>Shift+click two nodes to connect/disconnect</color>", EditorStyles.RichLabel);
+            GUILayout.Label("<color=#888>Ctrl+click waypoint to insert new point</color>", EditorStyles.RichLabel);
+            GUILayout.Label("<color=#888>Drag waypoint to reshape road</color>", EditorStyles.RichLabel);
+            GUILayout.Label("<color=#888>Backspace on waypoint to remove it</color>", EditorStyles.RichLabel);
+            GUILayout.Label("<color=#888>Click node to select for context</color>", EditorStyles.RichLabel);
+            GUILayout.Label("<color=#888>Escape to cancel connection mode</color>", EditorStyles.RichLabel);
+            GUILayout.Label("<color=#888>Right-drag to pan, scroll to zoom</color>", EditorStyles.RichLabel);
+
+            GUILayout.Space(4);
+
+            int roadCount = _editor.MapEdit?.RoadCount ?? 0;
+            GUILayout.Label($"<b>Roads:</b> {roadCount}", EditorStyles.RichLabel);
+
+            var connectId = _editor.MapEdit?.ConnectFirstId;
+            if (connectId != null)
+            {
+                GUILayout.Space(4);
+                GUILayout.Label($"<color=yellow>Connecting from: {connectId}</color>", EditorStyles.RichLabel);
+                GUILayout.Label("<color=#888>Shift+click another node or Esc to cancel</color>", EditorStyles.RichLabel);
+            }
+
+            GUILayout.Space(4);
+            if (GUILayout.Button("Rebuild Viewport", EditorStyles.MiniButton))
+                _editor.MapEdit?.ForceRebuild();
+        }
+
         /// <summary>Draw the left-side viewport for the active sub-tab.</summary>
         public void DrawViewport(Rect rect)
         {
-            EnsureCurrentZone();
-
             switch (ActiveSubTab)
             {
-                case SubTab.Map:
-                case SubTab.Node:
-                case SubTab.Road:
-                    // Reuse the map viewport — Node/Road highlight via selection state
-                    _editor.MapView?.DrawViewport(rect);
+                case SubTab.Zones:
+                    EnsureCurrentZone();
+                    switch (ActiveZoneInnerTab)
+                    {
+                        case ZoneInnerTab.Map:
+                        case ZoneInnerTab.Node:
+                        case ZoneInnerTab.Road:
+                            _editor.MapEdit?.DrawViewport(rect);
+                            break;
+                    }
                     break;
                 case SubTab.Event:
                     DrawEventPreview(rect);
                     break;
                 case SubTab.Encounter:
                     DrawEncounterPreview(rect);
+                    break;
+                case SubTab.Background:
+                    _editor.BackgroundEdit?.DrawViewport(rect);
                     break;
             }
         }
@@ -145,10 +206,12 @@ namespace UnknownMod.Editor.Tabs
             string evtId = _editor.SelectedEventId;
             EventDef def = null;
 
-            // Look up from zone def or patch
-            var zone = ZoneEditingService.CurrentZone;
-            if (zone != null && !string.IsNullOrEmpty(evtId))
-                zone.Events?.TryGetValue(evtId, out def);
+            var proj = ModManagerPanel.ActiveProject;
+            if (proj != null && !string.IsNullOrEmpty(evtId))
+            {
+                if (!proj.Events.TryGetValue(evtId, out def))
+                    proj.EventPatches.TryGetValue(evtId, out def);
+            }
 
             ViewportPreview.DrawEvent(rect, evtId, def);
         }
@@ -158,9 +221,12 @@ namespace UnknownMod.Editor.Tabs
             string combatId = _editor.SelectedCombatId;
             CombatDef def = null;
 
-            var zone = ZoneEditingService.CurrentZone;
-            if (zone != null && !string.IsNullOrEmpty(combatId))
-                zone.Combats?.TryGetValue(combatId, out def);
+            var proj = ModManagerPanel.ActiveProject;
+            if (proj != null && !string.IsNullOrEmpty(combatId))
+            {
+                if (!proj.Combats.TryGetValue(combatId, out def))
+                    proj.CombatPatches.TryGetValue(combatId, out def);
+            }
 
             ViewportPreview.DrawEncounter(rect, combatId, def);
         }
@@ -227,8 +293,9 @@ namespace UnknownMod.Editor.Tabs
             bool changed = false;
             switch (ActiveSubTab)
             {
-                case SubTab.Node:
-                    changed = _editor.SelectedNodeId != null;
+                case SubTab.Zones:
+                    changed = (ActiveZoneInnerTab == ZoneInnerTab.Node && _editor.SelectedNodeId != null)
+                           || ActiveZoneInnerTab == ZoneInnerTab.Map;
                     break;
                 case SubTab.Event:
                     changed = _editor.SelectedEventId != null;
@@ -240,43 +307,42 @@ namespace UnknownMod.Editor.Tabs
 
             if (!changed) return;
 
-            // Auto-save zone data
-            bool isNew = !string.IsNullOrEmpty(SelectedZoneId) && proj.Zones.ContainsKey(SelectedZoneId);
-            bool isPatch = !string.IsNullOrEmpty(SelectedZoneId) && proj.ZonePatches.ContainsKey(SelectedZoneId);
-
-            if (isNew && proj.Zones.TryGetValue(SelectedZoneId, out var zone))
+            if (ActiveSubTab == SubTab.Event && _editor.SelectedEventId != null)
             {
-                ModProjectLoader.SaveZone(proj, zone);
-                proj.IsDirty = true;
-                proj.LastChangeTime = Time.realtimeSinceStartup;
+                EventDef evtDef = null;
+                if (proj.Events.TryGetValue(_editor.SelectedEventId, out evtDef))
+                    ModProjectLoader.SaveEntity(proj, "events", _editor.SelectedEventId, evtDef);
+                else if (proj.EventPatches.TryGetValue(_editor.SelectedEventId, out evtDef))
+                    ModProjectLoader.SaveEntity(proj, "events", _editor.SelectedEventId, evtDef, isPatch: true);
             }
-            else if (isPatch && proj.ZonePatches.TryGetValue(SelectedZoneId, out var patch))
+            else if (ActiveSubTab == SubTab.Encounter && _editor.SelectedCombatId != null)
             {
-                SaveZonePatch(proj, patch);
-                ZoneEditingService.InvalidateSynthesizedZone(patch.TargetZoneId);
-                proj.IsDirty = true;
-                proj.LastChangeTime = Time.realtimeSinceStartup;
+                CombatDef combatDef = null;
+                if (proj.Combats.TryGetValue(_editor.SelectedCombatId, out combatDef))
+                    ModProjectLoader.SaveEntity(proj, "combats", _editor.SelectedCombatId, combatDef);
+                else if (proj.CombatPatches.TryGetValue(_editor.SelectedCombatId, out combatDef))
+                    ModProjectLoader.SaveEntity(proj, "combats", _editor.SelectedCombatId, combatDef, isPatch: true);
+            }
+            else
+            {
+                // Node/Road changes: save zone data
+                bool isNew = !string.IsNullOrEmpty(SelectedZoneId) && proj.Zones.ContainsKey(SelectedZoneId);
+                bool isPatch = !string.IsNullOrEmpty(SelectedZoneId) && proj.ZonePatches.ContainsKey(SelectedZoneId);
+
+                if (isNew && proj.Zones.TryGetValue(SelectedZoneId, out var zone))
+                {
+                    ModProjectLoader.SaveZone(proj, zone);
+                }
+                else if (isPatch && proj.ZonePatches.TryGetValue(SelectedZoneId, out var patch))
+                {
+                    SaveZonePatch(proj, patch);
+                    ZoneEditingService.InvalidateSynthesizedZone(patch.TargetZoneId);
+                }
             }
 
-            // Hot-reload affected SOs
-            HotReload();
-        }
-
-        private void HotReload()
-        {
+            proj.IsDirty = true;
+            proj.LastChangeTime = Time.realtimeSinceStartup;
             ModEditor.EntityPreview?.Invalidate();
-            switch (ActiveSubTab)
-            {
-                case SubTab.Node:
-                    if (_editor.SelectedNodeId != null) ZoneEditingService.RebuildNode(_editor.SelectedNodeId);
-                    break;
-                case SubTab.Event:
-                    if (_editor.SelectedEventId != null) ZoneEditingService.RebuildEvent(_editor.SelectedEventId);
-                    break;
-                case SubTab.Encounter:
-                    if (_editor.SelectedCombatId != null) ZoneEditingService.RebuildCombat(_editor.SelectedCombatId);
-                    break;
-            }
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -344,6 +410,19 @@ namespace UnknownMod.Editor.Tabs
                     ZoneId = newId,
                     ZoneName = "New Zone",
                     IdPrefix = newId.Replace("-", "_"),
+                    VisualLayers = new System.Collections.Generic.List<VisualLayerDef>
+                    {
+                        new VisualLayerDef
+                        {
+                            Name = "Background_Bg",
+                            Type = VisualLayerType.Sprite,
+                            SpriteName = "background.jpeg",
+                            SortingOrder = -10,
+                            SortingLayer = "Map",
+                            Visible = true,
+                            IsOverride = true,
+                        }
+                    },
                 };
                 proj.Zones[newId] = def;
                 SelectedZoneId = newId;
@@ -494,14 +573,10 @@ namespace UnknownMod.Editor.Tabs
         //  SAVE / DELETE HELPERS
         // ═══════════════════════════════════════════════════════════════
 
-        private static void SaveZonePatch(ModProject proj, ZonePatchDef patch)
+        internal static void SaveZonePatch(ModProject proj, ZonePatchDef patch)
         {
             foreach (var kvp in patch.Nodes)
                 ModProjectLoader.SaveZonePatchEntity(proj, patch.TargetZoneId, "nodes", kvp.Key, kvp.Value);
-            foreach (var kvp in patch.Encounters)
-                ModProjectLoader.SaveZonePatchEntity(proj, patch.TargetZoneId, "encounters", kvp.Key, kvp.Value);
-            foreach (var kvp in patch.Events)
-                ModProjectLoader.SaveZonePatchEntity(proj, patch.TargetZoneId, "events", kvp.Key, kvp.Value);
             if (patch.Roads.Count > 0)
                 ModProjectLoader.SaveRoads(proj, patch.TargetZoneId, patch.Roads, true);
         }
@@ -528,24 +603,40 @@ namespace UnknownMod.Editor.Tabs
         private void DrawSubTabBar()
         {
             GUILayout.BeginHorizontal();
-            SubTabButton("Map", SubTab.Map);
-            SubTabButton("Nodes", SubTab.Node);
+            SubTabButton("Zones", SubTab.Zones);
             SubTabButton("Events", SubTab.Event);
             SubTabButton("Encounters", SubTab.Encounter);
-            SubTabButton("Roads", SubTab.Road);
+            SubTabButton("BGs", SubTab.Background);
+            GUILayout.EndHorizontal();
+        }
+
+        private void DrawZoneInnerTabBar()
+        {
+            GUILayout.BeginHorizontal();
+            ZoneInnerTabButton("Map", ZoneInnerTab.Map);
+            ZoneInnerTabButton("Nodes", ZoneInnerTab.Node);
+            ZoneInnerTabButton("Roads", ZoneInnerTab.Road);
             GUILayout.EndHorizontal();
         }
 
         private void SubTabButton(string label, SubTab tab)
         {
             bool active = ActiveSubTab == tab;
-            var style = active ? EditorStyles.RichLabel : GUI.skin.button;
+            var style = active ? EditorStyles.SubTabActive : GUI.skin.button;
             string text = active ? $"<b><color=cyan>{label}</color></b>" : label;
 
-            if (active)
-                GUILayout.Label(text, style, GUILayout.ExpandWidth(false));
-            else if (GUILayout.Button(text, style, GUILayout.ExpandWidth(false)))
+            if (GUILayout.Button(text, style, GUILayout.ExpandWidth(false)))
                 ActiveSubTab = tab;
+        }
+
+        private void ZoneInnerTabButton(string label, ZoneInnerTab tab)
+        {
+            bool active = ActiveZoneInnerTab == tab;
+            var style = active ? EditorStyles.SubTabActive : GUI.skin.button;
+            string text = active ? $"<b><color=cyan>{label}</color></b>" : label;
+
+            if (GUILayout.Button(text, style, GUILayout.ExpandWidth(false)))
+                ActiveZoneInnerTab = tab;
         }
     }
 }

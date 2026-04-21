@@ -3,6 +3,7 @@
   "Name": "Blightcaller",
   "Description": "",
   "SpriteSource": "druid",
+  "SpriteSkinId": "myc_blightcaller",
   "Hp": 140,
   "Speed": 14,
   "Energy": 10,

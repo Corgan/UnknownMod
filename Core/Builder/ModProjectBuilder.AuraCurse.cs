@@ -122,13 +122,7 @@ namespace UnknownMod.Core
 
         internal static void RegisterAuraCurse(AuraCurseData ac)
         {
-            var t = Traverse.Create(ac);
-            string id = DataHelper.NormalizeKey(t.Field<string>("id").Value);
-            if (string.IsNullOrEmpty(id)) return;
-
-            var dict = Traverse.Create(Globals.Instance)
-                .Field<Dictionary<string, AuraCurseData>>("_AurasCursesSource").Value;
-            if (dict != null) dict[id] = ac;
+            DataHelper.RegisterAuraCurse(ac);
         }
     }
 }

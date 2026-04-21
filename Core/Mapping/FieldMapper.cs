@@ -63,6 +63,10 @@ namespace UnknownMod.Core
 
             public bool IsValid => Field != null || Property != null;
 
+            public Type MemberType =>
+                Field != null ? Field.FieldType :
+                Property != null ? Property.PropertyType : null;
+
             public object Get(object obj)
             {
                 if (Field != null) return Field.GetValue(obj);
@@ -79,8 +83,8 @@ namespace UnknownMod.Core
 
         private static readonly Dictionary<(Type, string), MemberAccessor> _soCache
             = new Dictionary<(Type, string), MemberAccessor>();
-        private static readonly Dictionary<(Type, string), PropertyInfo> _defCache
-            = new Dictionary<(Type, string), PropertyInfo>();
+        private static readonly Dictionary<(Type, string), MemberAccessor> _defCache
+            = new Dictionary<(Type, string), MemberAccessor>();
 
         private static MemberAccessor GetSoAccessor(Type soType, string name)
         {
@@ -97,17 +101,19 @@ namespace UnknownMod.Core
             return acc;
         }
 
-        private static PropertyInfo GetDefProp(Type defType, string name)
+        private static MemberAccessor GetDefAccessor(Type defType, string name)
         {
             var key = (defType, name);
-            if (!_defCache.TryGetValue(key, out var pi))
+            if (!_defCache.TryGetValue(key, out var acc))
             {
-                pi = defType.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
-                if (pi == null)
-                    Plugin.Log.LogWarning($"[FieldMapper] Def property '{name}' not found on {defType.Name}");
-                _defCache[key] = pi;
+                acc.Property = defType.GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
+                if (acc.Property == null)
+                    acc.Field = defType.GetField(name, BindingFlags.Public | BindingFlags.Instance);
+                if (!acc.IsValid)
+                    Plugin.Log.LogWarning($"[FieldMapper] Def member '{name}' not found on {defType.Name}");
+                _defCache[key] = acc;
             }
-            return pi;
+            return acc;
         }
 
         // ═══════════════════════════════════════════════════════════
@@ -127,18 +133,18 @@ namespace UnknownMod.Core
             for (int i = 0; i < mappings.Length; i++)
             {
                 var m = mappings[i];
-                var defProp = GetDefProp(defType, m.DefProp);
-                if (defProp == null) continue;
+                var defAcc = GetDefAccessor(defType, m.DefProp);
+                if (!defAcc.IsValid) continue;
                 var soAcc = GetSoAccessor(soType, m.SoField);
                 if (!soAcc.IsValid) continue;
 
-                object val = defProp.GetValue(def);
+                object val = defAcc.Get(def);
 
                 switch (m.Ref)
                 {
                     case RefType.None:
                         // Null-coalesce strings to "" to match existing behavior
-                        if (val == null && defProp.PropertyType == typeof(string))
+                        if (val == null && defAcc.MemberType == typeof(string))
                             val = "";
                         soAcc.Set(so, val);
                         break;
@@ -187,8 +193,8 @@ namespace UnknownMod.Core
             for (int i = 0; i < mappings.Length; i++)
             {
                 var m = mappings[i];
-                var defProp = GetDefProp(defType, m.DefProp);
-                if (defProp == null) continue;
+                var defAcc = GetDefAccessor(defType, m.DefProp);
+                if (!defAcc.IsValid) continue;
                 var soAcc = GetSoAccessor(soType, m.SoField);
                 if (!soAcc.IsValid) continue;
 
@@ -196,24 +202,24 @@ namespace UnknownMod.Core
                 {
                     case RefType.None:
                         var raw = soAcc.Get(so);
-                        if (defProp.PropertyType == typeof(string))
+                        if (defAcc.MemberType == typeof(string))
                             raw = (raw as string) ?? "";
-                        defProp.SetValue(def, raw);
+                        defAcc.Set(def, raw);
                         break;
 
                     case RefType.AuraCurse:
                         var ac = soAcc.Get(so) as AuraCurseData;
-                        defProp.SetValue(def, DataHelper.GetACId(ac));
+                        defAcc.Set(def, DataHelper.GetACId(ac));
                         break;
 
                     case RefType.Card:
                         var card = soAcc.Get(so) as CardData;
-                        defProp.SetValue(def, card != null ? (card.Id ?? "") : "");
+                        defAcc.Set(def, card != null ? (card.Id ?? "") : "");
                         break;
 
                     case RefType.NPC:
                         var npc = soAcc.Get(so) as NPCData;
-                        defProp.SetValue(def, npc != null ? (npc.Id ?? "") : "");
+                        defAcc.Set(def, npc != null ? (npc.Id ?? "") : "");
                         break;
                 }
             }

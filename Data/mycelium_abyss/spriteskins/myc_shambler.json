@@ -1,0 +1,24 @@
+﻿{
+    "Id":  "myc_shambler",
+    "BaseSprite":  "treant",
+    "Grafts":  [
+                   {
+                       "TargetBone":  "BrazoIzk",
+                       "Source":  "treant/PiernaDrch1",
+                       "ReplaceTarget":  true,
+                       "BoneOverrides":  {
+                                             "bone_11":  {
+                                                             "PosX":  -0.25,
+                                                             "PosY":  -0.15,
+                                                             "ScaleX":  0.8,
+                                                             "ScaleY":  0.6
+                                                         }
+                                         }
+                   }
+               ],
+    "BoneOverrides":  {
+                          "ArmaIzk":  {
+                                          "Visible":  false
+                                      }
+                      }
+}

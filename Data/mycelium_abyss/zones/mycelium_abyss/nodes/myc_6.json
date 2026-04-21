@@ -2,8 +2,8 @@
   "NodeId": "myc_6",
   "NodeName": "The Luminous Garden",
   "Description": "",
-  "PosX": -0.4,
-  "PosY": 3.8,
+  "PosX": -0.488378882,
+  "PosY": 3.75263667,
   "TravelDestination": false,
   "GoToTown": false,
   "ExistsPercent": 100,
@@ -12,14 +12,14 @@
   "VisibleIfNotRequirement": false,
   "NodeGround": "None",
   "NodeRequirementId": "",
-  "CombatId": "",
   "CombatTier": "T0",
   "CombatPercent": 0,
-  "EventId": "e_myc_6",
+  "EventIds": [
+    "e_myc_6"
+  ],
   "EventPercent": 100,
   "NodeEventTier": "T0",
   "Connections": [
     "myc_8"
-  ],
-  "ConnectionRequirements": []
+  ]
 }

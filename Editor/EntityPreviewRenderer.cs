@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 using UnknownMod.Core;
+using UnknownMod.Definitions;
+using UnknownMod.Editor.Tabs;
+using UnknownMod.Runtime;
 
 namespace UnknownMod.Editor
 {
@@ -38,6 +42,27 @@ namespace UnknownMod.Editor
         private static Dictionary<string, GameObject> _bgPrefabCache;
         private static bool _bgCacheRequested;
         private static bool _bgCacheFailed;
+
+        /// <summary>Get a cached background prefab by enum name (case-insensitive). Returns null if not cached.</summary>
+        public static GameObject GetBackgroundPrefab(string bgName)
+        {
+            EnsureBgCache();
+            if (_bgPrefabCache == null || string.IsNullOrEmpty(bgName)) return null;
+            foreach (var kvp in _bgPrefabCache)
+            {
+                if (string.Equals(kvp.Key, bgName, StringComparison.OrdinalIgnoreCase))
+                    return kvp.Value;
+            }
+            return null;
+        }
+
+        /// <summary>Get all cached background prefab names. Returns empty if cache not ready.</summary>
+        public static List<string> GetAllBackgroundNames()
+        {
+            EnsureBgCache();
+            if (_bgPrefabCache == null) return new List<string>();
+            return new List<string>(_bgPrefabCache.Keys);
+        }
 
         // Incremented when bg cache becomes available; forces encounter re-render
         private static int _bgCacheGeneration;
@@ -106,7 +131,7 @@ namespace UnknownMod.Editor
 
         private void CreateRT(int w, int h)
         {
-            if (_rt != null) _rt.Release();
+            if (_rt != null) { _rt.Release(); UnityEngine.Object.Destroy(_rt); }
             _rt = new RenderTexture(w, h, 16);
             _rt.filterMode = FilterMode.Bilinear;
             if (_cam != null) _cam.targetTexture = _rt;
@@ -141,10 +166,11 @@ namespace UnknownMod.Editor
         private void ClearObjects()
         {
             foreach (var go in _objects)
-                if (go != null) UnityEngine.Object.Destroy(go);
+                if (go != null) UnityEngine.Object.DestroyImmediate(go);
             _objects.Clear();
-            if (_bgInstance != null) { UnityEngine.Object.Destroy(_bgInstance); _bgInstance = null; }
+            if (_bgInstance != null) { UnityEngine.Object.DestroyImmediate(_bgInstance); _bgInstance = null; }
             _animated = false;
+            DoRender();  // render the now-empty scene so RT doesn't show stale content
         }
 
         private void DoRender()
@@ -340,6 +366,74 @@ namespace UnknownMod.Editor
         }
 
         // ═══════════════════════════════════════════════════════════════
+        //  SPRITE SKIN OVERRIDE RESOLUTION (for NPC / encounter previews)
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Resolve a CharacterOverrideDef for the given NPC entity ID.
+        /// Checks the active mod project in order:
+        ///   1. NpcDef.SpriteSkinId (explicit override key)
+        ///   2. SpriteSkins / SpriteSkinPatches keyed by NPC ID (convention: skin key == NPC ID)
+        ///   3. Zone-level SpriteSkins keyed by NPC ID
+        /// </summary>
+        private static CharacterOverrideDef ResolveNpcOverride(string npcId, out string zoneId)
+        {
+            zoneId = null;
+            var proj = Tabs.ModManagerPanel.ActiveProject;
+            if (proj == null) return null;
+
+            zoneId = proj.ModId;
+
+            // 1. Check explicit SpriteSkinId on the NpcDef (if set)
+            NpcDef npcDef = null;
+            if (proj.Npcs.TryGetValue(npcId, out npcDef) || proj.NpcPatches.TryGetValue(npcId, out npcDef))
+            {
+                if (!string.IsNullOrEmpty(npcDef.SpriteSkinId))
+                {
+                    if (proj.SpriteSkins.TryGetValue(npcDef.SpriteSkinId, out var spriteDef))
+                        return spriteDef;
+                    if (proj.SpriteSkinPatches.TryGetValue(npcDef.SpriteSkinId, out spriteDef))
+                        return spriteDef;
+                }
+            }
+
+            // 2. SpriteSkins are keyed by NpcId — look up directly
+            if (proj.SpriteSkins.TryGetValue(npcId, out var skinDef))
+                return skinDef;
+            if (proj.SpriteSkinPatches.TryGetValue(npcId, out skinDef))
+                return skinDef;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Get the customized model for an NPC, applying sprite skin overrides
+        /// from the current editing context. Returns the original model if no
+        /// override exists. Also outputs the override def for attaching
+        /// CharacterOverrideDriver after instantiation.
+        /// </summary>
+        private static GameObject GetOverriddenModel(string npcId, GameObject sourceModel, out CharacterOverrideDef overrideDef)
+        {
+            overrideDef = ResolveNpcOverride(npcId, out string zoneId);
+            if (overrideDef == null || sourceModel == null) return sourceModel;
+
+            // Invalidate cached prefab so current edits are always reflected
+            NpcPrefabBuilder.InvalidateCache(npcId);
+            var customPrefab = NpcPrefabBuilder.BuildCustomPrefab(npcId, sourceModel, overrideDef, zoneId);
+            return customPrefab ?? sourceModel;
+        }
+
+        /// <summary>Check if a CharacterOverrideDef has per-frame overrides that need CharacterOverrideDriver.</summary>
+        private static bool HasPerFrameOverrides(CharacterOverrideDef def)
+        {
+            return def.BoneOverrides.Count > 0 ||
+                   def.CustomSprites.Count > 0 ||
+                   def.Grafts.Count > 0 ||
+                   !def.Model.IsDefault() ||
+                   (def.AnimOverrides != null && def.AnimOverrides.Count > 0);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
         //  NPC PREVIEW  (animated model or static sprite)
         // ═══════════════════════════════════════════════════════════════
 
@@ -370,11 +464,23 @@ namespace UnknownMod.Editor
                 var model = npcData.GameObjectAnimated;
                 if (model != null)
                 {
+                    // Apply sprite skin overrides from the current editing context
+                    CharacterOverrideDef overrideDef = null;
+                    model = GetOverriddenModel(npcId, model, out overrideDef);
+
                     try
                     {
                         var go = UnityEngine.Object.Instantiate(model, Origin, Quaternion.identity, _root.transform);
                         go.transform.localPosition = Vector3.zero;
+                        go.SetActive(true); // custom prefabs are built inactive
                         _objects.Add(go);
+
+                        // Attach CharacterOverrideDriver for per-frame effects (bone transforms, model, keyframes, grafts)
+                        if (overrideDef != null && HasPerFrameOverrides(overrideDef))
+                        {
+                            var ovr = go.AddComponent<CharacterOverrideDriver>();
+                            ovr.Init(overrideDef);
+                        }
 
                         // Force idle pose evaluation
                         var anim = go.GetComponentInChildren<Animator>();
@@ -433,14 +539,92 @@ namespace UnknownMod.Editor
         const float BaseOffset = 2.4f;
         const float Spacing = 1.9f;
 
+        // ── Slot oval marker (shared texture) ────────────────────────
+        private static Texture2D _ovalTex;
+        private static Sprite _ovalSprite;
+
+        /// <summary>Create slot position oval markers for both hero (left) and NPC (right) sides.
+        /// Spawns semi-transparent oval GameObjects at the game's character positions.</summary>
+        private void SpawnSlotOvals(Transform parent, bool heroSide, bool npcSide)
+        {
+            EnsureOvalSprite();
+            if (_ovalSprite == null) return;
+
+            // Oval approximate dimensions — wide, short, like a shadow
+            const float ovalScaleX = 1.4f;
+            const float ovalScaleY = 0.35f;
+
+            for (int side = 0; side < 2; side++)
+            {
+                bool isHero = side == 0;
+                if (isHero && !heroSide) continue;
+                if (!isHero && !npcSide) continue;
+
+                Color col = isHero
+                    ? new Color(0.3f, 0.6f, 1f, 0.35f)   // blue tint for heroes
+                    : new Color(1f, 0.35f, 0.3f, 0.35f);  // red tint for NPCs
+                string label = isHero ? "H" : "E";
+
+                for (int slot = 0; slot < 4; slot++)
+                {
+                    float x = BaseOffset + slot * Spacing;
+                    if (isHero) x = -x;
+
+                    var go = new GameObject($"SlotOval_{label}{slot}");
+                    go.transform.SetParent(parent, false);
+                    go.transform.localPosition = new Vector3(x, -0.05f, 10f);
+                    go.transform.localScale = new Vector3(ovalScaleX, ovalScaleY, 1f);
+
+                    var sr = go.AddComponent<SpriteRenderer>();
+                    sr.sprite = _ovalSprite;
+                    sr.color = col;
+                    sr.sortingOrder = 900;
+                }
+            }
+        }
+
+        /// <summary>Build a procedural circle texture + sprite for oval markers.</summary>
+        private static void EnsureOvalSprite()
+        {
+            if (_ovalSprite != null) return;
+
+            const int size = 64;
+            _ovalTex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            float center = (size - 1) * 0.5f;
+            float radius = center;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x - center) / radius;
+                    float dy = (y - center) / radius;
+                    float dist = dx * dx + dy * dy;
+                    // Soft edge: full inside, fade from 0.8 to 1.0 radius
+                    float alpha = dist <= 0.64f ? 1f : // inside r=0.8
+                                  dist >= 1f ? 0f :    // outside r=1.0
+                                  1f - (dist - 0.64f) / 0.36f;
+                    _ovalTex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+            _ovalTex.Apply();
+            _ovalTex.filterMode = FilterMode.Bilinear;
+
+            _ovalSprite = Sprite.Create(_ovalTex,
+                new Rect(0, 0, size, size),
+                new Vector2(0.5f, 0.5f),
+                size); // 1 world unit = size pixels
+        }
+
         /// <summary>
         /// Recreate the game's combat scene: background, camera at game orthoSize,
         /// NPC models in game-accurate positions.
         /// </summary>
-        public bool ShowEncounter(List<string> npcIds, Enums.CombatBackground background = Enums.CombatBackground.Spider_Lair)
+        public bool ShowEncounter(List<string> npcIds, Enums.CombatBackground background = Enums.CombatBackground.Spider_Lair, string customBackgroundId = null)
         {
             EnsureInit();
-            string key = "enc:" + (npcIds != null ? string.Join(",", npcIds) : "") + ":" + background;
+            string bgPart = !string.IsNullOrEmpty(customBackgroundId) ? customBackgroundId : background.ToString();
+            string key = "enc:" + (npcIds != null ? string.Join(",", npcIds) : "") + ":" + bgPart;
             // Re-render if bg cache arrived since last render
             bool bgChanged = _lastBgGeneration != _bgCacheGeneration;
             if (key == _cacheKey && !_needsRender && !bgChanged) return _objects.Count > 0;
@@ -461,7 +645,8 @@ namespace UnknownMod.Editor
             _cam.backgroundColor = GetBackgroundTint(background);
 
             // ── Background prefab at scene origin ──
-            TryPlaceBackground(background);
+            if (!TryPlaceCustomBackground(customBackgroundId))
+                TryPlaceBackground(background);
 
             if (npcIds == null || npcIds.Count == 0) { LastError = "No NPCs in encounter"; DoRender(); return false; }
 
@@ -490,12 +675,24 @@ namespace UnknownMod.Editor
                     var model = npcData.GameObjectAnimated;
                     if (model != null)
                     {
+                        // Apply sprite skin overrides from the current editing context
+                        CharacterOverrideDef overrideDef = null;
+                        model = GetOverriddenModel(npcIds[i], model, out overrideDef);
+
                         try
                         {
                             var go = UnityEngine.Object.Instantiate(model, Vector3.zero, Quaternion.identity, charGroup.transform);
                             go.transform.localPosition = new Vector3(x, 0, z);
+                            go.SetActive(true); // custom prefabs are built inactive
                             _animated = true;
                             placed = true;
+
+                            // Attach CharacterOverrideDriver for per-frame effects
+                            if (overrideDef != null && HasPerFrameOverrides(overrideDef))
+                            {
+                                var ovr = go.AddComponent<CharacterOverrideDriver>();
+                                ovr.Init(overrideDef);
+                            }
 
                             var anim = go.GetComponentInChildren<Animator>();
                             if (anim != null) anim.Update(0);
@@ -521,8 +718,13 @@ namespace UnknownMod.Editor
                 if (charGroup.transform.childCount == 0)
                 {
                     LastError = "No NPC data could be resolved for encounter";
+                    _cacheKey = null; // prevent false cache hit next frame
+                    DoRender();       // clear the RT
                     return false;
                 }
+
+                // Spawn slot ovals for hero (left) and NPC (right) positions
+                SpawnSlotOvals(charGroup.transform, heroSide: true, npcSide: true);
 
                 DoRender();
                 return true;
@@ -534,6 +736,37 @@ namespace UnknownMod.Editor
                 ClearObjects();
                 return false;
             }
+        }
+
+        /// <summary>Place a custom mod background from BackgroundDef, matching game placement. Returns true if placed.</summary>
+        private bool TryPlaceCustomBackground(string customBgId)
+        {
+            if (string.IsNullOrEmpty(customBgId)) return false;
+
+            // Look up the BackgroundDef from the active project (mod-level)
+            BackgroundDef bgDef = null;
+            var proj = Tabs.ModManagerPanel.ActiveProject;
+            if (proj?.Backgrounds != null)
+                proj.Backgrounds.TryGetValue(customBgId, out bgDef);
+            if (bgDef == null && proj?.BackgroundPatches != null)
+                proj.BackgroundPatches.TryGetValue(customBgId, out bgDef);
+            if (bgDef == null || bgDef.Layers.Count == 0) return false;
+
+            if (_bgInstance != null) { UnityEngine.Object.DestroyImmediate(_bgInstance); _bgInstance = null; }
+
+            var root = new GameObject(customBgId);
+            root.transform.SetParent(_root.transform, false);
+            root.transform.localPosition = Vector3.zero;
+            root.transform.localScale = new Vector3(0.545f, 0.545f, 1f);
+
+            foreach (var layer in bgDef.Layers)
+            {
+                if (!layer.Visible) continue;
+                SpawnBgLayer(layer, root.transform);
+            }
+
+            _bgInstance = root;
+            return true;
         }
 
         /// <summary>Place the real combat background prefab if cached, matching game placement.</summary>
@@ -549,7 +782,7 @@ namespace UnknownMod.Editor
             {
                 if (!string.Equals(kvp.Key, bgName, StringComparison.OrdinalIgnoreCase)) continue;
 
-                if (_bgInstance != null) { UnityEngine.Object.Destroy(_bgInstance); _bgInstance = null; }
+                if (_bgInstance != null) { UnityEngine.Object.DestroyImmediate(_bgInstance); _bgInstance = null; }
 
                 // Game: Instantiate at (0,0,0) under backgroundTransform, scale (0.545, 0.545, 1)
                 var go = UnityEngine.Object.Instantiate(kvp.Value, Origin, Quaternion.identity, _root.transform);
@@ -588,7 +821,15 @@ namespace UnknownMod.Editor
             try
             {
                 Plugin.Log.LogInfo("[EntityPreview] Loading Combat scene (additive, async) for background prefabs...");
-                SceneManager.LoadSceneAsync("Combat", LoadSceneMode.Additive);
+                var op = SceneManager.LoadSceneAsync("Combat", LoadSceneMode.Additive);
+                if (op == null)
+                {
+                    // Scene not in build settings — LoadSceneAsync returns null without throwing
+                    Plugin.Log.LogWarning("[EntityPreview] Combat scene not available (LoadSceneAsync returned null).");
+                    SceneManager.sceneLoaded -= OnCombatSceneLoaded;
+                    _bgCacheFailed = true;
+                    ZoneEditingService.SuppressSceneLoad--;
+                }
             }
             catch (Exception ex)
             {
@@ -664,7 +905,16 @@ namespace UnknownMod.Editor
             {
                 Plugin.Log.LogError($"[EntityPreview] Combat scene extraction failed: {ex.Message}\n{ex.StackTrace}");
                 _bgCacheFailed = true;
-                ZoneEditingService.SuppressSceneLoad--;
+                // Ensure the scene is unloaded even on failure
+                try
+                {
+                    SceneManager.sceneUnloaded += OnCombatUnloaded;
+                    SceneManager.UnloadSceneAsync(scene);
+                }
+                catch
+                {
+                    ZoneEditingService.SuppressSceneLoad--;
+                }
             }
         }
 
@@ -1058,13 +1308,240 @@ namespace UnknownMod.Editor
         }
 
         // ═══════════════════════════════════════════════════════════════
+        //  BACKGROUND PREVIEW  (renders a BackgroundDef's layers)
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Render a custom BackgroundDef by building its layer hierarchy.
+        /// Uses game sprites where available, matching game scale (0.545).
+        /// </summary>
+        public bool ShowBackground(BackgroundDef bgDef)
+        {
+            EnsureInit();
+            string key = "bg:" + (bgDef?.BackgroundId ?? "");
+            if (key == _cacheKey && !_needsRender) return _objects.Count > 0;
+
+            ClearObjects();
+            _cacheKey = key;
+            _animated = false;
+
+            if (bgDef == null || bgDef.Layers.Count == 0)
+            { LastError = "Background has no layers"; DoRender(); return false; }
+
+            try
+            {
+                // Root GO at scene origin, game scale
+                var root = new GameObject("BgPreview");
+                root.transform.SetParent(_root.transform, false);
+                root.transform.localPosition = Vector3.zero;
+                root.transform.localScale = new Vector3(0.545f, 0.545f, 1f);
+                _objects.Add(root);
+
+                foreach (var layer in bgDef.Layers)
+                {
+                    if (!layer.Visible) continue;
+                    SpawnBgLayer(layer, root.transform);
+                }
+
+                // Frame camera to game combat view
+                float vpAspect = _rt != null ? (float)_rt.width / _rt.height : 1f;
+                const float gameHalfWidth = CombatOrthoSize * (16f / 9f);
+                _cam.orthographicSize = gameHalfWidth / Mathf.Max(vpAspect, 0.01f);
+                _cam.transform.position = Origin + new Vector3(0, 0, -10);
+                _cam.backgroundColor = new Color(0.08f, 0.08f, 0.10f, 1f);
+
+                // Spawn slot ovals at character positions (both sides)
+                var charGroup = new GameObject("CharGroup");
+                charGroup.transform.SetParent(_root.transform, false);
+                charGroup.transform.localPosition = CharGroupOffset;
+                _objects.Add(charGroup);
+                SpawnSlotOvals(charGroup.transform, heroSide: true, npcSide: true);
+
+                DoRender();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[EntityPreview] Background render failed: {ex.Message}");
+                LastError = $"Exception: {ex.Message}";
+                ClearObjects();
+                return false;
+            }
+        }
+
+        /// <summary>Spawn a single background layer GO by type, matching the background editor viewport.</summary>
+        private void SpawnBgLayer(BackgroundLayerDef layer, Transform parent)
+        {
+            var go = new GameObject(layer.Name);
+            go.transform.SetParent(parent, false);
+            go.transform.localPosition = new Vector3(layer.PosX, layer.PosY, layer.PosZ);
+            go.transform.localScale = new Vector3(layer.ScaleX, layer.ScaleY, 1f);
+            if (Mathf.Abs(layer.Rotation) > 0.001f)
+                go.transform.localEulerAngles = new Vector3(0, 0, layer.Rotation);
+
+            switch (layer.Type)
+            {
+                case VisualLayerType.Sprite:
+                default:
+                {
+                    var sr = go.AddComponent<SpriteRenderer>();
+                    sr.sortingOrder = layer.SortingOrder;
+                    try { sr.sortingLayerName = layer.SortingLayer; } catch { }
+                    sr.color = new Color(layer.ColorR, layer.ColorG, layer.ColorB, layer.ColorA);
+                    sr.flipX = layer.FlipX;
+                    sr.flipY = layer.FlipY;
+                    sr.enabled = layer.Enabled;
+                    if (!string.IsNullOrEmpty(layer.SpriteName))
+                    {
+                        var sprite = ResolveSprite(layer.SpriteName);
+                        if (sprite != null) sr.sprite = sprite;
+                    }
+                    break;
+                }
+                case VisualLayerType.Light:
+                {
+                    var light = go.AddComponent<Light2D>();
+                    light.lightType = (Light2D.LightType)layer.LightType;
+                    light.color = new Color(layer.ColorR, layer.ColorG, layer.ColorB, layer.ColorA);
+                    light.intensity = layer.Intensity;
+                    light.falloffIntensity = layer.FalloffIntensity;
+                    light.lightOrder = layer.LightOrder;
+                    light.blendStyleIndex = layer.BlendStyleIndex;
+                    light.shadowsEnabled = layer.ShadowsEnabled;
+                    light.shadowIntensity = layer.ShadowIntensity;
+                    light.enabled = layer.Enabled;
+                    if (layer.LightType == 3)
+                    {
+                        light.pointLightInnerAngle = layer.PointLightInnerAngle;
+                        light.pointLightOuterAngle = layer.PointLightOuterAngle;
+                        light.pointLightInnerRadius = layer.PointLightInnerRadius;
+                        light.pointLightOuterRadius = layer.PointLightOuterRadius;
+                    }
+                    if (layer.LightType == 0 || layer.LightType == 1)
+                        light.shapeLightFalloffSize = layer.ShapeLightFalloffSize;
+                    break;
+                }
+                case VisualLayerType.ParticleSystem:
+                {
+                    var ps = go.AddComponent<ParticleSystem>();
+                    var main = ps.main;
+                    main.duration = layer.Duration;
+                    main.loop = layer.Loop;
+                    main.prewarm = layer.Prewarm;
+                    main.startLifetime = layer.StartLifetime;
+                    main.startSpeed = layer.StartSpeed;
+                    main.startSize = layer.StartSize;
+                    main.maxParticles = layer.MaxParticles;
+                    main.simulationSpeed = layer.SimulationSpeed;
+                    main.playOnAwake = layer.PlayOnAwake;
+                    main.gravityModifier = layer.GravityModifier;
+                    main.startColor = new Color(layer.ColorR, layer.ColorG, layer.ColorB, layer.ColorA);
+                    var emission = ps.emission;
+                    emission.rateOverTime = layer.EmissionRate;
+                    var psr = go.GetComponent<ParticleSystemRenderer>();
+                    if (psr != null)
+                    {
+                        psr.sortingOrder = layer.SortingOrder;
+                        psr.enabled = layer.Enabled;
+                        if (psr.sharedMaterial == null)
+                        {
+                            var defaultMat = new Material(Shader.Find("Particles/Standard Unlit"));
+                            defaultMat.SetFloat("_Mode", 1);
+                            psr.sharedMaterial = defaultMat;
+                        }
+                    }
+                    if (layer.PlayOnAwake) ps.Play();
+                    _animated = true;
+                    break;
+                }
+                case VisualLayerType.SpriteMask:
+                {
+                    var mask = go.AddComponent<SpriteMask>();
+                    mask.alphaCutoff = layer.AlphaCutoff;
+                    mask.isCustomRangeActive = layer.CustomRange;
+                    if (layer.CustomRange)
+                    {
+                        mask.frontSortingOrder = layer.FrontSortingOrder;
+                        mask.backSortingOrder = layer.BackSortingOrder;
+                    }
+                    mask.sortingOrder = layer.SortingOrder;
+                    mask.enabled = layer.Enabled;
+                    if (!string.IsNullOrEmpty(layer.SpriteName))
+                    {
+                        var sprite = ResolveSprite(layer.SpriteName);
+                        if (sprite != null) mask.sprite = sprite;
+                    }
+                    break;
+                }
+                case VisualLayerType.Container:
+                    break;
+                case VisualLayerType.Shader:
+                {
+                    var sr = go.AddComponent<SpriteRenderer>();
+                    sr.sprite = ShaderPresetGenerator.GetPresetSprite(layer.Preset, layer.PresetParam1, layer.PresetParam2);
+                    sr.sortingOrder = layer.SortingOrder;
+                    try { sr.sortingLayerName = layer.SortingLayer; } catch { }
+                    sr.color = new Color(layer.ColorR, layer.ColorG, layer.ColorB, layer.ColorA);
+                    sr.maskInteraction = (SpriteMaskInteraction)layer.MaskInteraction;
+                    sr.enabled = layer.Enabled;
+                    if (!string.IsNullOrEmpty(layer.ShaderName))
+                    {
+                        var shader = Shader.Find(layer.ShaderName) ?? Resources.Load<Shader>(layer.ShaderName);
+                        if (shader != null)
+                            sr.material = new Material(shader);
+                    }
+                    ShaderEffectRegistry.ApplyToMaterial(sr.material, layer.ShaderKeywords, layer.ShaderFloats);
+                    break;
+                }
+                case VisualLayerType.PrefabEffect:
+                {
+                    if (!string.IsNullOrEmpty(layer.EffectName))
+                    {
+                        var prefab = Globals.Instance?.GetResourceEffect(layer.EffectName);
+                        if (prefab != null)
+                        {
+                            var clone = UnityEngine.Object.Instantiate(prefab, go.transform);
+                            clone.name = layer.EffectName;
+                            _animated = true;
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        /// <summary>Try to find a game sprite by name. Searches mod images then all loaded Sprites.</summary>
+        private static Sprite ResolveSprite(string spriteName)
+        {
+            if (string.IsNullOrEmpty(spriteName)) return null;
+            // Mod-loaded image sprites (exact match)
+            if (ModRegistry.ModImageSprites.TryGetValue(spriteName, out var modSprite) && modSprite != null)
+                return modSprite;
+            // Try prefixed name ("<modId>_<name>")
+            string suffix = "_" + spriteName;
+            foreach (var kvp in ModRegistry.ModImageSprites)
+            {
+                if (kvp.Value != null && kvp.Key.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                    return kvp.Value;
+            }
+            // Search all loaded sprites
+            var all = Resources.FindObjectsOfTypeAll<Sprite>();
+            foreach (var s in all)
+            {
+                if (string.Equals(s.name, spriteName, StringComparison.OrdinalIgnoreCase))
+                    return s;
+            }
+            return null;
+        }
+
+        // ═══════════════════════════════════════════════════════════════
         //  DISPOSE
         // ═══════════════════════════════════════════════════════════════
 
         public void Dispose()
         {
             ClearObjects();
-            if (_rt != null) { _rt.Release(); _rt = null; }
+            if (_rt != null) { _rt.Release(); UnityEngine.Object.Destroy(_rt); _rt = null; }
             if (_root != null) UnityEngine.Object.Destroy(_root);
             _root = null;
             _cam = null;

@@ -1,13 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Unity.Collections;
 using UnityEngine;
-using UnityEngine.U2D;
 using UnityEngine.U2D.Animation;
 using UnknownMod.Core;
 using UnknownMod.Definitions;
-using UnknownMod.Editor;
 
 namespace UnknownMod.Runtime
 {
@@ -15,19 +12,16 @@ namespace UnknownMod.Runtime
     /// Builds custom NPC GameObjectAnimated prefabs at zone registration time.
     /// This is the SINGLE source of truth for all one-time NPC model modifications:
     ///   - Removed bones (deactivate GameObjects)
-    ///   - Added rig bones (empty GameObjects)
-    ///   - Added sprites (GameObjects with SpriteRenderers)
-    ///   - Auto-weight (distance-based vertex weight assignment for added bones)
-    ///   - Sprite grafts (subtree clone from source NPC)
     ///   - Custom sprites (image swap from spritesheet/file)
     ///   - Visibility overrides (hide bones)
     ///   - Global offset (baked into prefab localPosition)
     ///   - Model tint + alpha (baked into SpriteRenderer colors)
-    ///   - Shader effects (material swap via AllIn1SpriteShader)
-    ///   - AnimatorOverrideController (clip swap from source NPC)
     ///
-    /// NpcSpriteOverride handles ONLY per-frame LateUpdate work (transform overrides,
-    /// animation keyframes, grafted sprite re-stamping, scale/flip).
+    /// Grafts are handled at runtime by GraftPuppet (each with its own Animator
+    /// synced via AnimatorStateMirror). No graft surgery or curve import needed.
+    ///
+    /// CharacterOverrideDriver handles ONLY per-frame LateUpdate work (transform
+    /// overrides, animation keyframes, scale/flip, graft puppet spawning).
     ///
     /// Workflow:
     /// 1. Clone the skeleton donor NPC's GameObjectAnimated prefab
@@ -39,55 +33,63 @@ namespace UnknownMod.Runtime
     {
         // Cache of built prefabs keyed by NPC ID (so we only build once)
         private static readonly Dictionary<string, GameObject> _builtPrefabs = new();
+        // Sprites created by Sprite.Create for prefab SRs (destroyed on cache clear)
+        private static readonly Dictionary<string, List<Sprite>> _prefabSprites = new();
 
         /// <summary>
         /// Build a custom prefab for an NPC with sprite overrides.
         /// Returns null if no prefab modifications are needed.
         /// The built prefab is a persistent (DontDestroyOnLoad) hidden GameObject.
         /// </summary>
-        public static GameObject BuildCustomPrefab(string npcId, NPCData baseNpcData, SpriteOverrideDef overrideDef, string zoneId)
+        public static GameObject BuildCustomPrefab(string npcId, NPCData baseNpcData, CharacterOverrideDef overrideDef, string modId)
+        {
+            if (baseNpcData == null) return null;
+            return BuildCustomPrefab(npcId, baseNpcData.GameObjectAnimated, overrideDef, modId);
+        }
+
+        /// <summary>
+        /// Build a custom prefab from a base GameObjectAnimated with sprite overrides.
+        /// Works for both NPC and hero skin prefabs. Returns null if no modifications are needed.
+        /// The built prefab is a persistent (DontDestroyOnLoad) hidden GameObject.
+        /// </summary>
+        public static GameObject BuildCustomPrefab(string entityId, GameObject sourcePrefab, CharacterOverrideDef overrideDef, string modId)
         {
             if (overrideDef == null) return null;
 
             // Check if ANY prefab-level modifications exist
+            // Note: Model offset is NOT baked here — CharacterOverrideDriver handles
+            // it at runtime in ApplyGlobalOverrides to avoid double-application.
             bool hasAny =
-                overrideDef.Bones.Values.Any(b => !string.IsNullOrEmpty(b.SpriteFrom)) ||
                 overrideDef.CustomSprites.Count > 0 ||
                 overrideDef.RemovedBones.Count > 0 ||
-                overrideDef.AddedBones.Count > 0 ||
-                overrideDef.AddedSprites.Count > 0 ||
-                overrideDef.Bones.Values.Any(b => !b.Visible) ||
-                !string.IsNullOrEmpty(overrideDef.AnimationSource) ||
-                overrideDef.UseShaderEffects ||
-                !string.IsNullOrEmpty(overrideDef.ModelTintHex) ||
-                overrideDef.ModelAlpha < 1f ||
-                overrideDef.OffsetX != 0f || overrideDef.OffsetY != 0f;
+                overrideDef.BoneOverrides.Values.Any(b => !b.Visible) ||
+                !string.IsNullOrEmpty(overrideDef.Model.TintHex) ||
+                overrideDef.Model.Alpha < 1f;
 
             if (!hasAny)
             {
-                Plugin.Log.LogDebug($"[NpcPrefabBuilder] '{npcId}' has no prefab modifications — skipping build");
+                Plugin.Log.LogDebug($"[NpcPrefabBuilder] '{entityId}' has no prefab modifications — skipping build");
                 return null;
             }
 
             // Return cached if already built
-            if (_builtPrefabs.TryGetValue(npcId, out var cached) && cached != null)
+            if (_builtPrefabs.TryGetValue(entityId, out var cached) && cached != null)
             {
-                Plugin.Log.LogDebug($"[NpcPrefabBuilder] '{npcId}' returning cached prefab");
+                Plugin.Log.LogDebug($"[NpcPrefabBuilder] '{entityId}' returning cached prefab");
                 return cached;
             }
 
-            var sourcePrefab = baseNpcData.GameObjectAnimated;
             if (sourcePrefab == null)
             {
-                Plugin.Log.LogWarning($"[NpcPrefabBuilder] '{npcId}' base NPC has no GameObjectAnimated prefab");
+                Plugin.Log.LogWarning($"[NpcPrefabBuilder] '{entityId}' has no source GameObjectAnimated prefab");
                 return null;
             }
 
-            Plugin.Log.LogInfo($"[NpcPrefabBuilder] Building custom prefab for '{npcId}' (base='{baseNpcData.Id}')");
+            Plugin.Log.LogInfo($"[NpcPrefabBuilder] Building custom prefab for '{entityId}'");
 
             // ── Clone the skeleton donor prefab ──
             var prefab = Object.Instantiate(sourcePrefab);
-            prefab.name = $"{npcId}_customPrefab";
+            prefab.name = $"{entityId}_customPrefab";
             prefab.SetActive(false); // hide from scene
             Object.DontDestroyOnLoad(prefab);
 
@@ -100,163 +102,67 @@ namespace UnknownMod.Runtime
 
             // ════════════════════════════════════════════════════════════
             //  1. REMOVED BONES (first — skip these in all subsequent steps)
+            //
+            //  Hide the SpriteRenderer only, NOT the GameObject. Rig bones
+            //  must stay active so other sprites' SpriteSkin components can
+            //  still read their transforms for mesh deformation.
             // ════════════════════════════════════════════════════════════
             int removedCount = 0;
             foreach (var boneName in overrideDef.RemovedBones)
             {
                 if (!boneMap.TryGetValue(boneName, out var bone)) continue;
-                bone.gameObject.SetActive(false);
+                var sr = bone.GetComponent<SpriteRenderer>();
+                if (sr != null) sr.enabled = false;
                 srMap.Remove(boneName);
                 removedCount++;
-                Plugin.Log.LogDebug($"[NpcPrefabBuilder] Deactivated bone '{boneName}'");
+                Plugin.Log.LogDebug($"[NpcPrefabBuilder] Hid sprite on bone '{boneName}'");
             }
 
+            // Rig bones referenced by other sprites' SpriteSkin stay active
+            // (we only hid the SpriteRenderer above), so no need to detach
+            // SpriteSkin components that reference removed bones.
+
             // ════════════════════════════════════════════════════════════
-            //  2. ADDED RIG BONES (pure transform bones, no SpriteRenderer)
+            //  2. STRIP ANIMATOR SPRITE CURVES for custom + pivot-only sprites
+            //     Any bone whose sprite we cache and re-stamp each frame needs
+            //     its Animator sprite curves stripped, otherwise the re-stamp
+            //     overwrites the Animator output and freezes the animation.
+            //     Grafts are handled at runtime by GraftPuppet (no surgery needed).
             // ════════════════════════════════════════════════════════════
-            int addedBoneCount = 0;
-            foreach (var kvp in overrideDef.AddedBones)
+            var stripBoneSet = new HashSet<string>(overrideDef.CustomSprites.Keys);
+            foreach (var kvp in overrideDef.BoneOverrides)
             {
-                string boneName = kvp.Key;
-                var boneDef = kvp.Value;
-                Transform parentT = null;
-                if (!string.IsNullOrEmpty(boneDef.ParentBone))
-                    boneMap.TryGetValue(boneDef.ParentBone, out parentT);
-                if (parentT == null)
+                if ((kvp.Value.PivotX >= 0f || kvp.Value.PivotY >= 0f) &&
+                    !overrideDef.CustomSprites.ContainsKey(kvp.Key) &&
+                    !overrideDef.RemovedBones.Contains(kvp.Key))
                 {
-                    Plugin.Log.LogWarning($"[NpcPrefabBuilder] AddedBone '{boneName}': parent '{boneDef.ParentBone}' not found");
-                    continue;
-                }
-
-                var go = new GameObject(boneName);
-                go.transform.SetParent(parentT, false);
-                go.transform.localPosition = new Vector3(boneDef.PosX, boneDef.PosY, 0f);
-                go.transform.localEulerAngles = new Vector3(0, 0, boneDef.Rotation);
-                go.transform.localScale = new Vector3(boneDef.ScaleX, boneDef.ScaleY, 1f);
-
-                boneMap[boneName] = go.transform;
-                addedBoneCount++;
-                Plugin.Log.LogDebug($"[NpcPrefabBuilder] Added rig bone '{boneName}' on '{boneDef.ParentBone}'");
-            }
-
-            // ════════════════════════════════════════════════════════════
-            //  3. ADDED SPRITES (GameObjects with SpriteRenderers)
-            // ════════════════════════════════════════════════════════════
-            int addedSpriteCount = 0;
-            foreach (var kvp in overrideDef.AddedSprites)
-            {
-                string name = kvp.Key;
-                var def = kvp.Value;
-                Transform parentT = null;
-                if (!string.IsNullOrEmpty(def.ParentBone))
-                    boneMap.TryGetValue(def.ParentBone, out parentT);
-                if (parentT == null)
-                {
-                    Plugin.Log.LogWarning($"[NpcPrefabBuilder] AddedSprite '{name}': parent bone '{def.ParentBone}' not found");
-                    continue;
-                }
-
-                var go = new GameObject(name);
-                go.transform.SetParent(parentT, false);
-                var sr = go.AddComponent<SpriteRenderer>();
-                if (srMap.TryGetValue(def.ParentBone, out var parentSR))
-                    sr.sortingLayerID = parentSR.sortingLayerID;
-
-                srMap[name] = sr;
-                boneMap[name] = go.transform;
-                addedSpriteCount++;
-                Plugin.Log.LogDebug($"[NpcPrefabBuilder] Added sprite '{name}' on bone '{def.ParentBone}'");
-            }
-
-            // ════════════════════════════════════════════════════════════
-            //  4. AUTO-WEIGHTS (distance-based vertex weights for added bones)
-            // ════════════════════════════════════════════════════════════
-            foreach (var kvp in overrideDef.AddedBones)
-            {
-                string boneName = kvp.Key;
-                var boneDef = kvp.Value;
-                if (boneDef.InfluenceSprites == null || boneDef.InfluenceSprites.Count == 0) continue;
-                if (!boneMap.TryGetValue(boneName, out var boneTransform)) continue;
-
-                foreach (var spriteBoneName in boneDef.InfluenceSprites)
-                {
-                    if (!srMap.TryGetValue(spriteBoneName, out var sr) || sr.sprite == null) continue;
-                    try { AddBoneInfluenceToSprite(sr, boneTransform, boneName, spriteBoneName, boneDef); }
-                    catch (System.Exception ex)
-                    {
-                        Plugin.Log.LogError($"[NpcPrefabBuilder] AutoWeight failed for bone '{boneName}' on sprite '{spriteBoneName}': {ex}");
-                    }
+                    stripBoneSet.Add(kvp.Key);
                 }
             }
-
-            // ════════════════════════════════════════════════════════════
-            //  5. SPRITE GRAFTS (subtree clone from source NPC)
-            // ════════════════════════════════════════════════════════════
-            int graftCount = 0;
-            foreach (var kvp in overrideDef.Bones)
-            {
-                if (string.IsNullOrEmpty(kvp.Value.SpriteFrom)) continue;
-                if (overrideDef.RemovedBones.Contains(kvp.Key)) continue;
-                if (!srMap.TryGetValue(kvp.Key, out var sr)) continue;
-
-                string sourceNpc, sourceBone;
-                int slash = kvp.Value.SpriteFrom.IndexOf('/');
-                if (slash >= 0)
-                {
-                    sourceNpc = kvp.Value.SpriteFrom.Substring(0, slash);
-                    sourceBone = kvp.Value.SpriteFrom.Substring(slash + 1);
-                }
-                else
-                {
-                    sourceNpc = kvp.Value.SpriteFrom;
-                    sourceBone = kvp.Key;
-                }
-
-                var sprites = SpriteEditor.ExtractNpcSprites(sourceNpc);
-                if (sprites.TryGetValue(sourceBone, out var sprite))
-                {
-                    var spriteSkin = sr.GetComponent<Component>();
-                    bool hasSpriteSkin = false;
-                    if (spriteSkin != null && spriteSkin.GetType().Name == "SpriteSkin")
-                    {
-                        hasSpriteSkin = true;
-                        bool grafted = TryGraftBoneSubtree(sr.gameObject, sourceNpc, sourceBone, kvp.Key, boneMap);
-                        if (!grafted)
-                        {
-                            Object.DestroyImmediate(spriteSkin);
-                            sr.sprite = null;
-                        }
-                    }
-
-                    sr.sprite = sprite;
-                    graftCount++;
-                    Plugin.Log.LogDebug($"[NpcPrefabBuilder] Grafted '{kvp.Key}' <- '{sourceNpc}/{sourceBone}' (SpriteSkin={hasSpriteSkin})");
-                }
-                else
-                {
-                    Plugin.Log.LogWarning($"[NpcPrefabBuilder] Graft failed: bone '{sourceBone}' not found in '{sourceNpc}'");
-                }
-            }
+            StripAnimatorSpriteCurves(prefab, stripBoneSet);
 
             // ════════════════════════════════════════════════════════════
             //  6. CUSTOM SPRITES (image swap from spritesheet/file)
             // ════════════════════════════════════════════════════════════
             int customCount = 0;
+            var createdSprites = new List<Sprite>();
             foreach (var kvp in overrideDef.CustomSprites)
             {
                 if (overrideDef.RemovedBones.Contains(kvp.Key)) continue;
                 if (!srMap.TryGetValue(kvp.Key, out var sr)) continue;
-                var newSprite = SpriteEditor.CreateSpriteFromDef(kvp.Value, zoneId, overrideDef.Spritesheet, sr.sprite);
+                var newSprite = SpriteUtils.CreateSpriteFromDef(kvp.Value, modId, overrideDef.Spritesheet, sr.sprite);
                 if (newSprite != null)
                 {
-                    var spriteSkin = sr.GetComponent<Component>();
-                    if (spriteSkin != null && spriteSkin.GetType().Name == "SpriteSkin")
+                    // Custom sprite replaces the deformable sprite — destroy SpriteSkin
+                    var spriteSkin = sr.GetComponent<SpriteSkin>();
+                    if (spriteSkin != null)
                     {
                         Object.DestroyImmediate(spriteSkin);
                         sr.sprite = null;
                     }
 
                     sr.sprite = newSprite;
+                    createdSprites.Add(newSprite);
                     customCount++;
                     Plugin.Log.LogDebug($"[NpcPrefabBuilder] Custom sprite on '{kvp.Key}': {kvp.Value.ImagePath}");
                 }
@@ -265,7 +171,7 @@ namespace UnknownMod.Runtime
             // ════════════════════════════════════════════════════════════
             //  7. VISIBILITY OVERRIDES (hide bones via SR.enabled)
             // ════════════════════════════════════════════════════════════
-            foreach (var kvp in overrideDef.Bones)
+            foreach (var kvp in overrideDef.BoneOverrides)
             {
                 if (kvp.Value.Visible) continue;
                 if (overrideDef.RemovedBones.Contains(kvp.Key)) continue;
@@ -273,380 +179,236 @@ namespace UnknownMod.Runtime
                     sr.enabled = false;
             }
 
-            // ════════════════════════════════════════════════════════════
-            //  8. GLOBAL OFFSET (baked into prefab localPosition)
-            // ════════════════════════════════════════════════════════════
-            if (overrideDef.OffsetX != 0f || overrideDef.OffsetY != 0f)
-            {
-                prefab.transform.localPosition += new Vector3(overrideDef.OffsetX, overrideDef.OffsetY, 0f);
-            }
+            // Note: Global offset is NOT baked here — it's applied per-frame by
+            // CharacterOverrideDriver.ApplyGlobalOverrides to avoid double-application.
 
             // ════════════════════════════════════════════════════════════
             //  9. MODEL TINT + ALPHA (baked into SpriteRenderer colors)
             // ════════════════════════════════════════════════════════════
             Color modelTint = Color.white;
-            bool hasModelTint = !string.IsNullOrEmpty(overrideDef.ModelTintHex) &&
-                                ColorUtility.TryParseHtmlString(overrideDef.ModelTintHex, out modelTint);
-            float modelAlpha = Mathf.Clamp01(overrideDef.ModelAlpha);
+            bool hasModelTint = !string.IsNullOrEmpty(overrideDef.Model.TintHex) &&
+                                ColorUtility.TryParseHtmlString(overrideDef.Model.TintHex, out modelTint);
+            float modelAlpha = Mathf.Clamp01(overrideDef.Model.Alpha);
             if (hasModelTint || modelAlpha < 1f)
             {
                 foreach (var kvp in srMap)
                 {
-                    Color c = hasModelTint ? modelTint : Color.white;
-                    c.a = modelAlpha;
+                    Color c = hasModelTint ? modelTint : kvp.Value.color;
+                    // Only override alpha when explicitly set (< 1). Preserves
+                    // alpha baked into TintHex (e.g. "#FF000080").
+                    if (modelAlpha < 1f) c.a = modelAlpha;
                     kvp.Value.color = c;
                 }
             }
 
-            // ════════════════════════════════════════════════════════════
-            //  10. SHADER EFFECTS (AllIn1SpriteShader material swap)
-            // ════════════════════════════════════════════════════════════
-            if (overrideDef.UseShaderEffects)
-            {
-                SpriteEditor.ApplyShaderEffectsToRenderers(srMap.Values, overrideDef);
-            }
+            Plugin.Log.LogInfo($"[NpcPrefabBuilder] Built prefab for '{entityId}': " +
+                $"{removedCount} removed, {customCount} custom");
 
-            // ════════════════════════════════════════════════════════════
-            //  11. ANIMATOR OVERRIDE CONTROLLER
-            // ════════════════════════════════════════════════════════════
-            if (!string.IsNullOrEmpty(overrideDef.AnimationSource))
-            {
-                ApplyAnimatorOverride(prefab, overrideDef.AnimationSource);
-            }
-
-            Plugin.Log.LogInfo($"[NpcPrefabBuilder] Built prefab for '{npcId}': " +
-                $"{removedCount} removed, {addedBoneCount} added bones, {addedSpriteCount} added sprites, " +
-                $"{graftCount} grafts, {customCount} custom" +
-                $"{(!string.IsNullOrEmpty(overrideDef.AnimationSource) ? $", anim from '{overrideDef.AnimationSource}'" : "")}");
-
-            _builtPrefabs[npcId] = prefab;
+            _builtPrefabs[entityId] = prefab;
+            if (createdSprites.Count > 0)
+                _prefabSprites[entityId] = createdSprites;
             return prefab;
         }
 
         // ═══════════════════════════════════════════════════════════════
-        //  AUTO-WEIGHT: distance-based vertex weight assignment
+        //  ANIMATOR SPRITE CURVE STRIPPING
         // ═══════════════════════════════════════════════════════════════
 
-        private static void AddBoneInfluenceToSprite(SpriteRenderer sr, Transform newBoneT, string newBoneName, string spriteBoneName, AddedBoneDef boneDef)
+        /// <summary>
+        /// Strip sprite property curves from the Animator's clips for custom sprite
+        /// bones. The Animator overwrites sr.sprite each frame via curves like
+        /// "bone_1 : SpriteRenderer.m_Sprite". By removing these curves at build time,
+        /// the custom sprite stays in place without per-frame re-stamping.
+        ///
+        /// Works by creating an AnimatorOverrideController with modified clip copies.
+        /// </summary>
+        private static void StripAnimatorSpriteCurves(GameObject prefab, IEnumerable<string> customSpriteBones)
         {
-            var spriteSkin = sr.gameObject.GetComponent<SpriteSkin>();
-            if (spriteSkin == null)
+            var stripBones = new HashSet<string>(customSpriteBones);
+
+            if (stripBones.Count == 0) return;
+
+            // binding.path is a hierarchy path (e.g. "body/Head"), but stripBones
+            // contains bare bone names (e.g. "Head"). Extract the leaf name.
+            string LeafName(string path)
             {
-                Plugin.Log.LogDebug($"[NpcPrefabBuilder] AutoWeight: No SpriteSkin on '{spriteBoneName}', skipping");
-                return;
+                int slash = path.LastIndexOf('/');
+                return slash >= 0 ? path.Substring(slash + 1) : path;
             }
 
-            Transform[] currentBones = spriteSkin.boneTransforms;
-            if (currentBones == null || currentBones.Length == 0) return;
+            var animator = prefab.GetComponent<Animator>() ?? prefab.GetComponentInChildren<Animator>();
+            if (animator == null || animator.runtimeAnimatorController == null) return;
 
-            for (int i = 0; i < currentBones.Length; i++)
-                if (currentBones[i] != null && currentBones[i].name == newBoneName) return;
+            var clips = animator.runtimeAnimatorController.animationClips;
+            if (clips == null || clips.Length == 0) return;
 
-            int newBoneIdx = currentBones.Length;
+            int totalStripped = 0;
+            bool needsOverride = false;
 
-            var expandedBones = new Transform[newBoneIdx + 1];
-            System.Array.Copy(currentBones, expandedBones, currentBones.Length);
-            expandedBones[newBoneIdx] = newBoneT;
-
-            var btProp = typeof(SpriteSkin).GetProperty("boneTransforms",
-                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-            btProp?.SetValue(spriteSkin, expandedBones);
-
-            Sprite sprite = sr.sprite;
-            SpriteBone[] existingBones = sprite.GetBones();
-
-            int parentIdx = -1;
-            if (!string.IsNullOrEmpty(boneDef.ParentBone))
+            // Check if any clips have sprite curves targeting our bones
+            foreach (var clip in clips)
             {
-                for (int i = 0; i < existingBones.Length; i++)
-                    if (existingBones[i].name == boneDef.ParentBone) { parentIdx = i; break; }
-            }
+                if (clip == null) continue;
+                var bindings = UnityEditor_Stub.GetObjectReferenceCurveBindings(clip);
+                if (bindings == null) continue;
 
-            var newBones = new SpriteBone[existingBones.Length + 1];
-            System.Array.Copy(existingBones, newBones, existingBones.Length);
-            newBones[existingBones.Length] = new SpriteBone
-            {
-                name = newBoneName,
-                position = new Vector3(newBoneT.localPosition.x, newBoneT.localPosition.y, 0f),
-                rotation = newBoneT.localRotation,
-                length = boneDef.Length,
-                parentId = parentIdx
-            };
-            sprite.SetBones(newBones);
-
-            using (var oldPoses = new NativeArray<Matrix4x4>(sprite.GetBindPoses().ToArray(), Allocator.Temp))
-            {
-                var newPoses = new NativeArray<Matrix4x4>(oldPoses.Length + 1, Allocator.Temp);
-                NativeArray<Matrix4x4>.Copy(oldPoses, newPoses, oldPoses.Length);
-                newPoses[oldPoses.Length] = newBoneT.worldToLocalMatrix;
-                sprite.SetBindPoses(newPoses);
-                newPoses.Dispose();
-            }
-
-            AssignDistanceWeights(sr, newBoneT, newBoneIdx, existingBones.Length, boneDef.WeightRadius, boneDef.WeightFalloff);
-
-            Plugin.Log.LogInfo($"[NpcPrefabBuilder] AutoWeight: bone '{newBoneName}' added to sprite '{spriteBoneName}' at idx={newBoneIdx}");
-        }
-
-        private static void AssignDistanceWeights(SpriteRenderer sr, Transform boneT, int newBoneIdx, int oldBoneCount, float radius, float falloff)
-        {
-            Sprite sprite = sr.sprite;
-            if (sprite == null) return;
-
-            int vertCount = sprite.GetVertexCount();
-            if (vertCount == 0) return;
-
-            NativeSlice<Vector3> positions;
-            try { positions = sprite.GetVertexAttribute<Vector3>(UnityEngine.Rendering.VertexAttribute.Position); }
-            catch { Plugin.Log.LogWarning("[NpcPrefabBuilder] AutoWeight: GetVertexAttribute<Position> failed"); return; }
-
-            NativeSlice<BoneWeight1> weights;
-            try { weights = sprite.GetVertexAttribute<BoneWeight1>(UnityEngine.Rendering.VertexAttribute.BlendWeight); }
-            catch { Plugin.Log.LogWarning("[NpcPrefabBuilder] AutoWeight: GetVertexAttribute<BlendWeight> failed"); return; }
-
-            int weightsPerVert = (weights.Length > 0 && vertCount > 0) ? weights.Length / vertCount : 0;
-            if (weightsPerVert == 0) return;
-
-            Vector3 boneWorldPos = boneT.position;
-            Vector3 boneLocalPos = sr.transform.InverseTransformPoint(boneWorldPos);
-            Vector2 bonePos2D = new Vector2(boneLocalPos.x, boneLocalPos.y);
-
-            int affected = 0;
-            for (int v = 0; v < vertCount; v++)
-            {
-                Vector2 vpos = new Vector2(positions[v].x, positions[v].y);
-                float dist = Vector2.Distance(vpos, bonePos2D);
-                if (dist > radius) continue;
-
-                float influence = Mathf.Pow(1f - Mathf.Clamp01(dist / Mathf.Max(radius, 0.001f)), Mathf.Max(falloff, 0.01f));
-                if (influence < 0.01f) continue;
-                affected++;
-                influence = Mathf.Min(influence, 0.7f);
-
-                int baseIdx = v * weightsPerVert;
-
-                int minSlot = -1;
-                float minWeight = float.MaxValue;
-                for (int w = 0; w < weightsPerVert; w++)
+                foreach (var binding in bindings)
                 {
-                    var bw = weights[baseIdx + w];
-                    bool isAddedBone = bw.boneIndex >= oldBoneCount && bw.weight > 0.001f;
-                    if (isAddedBone) continue;
-                    if (bw.weight < minWeight) { minWeight = bw.weight; minSlot = w; }
-                }
-                if (minSlot < 0)
-                {
-                    for (int w = 0; w < weightsPerVert; w++)
+                    if (binding.propertyName == "m_Sprite" && stripBones.Contains(LeafName(binding.path)))
                     {
-                        if (weights[baseIdx + w].weight < minWeight)
-                        { minWeight = weights[baseIdx + w].weight; minSlot = w; }
+                        needsOverride = true;
+                        break;
                     }
                 }
-                if (minSlot < 0) continue;
-
-                float scale = Mathf.Max(0f, 1f - influence);
-                for (int w = 0; w < weightsPerVert; w++)
-                {
-                    if (w == minSlot) continue;
-                    var bw = weights[baseIdx + w];
-                    bw.weight *= scale;
-                    weights[baseIdx + w] = bw;
-                }
-
-                weights[baseIdx + minSlot] = new BoneWeight1 { boneIndex = newBoneIdx, weight = influence };
-
-                float total = 0f;
-                for (int w = 0; w < weightsPerVert; w++)
-                    total += weights[baseIdx + w].weight;
-                if (total > 0.001f && Mathf.Abs(total - 1f) > 0.001f)
-                {
-                    float norm = 1f / total;
-                    for (int w = 0; w < weightsPerVert; w++)
-                    {
-                        var bw = weights[baseIdx + w];
-                        bw.weight *= norm;
-                        weights[baseIdx + w] = bw;
-                    }
-                }
+                if (needsOverride) break;
             }
 
-            Plugin.Log.LogInfo($"[NpcPrefabBuilder] AutoWeight: sprite '{sprite.name}' — {affected}/{vertCount} vertices influenced");
-        }
-
-        // ═══════════════════════════════════════════════════════════════
-        //  ANIMATOR OVERRIDE
-        // ═══════════════════════════════════════════════════════════════
-
-        private static void ApplyAnimatorOverride(GameObject prefab, string sourceNpcId)
-        {
-            var animator = prefab.GetComponent<Animator>();
-            if (animator == null || animator.runtimeAnimatorController == null)
+            if (!needsOverride)
             {
-                Plugin.Log.LogWarning($"[NpcPrefabBuilder] Cannot apply AnimatorOverride: prefab has no Animator/Controller");
+                Plugin.Log.LogDebug($"[NpcPrefabBuilder] No Animator sprite curves found for grafted/custom bones — skipping strip");
                 return;
             }
 
-            NPCData sourceNpc = DataHelper.GetExistingNPC(sourceNpcId);
-            if (sourceNpc?.GameObjectAnimated == null)
-            {
-                Plugin.Log.LogWarning($"[NpcPrefabBuilder] AnimationSource NPC '{sourceNpcId}' has no GameObjectAnimated");
-                return;
-            }
-
-            var sourceAnimator = sourceNpc.GameObjectAnimated.GetComponent<Animator>();
-            if (sourceAnimator?.runtimeAnimatorController == null)
-            {
-                Plugin.Log.LogWarning($"[NpcPrefabBuilder] AnimationSource NPC '{sourceNpcId}' has no AnimatorController");
-                return;
-            }
-
+            // Always create a NEW override controller — Object.Instantiate does not
+            // deep-clone the runtimeAnimatorController, so modifying a cast-in-place AOC
+            // would mutate the shared source prefab's controller.
             var baseController = animator.runtimeAnimatorController;
             var overrideController = new AnimatorOverrideController(baseController);
 
             var overrides = new List<KeyValuePair<AnimationClip, AnimationClip>>(overrideController.overridesCount);
             overrideController.GetOverrides(overrides);
 
-            var sourceClips = new Dictionary<string, AnimationClip>();
-            foreach (var clip in sourceAnimator.runtimeAnimatorController.animationClips)
-            {
-                if (clip != null && !sourceClips.ContainsKey(clip.name))
-                    sourceClips[clip.name] = clip;
-            }
-
-            int swapped = 0;
             for (int i = 0; i < overrides.Count; i++)
             {
-                var original = overrides[i].Key;
-                if (original == null) continue;
+                var origClip = overrides[i].Value ?? overrides[i].Key;
+                if (origClip == null) continue;
 
-                if (sourceClips.TryGetValue(original.name, out var replacement))
+                var bindings = UnityEditor_Stub.GetObjectReferenceCurveBindings(origClip);
+                if (bindings == null) continue;
+
+                bool hasTargetCurves = false;
+                foreach (var binding in bindings)
                 {
-                    overrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(original, replacement);
-                    swapped++;
+                    if (binding.propertyName == "m_Sprite" && stripBones.Contains(LeafName(binding.path)))
+                    { hasTargetCurves = true; break; }
                 }
-                else
+
+                if (!hasTargetCurves) continue;
+
+                // Clone the clip and remove the offending curves
+                var newClip = Object.Instantiate(origClip);
+                newClip.name = origClip.name;
+
+                foreach (var binding in bindings)
                 {
-                    string[] keywords = { "idle", "attack", "cast", "hit" };
-                    foreach (var kw in keywords)
+                    if (binding.propertyName == "m_Sprite" && stripBones.Contains(LeafName(binding.path)))
                     {
-                        if (!original.name.ToLower().Contains(kw)) continue;
-                        var match = sourceClips.FirstOrDefault(c => c.Key.ToLower().Contains(kw));
-                        if (match.Value != null)
-                        {
-                            overrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(original, match.Value);
-                            swapped++;
-                            break;
-                        }
+                        // Set the curve to null/empty to remove it
+                        UnityEditor_Stub.SetObjectReferenceCurve(newClip, binding, null);
+                        totalStripped++;
                     }
                 }
+
+                overrides[i] = new KeyValuePair<AnimationClip, AnimationClip>(overrides[i].Key, newClip);
             }
 
             overrideController.ApplyOverrides(overrides);
             animator.runtimeAnimatorController = overrideController;
 
-            Plugin.Log.LogInfo($"[NpcPrefabBuilder] AnimatorOverrideController: {swapped}/{overrides.Count} clips swapped from '{sourceNpcId}'");
+            Plugin.Log.LogInfo($"[NpcPrefabBuilder] Stripped {totalStripped} Animator sprite curves from {stripBones.Count} bones");
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        //  BONE SUBTREE GRAFT
-        // ═══════════════════════════════════════════════════════════════
-
-        private static bool TryGraftBoneSubtree(GameObject targetBone, string sourceNpcId, string sourceBoneName, string targetBoneName, Dictionary<string, Transform> targetBoneMap)
+        /// <summary>
+        /// Slim stub for AnimationUtility methods — at runtime we use reflection since
+        /// UnityEditor namespace is unavailable. Only needs object reference curve
+        /// bindings for sprite curve stripping.
+        /// </summary>
+        internal static class UnityEditor_Stub
         {
-            NPCData npcData = DataHelper.GetExistingNPC(sourceNpcId);
-            if (npcData?.GameObjectAnimated == null) return false;
+            private static System.Type _animUtilType;
+            private static MethodInfo _getORCBindings;
+            private static MethodInfo _setORCurve;
+            private static bool _searched;
 
-            var tempPrefab = Object.Instantiate(npcData.GameObjectAnimated);
-            tempPrefab.SetActive(false);
-
-            try
+            private static void EnsureReflection()
             {
-                var sourceBone = BoneHierarchyUtils.FindRecursive(tempPrefab.transform, sourceBoneName);
-                if (sourceBone == null) return false;
+                if (_searched) return;
+                _searched = true;
 
-                var spriteSkin = targetBone.GetComponents<Component>()
-                    .FirstOrDefault(c => c.GetType().Name == "SpriteSkin");
-                if (spriteSkin == null) return false;
-
-                var skinType = spriteSkin.GetType();
-                var boneTransformsProp = skinType.GetProperty("boneTransforms",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-                var rootBoneProp = skinType.GetProperty("rootBone",
-                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
-
-                if (boneTransformsProp == null || rootBoneProp == null) return false;
-
-                var currentBoneTransforms = boneTransformsProp.GetValue(spriteSkin) as Transform[];
-                if (currentBoneTransforms == null || currentBoneTransforms.Length == 0) return false;
-
-                var sourceSpriteSkin = sourceBone.GetComponents<Component>()
-                    .FirstOrDefault(c => c.GetType().Name == "SpriteSkin");
-                if (sourceSpriteSkin == null) return false;
-
-                var sourceBoneTransforms = boneTransformsProp.GetValue(sourceSpriteSkin) as Transform[];
-                var sourceRootBone = rootBoneProp.GetValue(sourceSpriteSkin) as Transform;
-                if (sourceBoneTransforms == null || sourceRootBone == null) return false;
-
-                var cloneMap = new Dictionary<string, Transform>();
-                var targetParent = targetBone.transform.parent ?? targetBone.transform;
-
-                if (!targetBoneMap.ContainsKey(sourceRootBone.name))
+                foreach (var asm in System.AppDomain.CurrentDomain.GetAssemblies())
                 {
-                    var clonedRoot = new GameObject(sourceRootBone.name).transform;
-                    clonedRoot.SetParent(targetParent);
-                    clonedRoot.localPosition = sourceRootBone.localPosition;
-                    clonedRoot.localRotation = sourceRootBone.localRotation;
-                    clonedRoot.localScale = sourceRootBone.localScale;
-                    cloneMap[sourceRootBone.name] = clonedRoot;
-                }
-                else
-                {
-                    cloneMap[sourceRootBone.name] = targetBoneMap[sourceRootBone.name];
+                    _animUtilType = asm.GetType("UnityEditor.AnimationUtility");
+                    if (_animUtilType != null) break;
                 }
 
-                foreach (var srcBt in sourceBoneTransforms)
+                if (_animUtilType != null)
                 {
-                    if (srcBt == null) continue;
-                    if (cloneMap.ContainsKey(srcBt.name)) continue;
-                    if (targetBoneMap.ContainsKey(srcBt.name))
-                    {
-                        cloneMap[srcBt.name] = targetBoneMap[srcBt.name];
-                        continue;
-                    }
-
-                    var cloned = new GameObject(srcBt.name).transform;
-                    cloned.SetParent(cloneMap.TryGetValue(sourceRootBone.name, out var r) ? r : targetParent);
-                    cloned.localPosition = srcBt.localPosition;
-                    cloned.localRotation = srcBt.localRotation;
-                    cloned.localScale = srcBt.localScale;
-                    cloneMap[srcBt.name] = cloned;
+                    _getORCBindings = _animUtilType.GetMethod("GetObjectReferenceCurveBindings",
+                        BindingFlags.Static | BindingFlags.Public);
+                    _setORCurve = _animUtilType.GetMethod("SetObjectReferenceCurve",
+                        BindingFlags.Static | BindingFlags.Public);
                 }
 
-                var newBoneTransforms = new Transform[sourceBoneTransforms.Length];
-                for (int i = 0; i < sourceBoneTransforms.Length; i++)
-                {
-                    if (sourceBoneTransforms[i] == null) continue;
-                    cloneMap.TryGetValue(sourceBoneTransforms[i].name, out newBoneTransforms[i]);
-                }
+                if (_getORCBindings == null)
+                    Plugin.Log.LogDebug("[NpcPrefabBuilder] AnimationUtility not available — sprite curve stripping disabled");
+            }
 
-                rootBoneProp.SetValue(spriteSkin, cloneMap[sourceRootBone.name]);
-                boneTransformsProp.SetValue(spriteSkin, newBoneTransforms);
+            public static EditorCurveBindingStub[] GetObjectReferenceCurveBindings(AnimationClip clip)
+            {
+                EnsureReflection();
+                if (_getORCBindings == null) return null;
 
                 try
                 {
-                    var utilType = skinType.Assembly.GetType("UnityEngine.U2D.Animation.SpriteSkinUtility");
-                    var resetMethod = utilType?.GetMethod("ResetBindPose",
-                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
-                    resetMethod?.Invoke(null, new object[] { spriteSkin });
-                }
-                catch { /* ResetBindPose not critical */ }
+                    var result = _getORCBindings.Invoke(null, new object[] { clip });
+                    if (result == null) return null;
 
-                Plugin.Log.LogInfo($"[NpcPrefabBuilder] Subtree graft on '{targetBoneName}': cloned {cloneMap.Count} bones from '{sourceNpcId}/{sourceBoneName}'");
-                return true;
+                    var arr = result as System.Array;
+                    if (arr == null || arr.Length == 0) return null;
+
+                    var stubs = new EditorCurveBindingStub[arr.Length];
+                    var pathField = arr.GetType().GetElementType()?.GetField("path");
+                    var propField = arr.GetType().GetElementType()?.GetField("propertyName");
+
+                    for (int i = 0; i < arr.Length; i++)
+                    {
+                        var binding = arr.GetValue(i);
+                        stubs[i] = new EditorCurveBindingStub
+                        {
+                            path = pathField?.GetValue(binding) as string ?? "",
+                            propertyName = propField?.GetValue(binding) as string ?? "",
+                            _raw = binding
+                        };
+                    }
+                    return stubs;
+                }
+                catch (System.Exception ex)
+                {
+                    Plugin.Log.LogWarning($"[NpcPrefabBuilder] GetObjectReferenceCurveBindings failed: {ex.Message}");
+                    return null;
+                }
             }
-            finally
+
+            public static void SetObjectReferenceCurve(AnimationClip clip, EditorCurveBindingStub binding, object[] keyframes)
             {
-                Object.DestroyImmediate(tempPrefab);
+                EnsureReflection();
+                if (_setORCurve == null) return;
+
+                try
+                {
+                    _setORCurve.Invoke(null, new object[] { clip, binding._raw, keyframes });
+                }
+                catch (System.Exception ex)
+                {
+                    Plugin.Log.LogWarning($"[NpcPrefabBuilder] SetObjectReferenceCurve failed: {ex.Message}");
+                }
+            }
+
+            public struct EditorCurveBindingStub
+            {
+                public string path;
+                public string propertyName;
+                public object _raw;
             }
         }
 
@@ -654,11 +416,32 @@ namespace UnknownMod.Runtime
         //  UTILITIES
         // ═══════════════════════════════════════════════════════════════
 
+        private static void DestroyPrefabSprites()
+        {
+            foreach (var list in _prefabSprites.Values)
+                foreach (var s in list)
+                    if (s != null && SpriteUtils.FindSpriteByName(s.name) != s)
+                        Object.Destroy(s);
+            _prefabSprites.Clear();
+        }
+
+        private static void DestroyPrefabSprites(string npcId)
+        {
+            if (_prefabSprites.TryGetValue(npcId, out var list))
+            {
+                foreach (var s in list)
+                    if (s != null && SpriteUtils.FindSpriteByName(s.name) != s)
+                        Object.Destroy(s);
+                _prefabSprites.Remove(npcId);
+            }
+        }
 
 
-        /// <summary>Clear the prefab cache (e.g. on zone reload).</summary>
+
+        /// <summary>Clear the prefab cache (e.g. on zone reload).\n        /// NOTE: We do NOT destroy AnimatorOverrideController/clip assets here because\n        /// live combat instances share the same AOC via Object.Instantiate (which does\n        /// not deep-clone RuntimeAnimatorControllers). Destroying them while live\n        /// instances reference them causes MissingReferenceException. The AOC + clips\n        /// are UnityEngine.Objects that will be collected on scene unload.</summary>
         public static void ClearCache()
         {
+            DestroyPrefabSprites();
             foreach (var kvp in _builtPrefabs)
             {
                 if (kvp.Value != null)
@@ -667,14 +450,17 @@ namespace UnknownMod.Runtime
             _builtPrefabs.Clear();
         }
 
-        /// <summary>Invalidate a single cached prefab so the next BuildCustomPrefab rebuilds it.</summary>
+        /// <summary>Invalidate a single cached prefab so the next BuildCustomPrefab rebuilds it.\n        /// Does not destroy AOC/clip assets — see ClearCache comment.</summary>
         public static void InvalidateCache(string npcId)
         {
             if (_builtPrefabs.TryGetValue(npcId, out var old))
             {
-                if (old != null) Object.Destroy(old);
+                DestroyPrefabSprites(npcId);
+                if (old != null)
+                    Object.Destroy(old);
                 _builtPrefabs.Remove(npcId);
             }
         }
+
     }
 }

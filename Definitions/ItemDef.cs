@@ -14,6 +14,10 @@ namespace UnknownMod.Definitions
         public string Name = "";
         /// <summary>Base-game card ID to copy the item card art sprite from.</summary>
         public string SpriteSource = "";
+        /// <summary>Base-game card ID to copy all sound clips from (drag, release, hit, sr exceptions).</summary>
+        public string SoundSource = "";
+        /// <summary>Base-game pet card ID to copy the pet model prefab from.</summary>
+        public string PetModelSource = "";
 
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardType CardType = Enums.CardType.Weapon;
@@ -21,13 +25,28 @@ namespace UnknownMod.Definitions
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardRarity Rarity = Enums.CardRarity.Common;
 
+        // ── Upgrade Path ─────────────────────────────────────────
+        /// <summary>Which upgrade level this item is: No (base) or Rare.</summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.CardUpgraded CardUpgraded = Enums.CardUpgraded.No;
+        /// <summary>ID of the Rare variant of this item.</summary>
+        public string UpgradesToRareId = "";
+        /// <summary>ID of the base item this was upgraded from.</summary>
+        public string BaseItemId = "";
+
         // ── Activation / Requisite ───────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.EventActivation Activation = Enums.EventActivation.None;
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.ActivationManual ActivationManual = Enums.ActivationManual.None;
         public bool ActivationOnlyOnHeroes = false;
+        public bool ActivateOnReceive = false;
+        public bool PreventApplyForHeroTarget = false;
 
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.ItemTarget ItemTarget = Enums.ItemTarget.Self;
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.ItemTarget OverrideTargetText = Enums.ItemTarget.None;
         public bool DontTargetBoss = false;
 
         public int TimesPerTurn = 0;
@@ -238,11 +257,24 @@ namespace UnknownMod.Definitions
         public int AuracurseCustomModValue1 = 0;
         public int AuracurseCustomModValue2 = 0;
 
+        // ── Debuff Conversion ────────────────────────────────────
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.DamageType ConvertReceivedDebuffsIntoDamage = Enums.DamageType.None;
+        public bool ConvertReceivedDebuffsIntoCurse = false;
+
         // ── FX / Effects ─────────────────────────────────────────
         public string EffectItemOwner = "";
         public string EffectCaster = "";
         public float EffectCasterDelay = 0f;
         public string EffectTarget = "";
         public float EffectTargetDelay = 0f;
+
+        // ── Paired Card ──────────────────────────────────────────
+        /// <summary>
+        /// Full CardDef for the paired equipment card. Fields like Id, Name,
+        /// CardType, Rarity, SpriteSource, SoundSource, PetModelSource are
+        /// auto-synced from the ItemDef identity fields at build time.
+        /// </summary>
+        public CardDef Card = new();
     }
 }

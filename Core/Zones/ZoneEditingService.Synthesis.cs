@@ -116,7 +116,6 @@ namespace UnknownMod.Core
                 ZoneId = zoneId,
                 ZoneName = zoneData?.ZoneName ?? zoneId,
                 IdPrefix = patch.DetectedPrefix.TrimEnd('_'),
-                BackgroundImage = "", // base zones use prefab backgrounds, not file images
             };
 
             // Zone-level fields from ZoneData
@@ -284,79 +283,9 @@ namespace UnknownMod.Core
             foreach (var kvp in patch.Roads)
                 synth.Roads[kvp.Key] = kvp.Value;
 
-            // 
-            //  SYNTHESIZE BASE-GAME EVENTS, COMBATS, NPCS, LOOT
-            // 
-
-            //  Events: snapshot from Globals 
-            var eventDict = Traverse.Create(Globals.Instance)
-                .Field<Dictionary<string, EventData>>("_Events").Value;
-            if (eventDict != null)
-            {
-                // Collect event IDs referenced by zone nodes
-                var referencedEventIds = new HashSet<string>();
-                foreach (var nd in synth.Nodes.Values)
-                {
-                    foreach (var eid in nd.EventIds)
-                    {
-                        if (!string.IsNullOrEmpty(eid))
-                            referencedEventIds.Add(DataHelper.NormalizeKey(eid));
-                    }
-                }
-
-                foreach (var evtId in referencedEventIds)
-                {
-                    if (patch.Events.ContainsKey(evtId)) continue; // patch overrides
-                    if (!eventDict.TryGetValue(evtId, out var evt) || evt == null) continue;
-
-                    synth.Events[evt.EventId] = SnapshotEventDef(evt);
-                }
-            }
-
-            //  Combats: snapshot from Globals 
-            var combatDict = Traverse.Create(Globals.Instance)
-                .Field<Dictionary<string, CombatData>>("_CombatDataSource").Value;
-            if (combatDict != null)
-            {
-                var referencedCombatIds = new HashSet<string>();
-                foreach (var nd in synth.Nodes.Values)
-                {
-                    foreach (var cid in nd.CombatIds)
-                    {
-                        if (!string.IsNullOrEmpty(cid))
-                            referencedCombatIds.Add(DataHelper.NormalizeKey(cid));
-                    }
-                }
-                // Also gather combats referenced by event reply outcomes
-                foreach (var evtDef in synth.Events.Values)
-                {
-                    foreach (var r in evtDef.Replies)
-                    {
-                        AddCombatRef(referencedCombatIds, r.Ss?.CombatId);
-                        AddCombatRef(referencedCombatIds, r.Fl?.CombatId);
-                        AddCombatRef(referencedCombatIds, r.Ssc?.CombatId);
-                        AddCombatRef(referencedCombatIds, r.Flc?.CombatId);
-                    }
-                }
-
-                foreach (var cId in referencedCombatIds)
-                {
-                    if (patch.Encounters.ContainsKey(cId)) continue;
-                    if (!combatDict.TryGetValue(cId, out var combat) || combat == null) continue;
-
-                    synth.Combats[combat.CombatId] = SnapshotCombatDef(combat);
-                }
-            }
-
-            //  Merge in patch additions (override base) 
-            foreach (var kvp in patch.Encounters)
-                synth.Combats[kvp.Key] = kvp.Value;
-            foreach (var kvp in patch.Events)
-                synth.Events[kvp.Key] = kvp.Value;
-
             _synthesizedCache[zoneId] = synth;
             SynthesisStatus = "";
-            Plugin.Log.LogInfo($"[ZoneEditing] Synthesized ZoneDef for '{zoneId}': {synth.Nodes.Count} nodes, {synth.Roads.Count} roads, {synth.Events.Count} events, {synth.Combats.Count} combats");
+            Plugin.Log.LogInfo($"[ZoneEditing] Synthesized ZoneDef for '{zoneId}': {synth.Nodes.Count} nodes, {synth.Roads.Count} roads");
             return synth;
         }
 
@@ -551,7 +480,16 @@ namespace UnknownMod.Core
             {
                 Plugin.Log.LogError($"[ZoneEditing] Map scene extraction failed: {ex.Message}\n{ex.StackTrace}");
                 _sceneLoadFailed = true;
-                SuppressSceneLoad--;
+                // Ensure the scene is unloaded even on failure
+                try
+                {
+                    SceneManager.sceneUnloaded += OnMapSceneUnloaded;
+                    SceneManager.UnloadSceneAsync(scene);
+                }
+                catch
+                {
+                    SuppressSceneLoad--;
+                }
             }
         }
 

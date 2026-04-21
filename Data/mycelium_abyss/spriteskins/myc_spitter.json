@@ -1,0 +1,8 @@
+﻿{
+    "Id":  "myc_spitter",
+    "BaseSprite":  "slime",
+    "Model":  {
+                  "TintHex":  "red",
+                  "Alpha":  0.5
+              }
+}
