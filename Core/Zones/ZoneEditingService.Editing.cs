@@ -81,7 +81,7 @@ namespace UnknownMod.Core
             if (CurrentZone == null || !CurrentZone.Nodes.TryGetValue(nodeId, out var nodeDef)) return;
 
             // In patch mode, only allow deleting patch-added nodes (not base-game nodes)
-            if (CurrentPatch != null && !CurrentPatch.Nodes.ContainsKey(nodeId))
+            if (CurrentPatch != null && (!CurrentPatch.Nodes.ContainsKey(nodeId) || IsBaseNodeInPatch(nodeId)))
             {
                 Plugin.Log.LogWarning($"[ZoneEditing] Cannot delete base-game node '{nodeId}' from a zone patch.");
                 return;
@@ -95,7 +95,7 @@ namespace UnknownMod.Core
                 string expectedCombatId = "c" + nodeId;
                 if (cid == expectedCombatId)
                 {
-                    if (proj != null) proj.Combats.Remove(cid);
+                    if (proj != null && proj.Combats.Remove(cid)) ModProjectLoader.DeleteEntity(proj, "combats", cid);
                 }
             }
 
@@ -105,7 +105,7 @@ namespace UnknownMod.Core
                 if (string.IsNullOrEmpty(eid)) continue;
                 if (eid.StartsWith($"e_{nodeId}_"))
                 {
-                    if (proj != null) proj.Events.Remove(eid);
+                    if (proj != null && proj.Events.Remove(eid)) ModProjectLoader.DeleteEntity(proj, "events", eid);
                 }
             }
 
@@ -116,7 +116,13 @@ namespace UnknownMod.Core
                 CurrentZone.Roads.Remove(key);
 
             foreach (var otherNode in CurrentZone.Nodes.Values)
+            {
                 otherNode.Connections.Remove(nodeId);
+                // The game dereferences a conditional connection's node unconditionally, so none may point at a deleted node
+                otherNode.ConnectionRequirements.RemoveAll(r => r.TargetNodeId == nodeId);
+                foreach (var r in otherNode.ConnectionRequirements)
+                    if (r.IfNotNodeId == nodeId) r.IfNotNodeId = "";
+            }
 
             CurrentZone.Nodes.Remove(nodeId);
 
@@ -209,7 +215,7 @@ namespace UnknownMod.Core
             string expectedId = "c" + nodeId;
             if (nodeDef.CombatId == expectedId)
             {
-                if (proj != null) proj.Combats.Remove(nodeDef.CombatId);
+                if (proj != null && proj.Combats.Remove(nodeDef.CombatId)) ModProjectLoader.DeleteEntity(proj, "combats", nodeDef.CombatId);
             }
 
 
@@ -231,7 +237,7 @@ namespace UnknownMod.Core
             string expectedId = $"e_{nodeId}_a";
             if (nodeDef.EventId == expectedId)
             {
-                if (proj != null) proj.Events.Remove(nodeDef.EventId);
+                if (proj != null && proj.Events.Remove(nodeDef.EventId)) ModProjectLoader.DeleteEntity(proj, "events", nodeDef.EventId);
             }
 
 

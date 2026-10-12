@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CardbackDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "CardbackName": {
+      "type": "string"
+    },
+    "CardbackTextId": {
+      "type": "string"
+    },
+    "CardbackOrder": {
+      "type": "integer"
+    },
+    "BaseCardback": {
+      "type": "boolean"
+    },
+    "Locked": {
+      "type": "boolean"
+    },
+    "ShowIfLocked": {
+      "type": "boolean"
+    },
+    "RankLevel": {
+      "type": "integer"
+    },
+    "Sku": {
+      "type": "string"
+    },
+    "SteamStat": {
+      "type": "string"
+    },
+    "AdventureLevel": {
+      "type": "integer"
+    },
+    "ObeliskLevel": {
+      "type": "integer"
+    },
+    "SingularityLevel": {
+      "type": "integer"
+    },
+    "PdxAccountRequired": {
+      "type": "boolean"
+    },
+    "HideInGame": {
+      "type": "boolean"
+    },
+    "CardbackSubclass": {
+      "type": "string"
+    },
+    "SpriteSource": {
+      "type": "string"
+    },
+    "SpriteOverride": {
+      "type": "string"
+    }
+  }
+}

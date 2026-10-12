@@ -1,0 +1,24 @@
+{
+  "CombatId": "emyc_24a",
+  "Description": "A horde of mindless warriors surges forward, sustained by dark magic.",
+  "NpcIds": [
+    "myc_thrall",
+    "myc_lurker",
+    "myc_lurker",
+    "myc_blightcaller"
+  ],
+  "CombatTier": "T4",
+  "Background": "Sewers",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 1,
+      "Target": "Monsters"
+    }
+  ]
+}

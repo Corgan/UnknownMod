@@ -1,0 +1,8 @@
+{
+  "Id": "mainperkmycsym2b",
+  "CardClass": "None",
+  "MainPerk": true,
+  "IconTextValue": "+1",
+  "SpriteSource": "aura:myc_symbiosis",
+  "CustomDescription": "When Symbiosis jumps to an ally, that ally also gains 3 Shield."
+}

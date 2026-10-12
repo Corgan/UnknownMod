@@ -12,10 +12,13 @@ namespace UnknownMod.Core
     public static partial class DataHelper
     {
         /// <summary>Create an AICards entry linking a card to NPC behavior.</summary>
-        public static AICards MakeAICard(CardData card, AiCardDef d)
+        public static AICards MakeAICard(Cards.CardRealtimeData card, AiCardDef d, CardDataNew source = null)
         {
             var ai = new AICards();
             ai.Card = card;
+            // cardInstance isn't serialized, so Object.Instantiate (RegisterNPC) drops it; cardSO survives and lets AICards.Card re-resolve
+            if (source != null)
+                Traverse.Create(ai).Field("cardSO").SetValue(source);
             ai.Priority = d.Priority;
             ai.AddCardRound = d.AddCardRound;
             ai.OnlyCastIf = d.OnlyCastIf;
@@ -38,6 +41,22 @@ namespace UnknownMod.Core
                 ai.SecondValueCastIf = d.SecondValueCastIf;
             }
 
+            // The game passes this id straight to Character.HasEffect, which throws on null and aborts the NPC's whole turn.
+            if (ai.AuracurseCastIf == null)
+            {
+                bool NeedsAura(Enums.OnlyCastIf c) => c == Enums.OnlyCastIf.TargetHasAuraCurse || c == Enums.OnlyCastIf.TargetHasNotAuraCurse;
+                if (NeedsAura(ai.OnlyCastIf))
+                {
+                    Plugin.Log.LogError($"[DataHelper] AI card '{card?.Id}' uses {ai.OnlyCastIf} without an AuracurseCastIf; casting it unconditionally instead.");
+                    ai.OnlyCastIf = Enums.OnlyCastIf.Always;
+                }
+                if (NeedsAura(ai.SecondOnlyCastIf))
+                {
+                    Plugin.Log.LogError($"[DataHelper] AI card '{card?.Id}' uses {ai.SecondOnlyCastIf} (second condition) without an AuracurseCastIf; ignoring it.");
+                    ai.SecondOnlyCastIf = Enums.OnlyCastIf.Always;
+                }
+            }
+
             if (!string.IsNullOrEmpty(d.SpecialSecondTargetId))
                 Traverse.Create(ai).Field("_specialSecondTargetID").SetValue(d.SpecialSecondTargetId);
 
@@ -45,7 +64,8 @@ namespace UnknownMod.Core
         }
 
         /// <summary>Create an NPCData with the given stats.</summary>
-        public static NPCData MakeNPC(NpcDef d, string spriteSource)
+        /// <param name="inheritedPortrait">Portrait sprite name taken from the base NPC when this variant has none of its own.</param>
+        public static NPCData MakeNPC(NpcDef d, string spriteSource, string inheritedPortrait = null)
         {
             // Apply variant multipliers
             int hp = d.HpMult != 1f ? (int)(d.Hp * d.HpMult) : d.Hp;
@@ -93,6 +113,25 @@ namespace UnknownMod.Core
                 npc.AuracurseImmune = new List<string>();
 
             CopyVisuals(npc, spriteSource);
+            var hits = ResolveHitSounds(d.HitSound, d.HitSounds, "Npc '" + d.Id + "'");
+            if (hits.Count > 0)
+            {
+                npc.HitSound = hits[0];
+                Traverse.Create(npc).Field("hitSoundRework").SetValue(hits);
+            }
+            string portraitName = !string.IsNullOrEmpty(d.Portrait) ? d.Portrait : inheritedPortrait;
+            if (!string.IsNullOrEmpty(portraitName))
+            {
+                var custom = UnknownMod.Runtime.SpriteUtils.FindSpriteByName(portraitName);
+                if (custom != null) npc.SpritePortrait = custom;
+                else Plugin.Log.LogWarning($"[DataHelper] Npc '{d.Id}' portrait sprite '{portraitName}' was not found.");
+            }
+            if (d.FlipPortrait || d.PortraitScale != 1f || d.PortraitOffsetX != 0f || d.PortraitOffsetY != 0f)
+            {
+                npc.SpritePortrait = UnknownMod.Runtime.SpriteUtils.TransformPortrait(npc.SpritePortrait, d.FlipPortrait, d.PortraitScale, d.PortraitOffsetX, d.PortraitOffsetY);
+                var alternate = Traverse.Create(npc).Field("spritePortraitAlternate");
+                alternate.SetValue(UnknownMod.Runtime.SpriteUtils.TransformPortrait(alternate.GetValue() as Sprite, d.FlipPortrait, d.PortraitScale, d.PortraitOffsetX, d.PortraitOffsetY));
+            }
 
             // Override visual offsets if explicitly set on def
             if (d.FluffOffsetX != 0f) npc.FluffOffsetX = d.FluffOffsetX;
@@ -103,15 +142,28 @@ namespace UnknownMod.Core
         }
 
         /// <summary>
+        /// The base NPC's custom portrait for a variant (_b, _plus, ...) that has none of its own, else null.
+        /// The base is BaseNpcId, or the id with its variant suffix removed.
+        /// </summary>
+        public static string InheritedNpcPortrait(NpcDef d, System.Func<string, NpcDef> find)
+        {
+            if (d == null || !string.IsNullOrEmpty(d.Portrait) || find == null) return null;
+            string baseId = !string.IsNullOrEmpty(d.BaseNpcId) ? d.BaseNpcId : ModRegistry.StripVariantSuffix(d.Id);
+            if (string.IsNullOrEmpty(baseId) || string.Equals(baseId, d.Id, System.StringComparison.OrdinalIgnoreCase)) return null;
+            var baseDef = find(baseId);
+            return baseDef != null && !string.IsNullOrEmpty(baseDef.Portrait) ? baseDef.Portrait : null;
+        }
+
+        /// <summary>
         /// Comprehensive NPC builder: creates NPCData, builds AI cards, wires
         /// variant chain refs. Consolidated entry point for mod-project builds.
         /// </summary>
-        public static NPCData MakeFullNpc(NpcDef d)
+        public static NPCData MakeFullNpc(NpcDef d, string inheritedPortrait = null)
         {
             string spriteSource = !string.IsNullOrEmpty(d.SpriteSource) ? d.SpriteSource : d.BaseNpcId;
             if (string.IsNullOrEmpty(spriteSource)) spriteSource = "yourfirstslime";
 
-            var npc = MakeNPC(d, spriteSource);
+            var npc = MakeNPC(d, spriteSource, inheritedPortrait);
 
             // Build AI cards
             if (d.AiCards != null && d.AiCards.Count > 0)
@@ -121,22 +173,40 @@ namespace UnknownMod.Core
                 {
                     var cardData = GetCard(aiDef.CardId);
                     if (cardData != null)
-                        aiList.Add(MakeAICard(cardData, aiDef));
+                        aiList.Add(MakeAICard(cardData, aiDef, GetCardSource(aiDef.CardId)));
                 }
                 npc.AICards = aiList.ToArray();
             }
 
             // Wire variant chain references (NPCs must already be registered)
             if (!string.IsNullOrEmpty(d.UpgradedMobId))
-                npc.UpgradedMob = GetExistingNPC(d.UpgradedMobId);
+                npc.UpgradedMob = GetExistingNPC(d.UpgradedMobId, false);
             if (!string.IsNullOrEmpty(d.NgPlusMobId))
-                npc.NgPlusMob = GetExistingNPC(d.NgPlusMobId);
+                npc.NgPlusMob = GetExistingNPC(d.NgPlusMobId, false);
             if (!string.IsNullOrEmpty(d.HellModeMobId))
-                npc.HellModeMob = GetExistingNPC(d.HellModeMobId);
+                npc.HellModeMob = GetExistingNPC(d.HellModeMobId, false);
             if (!string.IsNullOrEmpty(d.BaseNpcId))
-                npc.BaseMonster = GetExistingNPC(d.BaseNpcId);
+                npc.BaseMonster = GetExistingNPC(d.BaseNpcId, false);
 
             return npc;
+        }
+
+        /// <summary>
+        /// Second pass: variant-chain refs (upgraded/ng+/hell/base) resolve to null when the target NPC
+        /// is built later in the same pass, so re-resolve them once every NPC is registered.
+        /// </summary>
+        public static void WireNpcVariantRefs(NpcDef d)
+        {
+            string key = NormalizeKey(d.Id);
+            foreach (var field in new[] { "_NPCsSource", "_NPCs", "_NPCsNamed" })
+            {
+                var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, NPCData>>(field).Value;
+                if (dict == null || !dict.TryGetValue(key, out var npc) || npc == null) continue;
+                if (!string.IsNullOrEmpty(d.UpgradedMobId)) npc.UpgradedMob = GetExistingNPC(d.UpgradedMobId);
+                if (!string.IsNullOrEmpty(d.NgPlusMobId)) npc.NgPlusMob = GetExistingNPC(d.NgPlusMobId);
+                if (!string.IsNullOrEmpty(d.HellModeMobId)) npc.HellModeMob = GetExistingNPC(d.HellModeMobId);
+                if (!string.IsNullOrEmpty(d.BaseNpcId)) npc.BaseMonster = GetExistingNPC(d.BaseNpcId);
+            }
         }
 
         /// <summary>

@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RequirementDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "RequirementName": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "AssignToPlayerAtBegin": {
+      "type": "boolean"
+    },
+    "RequirementTrack": {
+      "type": "boolean"
+    },
+    "ItemTrack": {
+      "type": "boolean"
+    },
+    "RequirementZoneFinishTrack": {
+      "type": "string",
+      "enum": [
+        "Senenthia",
+        "Velkarath",
+        "Aquarfall",
+        "Faeborg",
+        "VoidLow",
+        "VoidHigh",
+        "Sectarium",
+        "SpiderLair",
+        "FrozenSewers",
+        "BlackForge",
+        "None",
+        "WolfWars",
+        "Ulminin",
+        "Pyramid",
+        "Sahti",
+        "Dreadnought",
+        "WitchWoods",
+        "CastleCourtyard",
+        "CastleSpire",
+        "Dreams",
+        "WitheredVale",
+        "ZamboraPlains",
+        "ShamanCave"
+      ]
+    },
+    "RequirementZoneFinishTrackAlternate": {
+      "type": "string",
+      "enum": [
+        "Senenthia",
+        "Velkarath",
+        "Aquarfall",
+        "Faeborg",
+        "VoidLow",
+        "VoidHigh",
+        "Sectarium",
+        "SpiderLair",
+        "FrozenSewers",
+        "BlackForge",
+        "None",
+        "WolfWars",
+        "Ulminin",
+        "Pyramid",
+        "Sahti",
+        "Dreadnought",
+        "WitchWoods",
+        "CastleCourtyard",
+        "CastleSpire",
+        "Dreams",
+        "WitheredVale",
+        "ZamboraPlains",
+        "ShamanCave"
+      ]
+    },
+    "WitheredValeUniqueCheck": {
+      "type": "boolean"
+    },
+    "TrackCard": {
+      "type": "string"
+    },
+    "SpriteSource": {
+      "type": "string"
+    }
+  }
+}

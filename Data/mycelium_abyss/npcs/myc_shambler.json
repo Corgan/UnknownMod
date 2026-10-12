@@ -3,8 +3,8 @@
   "Name": "Sporecap Shambler",
   "Description": "",
   "SpriteSource": "treant",
-  "SpriteSkinId": "myc_shambler",
-  "Hp": 95,
+  "VisualGraphId": "myc_shambler_sprite",
+  "Hp": 109,
   "Speed": 10,
   "Energy": 10,
   "EnergyTurn": 0,
@@ -20,7 +20,7 @@
   "ResShadow": 25,
   "AiCards": [
     {
-      "CardId": "myc_toxicslam",
+      "CardId": "myctoxicslam",
       "Priority": 5,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -35,7 +35,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_sporecloud",
+      "CardId": "mycsporemist",
       "Priority": 3,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -50,8 +50,8 @@
       "SecondValueCastIf": 0.0
     }
   ],
-  "XpReward": 18,
-  "GoldReward": 12,
+  "XpReward": 28,
+  "GoldReward": 26,
   "TierReward": 3,
   "IsBoss": false,
   "IsNamed": false,

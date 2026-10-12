@@ -1,0 +1,45 @@
+{
+  "EventId": "e_myc_32",
+  "EventName": "The Mycologist's Camp",
+  "Description": "A canvas tent sags under a thick blanket of mold, but the fire pit beside it is still warm. Racks of sample jars line a fallen log, each labeled in a cramped hand. A half-finished journal lies open: \"It is not a disease. It is a conversation, and we have been answering badly.\"",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Rest by the fire.",
+      "Action": 20,
+      "SsHealPercent": 25,
+      "SsText": "The embers still hold enough heat to cook a meal. You rest more easily than you have in days."
+    },
+    {
+      "ReplyText": "Study the mycologist's samples.",
+      "Action": 57,
+      "SsXP": 45,
+      "SsLootId": "myc_forage",
+      "FlHealFlat": -10,
+      "HasRoll": true,
+      "RollDC": 1,
+      "RollTarget": 3,
+      "RepeatForAllMages": true,
+      "SsText": "The labels make sense once you recognize the system. You learn how the spores spread and how to avoid them.",
+      "FlText": "You open the wrong jar and the contents spray across your face.",
+      "RollMode": 1
+    },
+    {
+      "ReplyText": "Brew a tonic from the samples.",
+      "Action": 42,
+      "SsHealPercent": 25,
+      "SsXP": 20,
+      "FlHealFlat": -15,
+      "HasRoll": true,
+      "RollDC": 2,
+      "RollTarget": 3,
+      "RepeatForAllHealers": true,
+      "SsText": "The mixture steams, turns clear, and tastes of mint. It restores you almost at once.",
+      "FlText": "The tonic curdles. You drink it anyway and regret it."
+    }
+  ]
+}

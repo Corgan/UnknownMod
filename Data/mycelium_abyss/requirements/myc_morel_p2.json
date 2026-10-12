@@ -1,0 +1,13 @@
+{
+  "Id": "myc_morel_p2",
+  "RequirementName": "Morel's Field Notes (II)",
+  "Description": "Notes copied from a waymarker. Morel made a last camp somewhere before the Mycelarch's throne.",
+  "AssignToPlayerAtBegin": false,
+  "RequirementTrack": false,
+  "ItemTrack": true,
+  "RequirementZoneFinishTrack": "None",
+  "RequirementZoneFinishTrackAlternate": "None",
+  "WitheredValeUniqueCheck": false,
+  "TrackCard": "",
+  "SpriteSource": "oldnotes"
+}

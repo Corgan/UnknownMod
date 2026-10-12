@@ -11,24 +11,34 @@
     {
       "ReplyText": "Walk through the pulsing corridor.",
       "Action": 29,
-      "SsText": "You push through the fleshy tunnel. The walls constrict around you, their bioluminescent veins flaring with each pulse. Spore-laden fluid drips onto your skin, stinging wherever it touches.",
-      "SsHealFlat": -15
+      "SsHealFlat": -15,
+      "SsXP": 25,
+      "SsText": "You push through the fleshy tunnel. The walls constrict around you, their bioluminescent veins flaring with each pulse. Spore-laden fluid drips onto your skin, stinging wherever it touches."
     },
     {
       "ReplyText": "Climb over the rubble to find another way.",
-      "Action": 30,
-      "HasRoll": true,
-      "RollDC": 4,
-      "RollCard": 1,
-      "SsText": "With careful footing and strong arms, you haul yourselves over the collapsed section and find a dry passage beyond. A stash of coins glints among the rubble.",
-      "SsGold": 40,
+      "Action": 40,
       "FlText": "The rubble shifts beneath you. Rocks tumble down, battering your party as the unstable passage collapses around your feet.",
-      "FlHealFlat": -25
+      "HasRoll": true,
+      "SsText": "With careful footing and strong arms, you haul yourselves over the collapsed section and find a dry passage beyond. A stash of coins glints among the rubble.",
+      "FlHealFlat": -25,
+      "RollDC": 1,
+      "SsGold": 40,
+      "RepeatForAllWarriors": true,
+      "RollTarget": 3
     },
     {
-      "ReplyText": "Search for an air pocket route. [Scout]",
-      "Action": 29,
-      "SsText": "Your keen eyes spot a narrow crack where fresh air flows. You guide the party through a hidden passage that bypasses the worst of the spores, emerging on the other side unscathed."
+      "ReplyText": "Search for an air pocket route.",
+      "Action": 35,
+      "FlText": "The crack leads nowhere. By the time you double back, the spores have thickened and your lungs burn.",
+      "HasRoll": true,
+      "SsText": "Your keen eyes spot a narrow crack where fresh air flows. You guide the party through a hidden passage that bypasses the worst of the spores. Tucked inside, an abandoned forager's satchel still holds fresh supplies.",
+      "SsLootId": "myc_forage",
+      "RollDC": 1,
+      "FlHealFlat": -10,
+      "RepeatForAllScouts": true,
+      "RollTarget": 3,
+      "RollMode": 1
     }
   ]
 }

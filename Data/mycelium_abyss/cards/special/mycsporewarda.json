@@ -1,0 +1,22 @@
+{
+  "Id": "mycsporewarda",
+  "Name": "Sporeward",
+  "Description": "<Gain><br2><Aura_AuraCharges> <Aura2_AuraCharges>",
+  "Fluff": "A canopy of caps closes over the party.",
+  "CardClass": "Special",
+  "CardType": "Defense",
+  "CardRarity": "Epic",
+  "CardUpgraded": "A",
+  "BaseCardId": "mycsporeward",
+  "EnergyCost": 2,
+  "Vanish": true,
+  "SpriteSource": "myc_art_sporeward",
+  "Aura": "shield",
+  "AuraCharges": 20,
+  "Aura2": "thorns",
+  "Aura2Charges": 4,
+  "EffectTarget": "defend",
+  "TargetPos": "Anywhere",
+  "TargetSide": "Friend",
+  "TargetType": "Global"
+}

@@ -1,0 +1,27 @@
+{
+  "PackId": "myc_pack_symbiont",
+  "PackName": "Symbiont",
+  "RequiredClassId": "",
+  "PackClass": "Scout",
+  "CardIds": [
+    "mycregrow",
+    "myccapshield",
+    "mycmycelialweb",
+    "helpinghand",
+    "shakeitoff",
+    "battleplan",
+    "mycfruitingbody",
+    "mycrootbound"
+  ],
+  "SpecialCardIds": [
+    "mychivemind",
+    "battleshout",
+    "mycrebirth"
+  ],
+  "PerkIds": [
+    "mainperkregeneration0",
+    "mainperkregeneration1a",
+    "mainperkheal0",
+    "mainperkvitality1b"
+  ]
+}

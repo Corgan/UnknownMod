@@ -1,0 +1,18 @@
+{
+  "CombatId": "cmyc_w1",
+  "Description": "Sprouts fan out behind the thralls, feeding them with living roots.",
+  "NpcIds": [
+    "myc_sproutling",
+    "myc_thrall",
+    "myc_thrall",
+    ""
+  ],
+  "CombatTier": "T3",
+  "Background": "Velkarath_Cave",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

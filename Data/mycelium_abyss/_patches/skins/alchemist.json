@@ -1,0 +1,15 @@
+{
+  "Id": "alchemist",
+  "SkinName": "Alchemist",
+  "SkinSubclass": "alchemist",
+  "BaseSkin": true,
+  "SkinOrder": 0,
+  "PerkLevel": 0,
+  "Sku": "",
+  "SteamStat": "",
+  "SkinTextId": "",
+  "HideInGame": false,
+  "SpriteSource": "alchemist",
+  "HeroSelectionScreenScale": 1.0,
+  "HeroSelectionScreenOffsetX": 0.0
+}

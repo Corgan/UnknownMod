@@ -1,0 +1,14 @@
+{
+  "Id": "myc_lichenden",
+  "NumItems": 1,
+  "GoldQuantity": 0,
+  "Items": [
+    {
+      "CardId": "myclichenblob",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    }
+  ]
+}

@@ -18,6 +18,9 @@ namespace UnknownMod.Definitions
         public string SoundSource = "";
         /// <summary>Base-game pet card ID to copy the pet model prefab from.</summary>
         public string PetModelSource = "";
+        /// <summary>Sprite name (game or mod) for the boss-drop art. Blank keeps the SpriteSource value.</summary>
+        public string SpriteBossDrop = "";
+        public bool ShouldSerializeSpriteBossDrop() => !string.IsNullOrEmpty(SpriteBossDrop);
 
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CardType CardType = Enums.CardType.Weapon;
@@ -157,6 +160,18 @@ namespace UnknownMod.Definitions
         public bool Acg3MultiplyByEnergyUsed = false;
         public bool ChooseOneACToGain = false;
 
+        // ── Self activation / misc ───────────────────────────────
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.EventActivation ActivationSelf = Enums.EventActivation.None;
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.PercentHpBase HealPercentQuantitySelfBase = Enums.PercentHpBase.MaxHp;
+        public bool ResurgeChoose = false;
+        public bool CombatCorruption = false;
+        public bool ShiftElementalResistance = false;
+        /// <summary>Per-stack tables used by Echo-style adaptation enchantments. Null/empty = none.</summary>
+        public List<EchoAdaptationDef> EchoAdaptationValues;
+        public bool ShouldSerializeEchoAdaptationValues() => EchoAdaptationValues != null && EchoAdaptationValues.Count > 0;
+
         // ── On-activation AuraCurse (self) ───────────────────────
         public string AuracurseGainSelf1 = "";
         public int AuracurseGainSelfValue1 = 0;
@@ -197,8 +212,8 @@ namespace UnknownMod.Definitions
         public Enums.CardType CardToGainType = Enums.CardType.None;
 
         [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.CardPlace CardPlace = Enums.CardPlace.Hand;
-        public List<string> CardToGainList = new();
+        public Enums.CardPlace CardPlace = Enums.CardPlace.Discard;
+        public List<string> CardToGainList = null;
 
         // ── Cost / Economy ───────────────────────────────────────
         public bool CostZero = false;
@@ -247,8 +262,8 @@ namespace UnknownMod.Definitions
         public bool IsEnchantment = false;
         public bool UseTheNextInsteadWhenYouPlay = false;
         public int DestroyAfterUses = 0;
-        public bool DestroyStartOfTurn = false;
-        public bool DestroyEndOfTurn = false;
+        public int DestroyStartOfTurn = 0;
+        public int DestroyEndOfTurn = 0;
         public bool CastEnchantmentOnFinishSelfCast = false;
 
         // ── Custom AC ────────────────────────────────────────────
@@ -276,5 +291,12 @@ namespace UnknownMod.Definitions
         /// auto-synced from the ItemDef identity fields at build time.
         /// </summary>
         public CardDef Card = new();
+    }
+
+    [Serializable]
+    public class EchoAdaptationDef
+    {
+        public int[] ResistanceFromPlayerDamagePercentBonuses = new int[0];
+        public int[] CursesPurgeFromPlayerCastsPercent = new int[0];
     }
 }

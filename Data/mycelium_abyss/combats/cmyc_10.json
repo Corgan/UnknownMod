@@ -1,16 +1,24 @@
 {
   "CombatId": "cmyc_10",
-  "Description": "Two colossal root-golems lumber out of the darkness.",
+  "Description": "A horde of mindless warriors surges forward, sustained by dark magic.",
   "NpcIds": [
-    "myc_golem",
-    "myc_golem"
+    "myc_thrall",
+    "myc_lurker",
+    "myc_lurker",
+    "myc_blightcaller"
   ],
   "CombatTier": "T4",
-  "Background": "Spider_Lair",
+  "Background": "Sewers",
   "NpcRemoveInMadness0Index": -1,
   "HealHeroes": false,
   "IsRift": false,
   "NpcToSummonOnKilledId": "",
   "EventDataId": "",
-  "CombatEffects": []
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 1,
+      "Target": "Monsters"
+    }
+  ]
 }

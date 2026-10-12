@@ -72,7 +72,7 @@ namespace UnknownMod.Editor
             if (EditorFields.Section("Layout", ref _secLayout))
             {
                 d.Row = EditorFields.IntField("Row", d.Row, 0, 6);
-                d.Column = EditorFields.IntField("Column", d.Column, 0, 11);
+                d.Column = EditorFields.IntField("Column", d.Column, -Patches.MaxExtraPerkColumns, 11);
                 d.Type = EditorFields.IntField("Type", d.Type, 0, 3);
             }
 
@@ -92,6 +92,7 @@ namespace UnknownMod.Editor
             }
 
             //  Connected Nodes 
+            if (d.PerksConnected == null) d.PerksConnected = new List<string>();
             if (EditorFields.Section($"Connected Nodes ({d.PerksConnected.Count})", ref _secConnected))
             {
                 var pnIds = BuildPerkNodeIdList(proj);
@@ -99,14 +100,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     d.PerksConnected[i] = EditorFields.IdDropdown("", d.PerksConnected[i], pnIds, $"pn_cn_{i}", pickerMode: EntityPicker.Mode.PerkNode);
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.PerksConnected.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, d.PerksConnected.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.PerksConnected, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Node", EditorStyles.MiniButton, GUILayout.Width(80)))
                 {

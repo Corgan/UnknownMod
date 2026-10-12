@@ -1,0 +1,17 @@
+{
+  "Id": "myc_thickcap",
+  "TraitName": "Thick Cap",
+  "TraitCard": "mycsporeward",
+  "Description": "Shadow and Mind resistance +15%. Symbiosis +1. Enemies that hit you gain 3 Spore Rot.",
+  "Activations": [
+    "PreBeginCombat",
+    "Hitted"
+  ],
+  "ResistModifiedValue1": 15,
+  "AuracurseBonusValue1": 1,
+  "AuracurseBonus1": "myc_symbiosis",
+  "ResistModifiedValue2": 15,
+  "ResistModified1": "Shadow",
+  "ResistModified2": "Mind",
+  "TimesPerTurn": 3
+}

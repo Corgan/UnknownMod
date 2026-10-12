@@ -34,8 +34,15 @@ namespace UnknownMod.Editor.Tabs
                     DrawCardbackPreview(rect);
                     break;
                 case SubTab.PlayerPacks:
-                    EditorStyles.ViewportBackground(rect);
+                {
+                    var proj = ModManagerPanel.ActiveProject;
+                    var cpp = _editor.CardPlayerPackEdit;
+                    if (cpp != null && cpp.PairsMode)
+                        EntitySummaryView.DrawFrom(rect, "a pairs pack", cpp.SelectedPairsPackId, proj?.CardPlayerPairsPacks, proj?.CardPlayerPairsPackPatches);
+                    else
+                        EntitySummaryView.DrawFrom(rect, "a player pack", cpp?.SelectedPlayerPackId, proj?.CardPlayerPacks, proj?.CardPlayerPackPatches);
                     break;
+                }
             }
         }
 

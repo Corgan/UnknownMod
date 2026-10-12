@@ -2,8 +2,8 @@
   "NodeId": "myc_19",
   "NodeName": "Fungal Laboratory",
   "Description": "",
-  "PosX": 0.8,
-  "PosY": -1.6,
+  "PosX": 0.6959961,
+  "PosY": -1.23037112,
   "TravelDestination": false,
   "GoToTown": false,
   "ExistsPercent": 100,
@@ -15,10 +15,19 @@
   "CombatTier": "T0",
   "CombatPercent": 0,
   "EventIds": [
+    "e_myc_39",
     "e_myc_19"
   ],
   "EventPercent": 100,
   "NodeEventTier": "T0",
+  "NodeEventPriority": [
+    0,
+    1
+  ],
+  "NodeEventPercent": [
+    100,
+    100
+  ],
   "Connections": [
     "myc_25"
   ]

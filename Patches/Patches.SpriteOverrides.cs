@@ -1,6 +1,7 @@
 using HarmonyLib;
 using System.Collections.Generic;
 using UnityEngine;
+using BattleMatch;
 using UnknownMod.Core;
 using UnknownMod.Definitions;
 using UnknownMod.Runtime;
@@ -8,254 +9,160 @@ using UnknownMod.Runtime;
 namespace UnknownMod
 {
     /// <summary>
-    /// Character override patches — attach CharacterOverrideDriver after NPC/Hero model init.
+    /// Graft Sprite patches — apply visual graphs after NPC/Hero/pet model init.
     /// </summary>
     public static partial class Patches
     {
-        /// <summary>
-        /// Register graft puppet SpriteRenderers with the host CharacterItem so
-        /// game effects (hover outline, darken, stealth/taunt materials) include them.
-        /// </summary>
-        private static void RegisterPuppetSpritesWithHost(CharacterItem host, CharacterOverrideDriver driver)
+        private static bool ApplyVisualGraph(CompiledCharacterVisualGraph graph, Transform root, CharacterItem item)
         {
-            var puppetSprites = driver.GetPuppetVisibleSprites();
-            if (puppetSprites.Count == 0) return;
-
-            // Access animatedSprites (internal) and animatedSpritesDefaultMaterial (private) via Harmony
-            var animSprites = Traverse.Create(host).Field<List<SpriteRenderer>>("animatedSprites").Value;
-            var matDict = Traverse.Create(host).Field<Dictionary<string, Material>>("animatedSpritesDefaultMaterial").Value;
-            if (animSprites == null || matDict == null) return;
-
-            foreach (var sr in puppetSprites)
-            {
-                if (sr == null) continue;
-                // Guard against double-registration (e.g. game re-calls GetSpritesFromAnimated)
-                if (animSprites.Contains(sr)) continue;
-                animSprites.Add(sr);
-                // Use a unique key to avoid name collisions with host bones that share
-                // the same name (game's SetStealth/SetTaunt/SetParalyze restore materials
-                // via animatedSpritesDefaultMaterial[sr.name], so collisions cause wrong material).
-                string matKey = $"puppet_{sr.GetInstanceID()}";
-                sr.name = matKey;
-                if (!matDict.ContainsKey(matKey))
-                    matDict.Add(matKey, sr.sharedMaterial);
-            }
-
-            Plugin.Log.LogInfo($"[Patches] Registered {puppetSprites.Count} puppet sprites with host '{host.name}'");
+            if (graph == null || root == null) return false;
+            if (!root.gameObject.activeSelf) root.gameObject.SetActive(true);
+            var rootAnimator = root.GetComponent<Animator>();
+            return VisualGraphHost.GetOrAdd(root).Apply(graph, root, item, rootAnimator != null ? rootAnimator : item.Anim);
         }
 
-        /// <summary>
-        /// Remove stale puppet sprites from the host's animatedSprites/material dict,
-        /// then destroy the old driver. Must be called BEFORE destroying GraftPuppet GOs.
-        /// </summary>
-        private static void CleanupOldOverride(CharacterOverrideDriver oldDriver, CharacterItem host)
+        /// <summary>The game rewrites every sprite's sort order as (base - index) whenever it re-sorts a character; lay grafts back into the draw stack afterwards.</summary>
+        [HarmonyPatch(typeof(CharacterItem), "DrawOrderSprites")]
+        [HarmonyPostfix]
+        public static void CharacterItemDrawOrderSprites_Postfix(CharacterItem __instance)
         {
-            // Collect all SpriteRenderers that the old driver registered as puppets
-            var staleSprites = new HashSet<SpriteRenderer>(oldDriver.GetPuppetVisibleSprites());
-            if (staleSprites.Count > 0)
-            {
-                var animSprites = Traverse.Create(host).Field<List<SpriteRenderer>>("animatedSprites").Value;
-                var matDict = Traverse.Create(host).Field<Dictionary<string, Material>>("animatedSpritesDefaultMaterial").Value;
-                if (animSprites != null)
-                    animSprites.RemoveAll(sr => sr == null || staleSprites.Contains(sr));
-                if (matDict != null)
-                {
-                    foreach (var sr in staleSprites)
-                    {
-                        if (sr != null) matDict.Remove(sr.name);
-                    }
-                }
-            }
-            UnityEngine.Object.DestroyImmediate(oldDriver);
+            try { VisualGraphHost.RelayerFor(__instance); }
+            catch (System.Exception ex) { Plugin.Log.LogError($"[Patches] Graft Sprite layering failed: {ex}"); }
         }
 
         // ═══════════════════════════════════════════════════════════════
-        //  NPC SPRITE OVERRIDES
+        //  NPC GRAFT SPRITES
         // ═══════════════════════════════════════════════════════════════
 
-        /// <summary>
-        /// After NPCItem.Init() instantiates the animated model, attach the
-        /// CharacterOverrideDriver component which applies bone overrides in LateUpdate
-        /// (so they persist through animations).
-        /// </summary>
+        /// <summary>After NPCItem.Init() instantiates the animated model, apply the NPC's Graft Sprite, if any.</summary>
         [HarmonyPatch(typeof(NPCItem), "Init")]
         [HarmonyPostfix]
         public static void NPCItemInit_Postfix(NPCItem __instance)
         {
             try
             {
-                if (__instance?.NPC == null)
-                {
-                    Plugin.Log.LogDebug($"[Patches] CharacterOverride skip: NPC={__instance?.NPC != null}");
-                    return;
-                }
+                if (__instance?.NPC == null) return;
 
                 string npcId = __instance.NPC.GameName;
-
-                // Find which modded zone owns this NPC (works across multiple loaded mods)
                 string baseId = ModRegistry.StripVariantSuffix(npcId);
 
-                // Resolve sprite definition: try GlobalNpcs → SpriteSkinId → GlobalSpriteSkins first
-                CharacterOverrideDef overrideDef = null;
-                NpcDef npcDef = null;
-
-                // Direct path: global NPC defs → SpriteSkinId
-                // Try exact npcId first so variant-specific defs win over base defs.
-                if (ModRegistry.GlobalNpcs.TryGetValue(npcId, out npcDef) ||
-                    ModRegistry.GlobalNpcs.TryGetValue(baseId, out npcDef))
-                {
-                    overrideDef = ModRegistry.ResolveOverrideForNpc(npcDef);
-                }
-
-                if (overrideDef == null)
-                {
-                    Plugin.Log.LogDebug($"[Patches] CharacterOverride: no override def for '{npcId}'");
-                    return;
-                }
-
-                // Skip if no per-frame overrides exist.
-                // Note: RemovedBones requires per-frame enforcement because the Animator
-                // can re-enable SpriteRenderers via animation curves each frame.
-                if (overrideDef.BoneOverrides.Count == 0 && overrideDef.CustomSprites.Count == 0 &&
-                    overrideDef.RemovedBones.Count == 0 && overrideDef.Grafts.Count == 0 &&
-                    overrideDef.Model.IsDefault() &&
-                    (overrideDef.AnimOverrides == null || overrideDef.AnimOverrides.Count == 0))
+                // Exact id first so variant-specific defs win over base defs.
+                NpcDef npcDef;
+                if (!ModRegistry.GlobalNpcs.TryGetValue(npcId, out npcDef) &&
+                    !ModRegistry.GlobalNpcs.TryGetValue(baseId, out npcDef))
                     return;
 
-                // Find the animated model root — use NPCItem.animatedTransform
-                // which is set during Init() after the GameObjectAnimated prefab
-                // is instantiated. GetComponentInChildren<Animator>() is unreliable
-                // because it can hit UI elements (e.g. EmoteCharacterPing) first.
-                Transform animRoot = __instance.animatedTransform;
-
-                if (animRoot == null)
-                {
-                    Plugin.Log.LogWarning($"[Patches] CharacterOverride: animatedTransform is null on '{npcId}' — NPC may not have an animated model");
-                    return;
-                }
-
-                Plugin.Log.LogInfo($"[Patches] CharacterOverride: attaching driver to '{npcId}' " +
-                    $"(bones={overrideDef.BoneOverrides.Count}, grafts={overrideDef.Grafts.Count}, " +
-                    $"animRoot='{animRoot.name}')");
-
-                // The custom prefab is built with SetActive(false) to hide the
-                // DontDestroyOnLoad template from the scene. Instantiate clones inherit
-                // inactive state, so activate the model here before attaching components.
-                if (!animRoot.gameObject.activeSelf)
-                    animRoot.gameObject.SetActive(true);
-
-                // Guard against double-init: destroy existing driver + puppets
-                var existing = animRoot.gameObject.GetComponent<CharacterOverrideDriver>();
-                if (existing != null)
-                {
-                    Plugin.Log.LogDebug($"[Patches] CharacterOverride: destroying previous driver on '{animRoot.name}'");
-                    CleanupOldOverride(existing, __instance);
-                }
-                foreach (var oldPuppet in animRoot.GetComponentsInChildren<GraftPuppet>(true))
-                    UnityEngine.Object.DestroyImmediate(oldPuppet.gameObject);
-
-                // Attach CharacterOverrideDriver for LateUpdate-based override persistence
-                var ovrComponent = animRoot.gameObject.AddComponent<CharacterOverrideDriver>();
-                ovrComponent.Init(overrideDef);
-
-                // Register puppet sprites with host CharacterItem for game effects
-                RegisterPuppetSpritesWithHost(__instance, ovrComponent);
-
-                // Defer collider recalc to first LateUpdate when all bone positions are finalized
-                ovrComponent.ScheduleColliderRecalc(__instance);
+                CompiledCharacterVisualGraph graph;
+                if (!ModRegistry.TryResolveVisualGraphForNpc(npcDef, out graph)) return;
+                if (__instance.animatedTransform == null) return;
+                VisualGraphHost.GetOrAdd(__instance.animatedTransform).Apply(graph, __instance.animatedTransform, __instance, __instance.Anim,
+                    new VisualGraphBinding { Kind = VisualGraphBindingKind.Npc, PrimaryId = npcId });
             }
             catch (System.Exception ex)
             {
-                Plugin.Log.LogError($"[Patches] CharacterOverride NPC failed: {ex}");
+                Plugin.Log.LogError($"[Patches] Graft Sprite NPC failed: {ex}");
             }
         }
-
         // ═══════════════════════════════════════════════════════════════
-        //  HERO SPRITE OVERRIDES
+        //  HERO GRAFT SPRITES
         // ═══════════════════════════════════════════════════════════════
 
-        /// <summary>
-        /// After HeroItem.Init() instantiates the animated model, attach the
-        /// CharacterOverrideDriver component if the hero's active skin has a sprite
-        /// override registered. Uses the same generic component as NPCs since
-        /// both share the same CharacterItem/SpriteSkin/Animator infrastructure.
-        /// </summary>
+        /// <summary>After HeroItem.Init() instantiates the animated model, apply the active skin's Graft Sprite, if any.</summary>
         [HarmonyPatch(typeof(HeroItem), "Init")]
         [HarmonyPostfix]
         public static void HeroItemInit_Postfix(HeroItem __instance, Hero _hero)
         {
             try
             {
-                if (_hero == null)
+                string skinId = _hero?.SkinUsed;
+                if (string.IsNullOrEmpty(skinId)) return;
+
+                CompiledCharacterVisualGraph graph;
+                if (!ModRegistry.TryResolveVisualGraphForSkin(skinId, out graph)) return;
+                if (__instance.animatedTransform == null)
                 {
-                    Plugin.Log.LogDebug("[Patches] HeroCharacterOverride skip: hero is null");
+                    Plugin.Log.LogWarning($"[Patches] Skin '{skinId}' has a Graft Sprite but its hero has no animated model. Its Host Model must be a hero skin (e.g. 'archer') or a monster with an animated model.");
                     return;
                 }
-
-                // Get the active skin ID from the Hero's Character base class
-                string skinId = _hero.SkinUsed;
-                if (string.IsNullOrEmpty(skinId))
-                {
-                    Plugin.Log.LogDebug($"[Patches] HeroCharacterOverride: no skin set for hero '{_hero.SubclassName}'");
-                    return;
-                }
-
-                // Look up the sprite override def for this skin
-                CharacterOverrideDef overrideDef = ModRegistry.ResolveOverrideForSkin(skinId);
-                if (overrideDef == null)
-                {
-                    Plugin.Log.LogDebug($"[Patches] HeroCharacterOverride: no override def for skin '{skinId}'");
-                    return;
-                }
-
-                // Skip if no per-frame overrides exist.
-                // Note: RemovedBones requires per-frame enforcement because the Animator
-                // can re-enable SpriteRenderers via animation curves each frame.
-                if (overrideDef.BoneOverrides.Count == 0 && overrideDef.CustomSprites.Count == 0 &&
-                    overrideDef.RemovedBones.Count == 0 && overrideDef.Grafts.Count == 0 &&
-                    overrideDef.Model.IsDefault() &&
-                    (overrideDef.AnimOverrides == null || overrideDef.AnimOverrides.Count == 0))
-                    return;
-
-                // Find the animated model root
-                Transform animRoot = __instance.animatedTransform;
-                if (animRoot == null)
-                {
-                    Plugin.Log.LogWarning($"[Patches] HeroCharacterOverride: animatedTransform is null on hero '{_hero.SubclassName}' skin '{skinId}'");
-                    return;
-                }
-
-                Plugin.Log.LogInfo($"[Patches] HeroCharacterOverride: attaching to hero '{_hero.SubclassName}' " +
-                    $"skin='{skinId}' (bones={overrideDef.BoneOverrides.Count}, grafts={overrideDef.Grafts.Count}, " +
-                    $"animRoot='{animRoot.name}')");
-
-                // Activate if cloned from an inactive custom prefab template
-                if (!animRoot.gameObject.activeSelf)
-                    animRoot.gameObject.SetActive(true);
-
-                // Guard against double-init: destroy existing driver + puppets
-                var existing = animRoot.gameObject.GetComponent<CharacterOverrideDriver>();
-                if (existing != null)
-                {
-                    Plugin.Log.LogDebug($"[Patches] HeroCharacterOverride: destroying previous driver on '{animRoot.name}'");
-                    CleanupOldOverride(existing, __instance);
-                }
-                foreach (var oldPuppet in animRoot.GetComponentsInChildren<GraftPuppet>(true))
-                    UnityEngine.Object.DestroyImmediate(oldPuppet.gameObject);
-
-                // Attach CharacterOverrideDriver for LateUpdate-based override persistence
-                var ovrComponent = animRoot.gameObject.AddComponent<CharacterOverrideDriver>();
-                ovrComponent.Init(overrideDef);
-
-                // Register puppet sprites with host CharacterItem for game effects
-                RegisterPuppetSpritesWithHost(__instance, ovrComponent);
-
-                // Defer collider recalc to first LateUpdate when all bone positions are finalized
-                ovrComponent.ScheduleColliderRecalc(__instance);
+                VisualGraphHost.GetOrAdd(__instance.animatedTransform).Apply(graph, __instance.animatedTransform, __instance, __instance.Anim,
+                    new VisualGraphBinding { Kind = VisualGraphBindingKind.HeroSkin, PrimaryId = skinId });
             }
             catch (System.Exception ex)
             {
-                Plugin.Log.LogError($"[Patches] HeroCharacterOverride failed: {ex}");
+                Plugin.Log.LogError($"[Patches] Graft Sprite hero failed: {ex}");
+            }
+        }
+        /// <summary>
+        /// The hero select popup instantiates the skin's raw model without HeroItem.Init, so the skin's visual graph (grafts, flip, tint)
+        /// would be missing there. Apply it to the popup's preview model.
+        /// </summary>
+        [HarmonyPatch(typeof(CharPopup), "SetHeroAnimated")]
+        [HarmonyPostfix]
+        public static void CharPopupSetHeroAnimated_Postfix(CharPopup __instance, GameObject heroSkin)
+        {
+            try
+            {
+                var t = Traverse.Create(__instance);
+                var model = t.Field("heroAnimated").GetValue<GameObject>();
+                var scd = t.Field("SCD").GetValue<SubClassData>();
+                if (model == null || scd == null || ModRegistry.SkinVisualGraphs.Count == 0) return;
+
+                string active = PlayerManager.Instance.GetActiveSkin(scd.Id);
+                string skinId = active;
+                if (heroSkin != null)
+                {
+                    skinId = null;
+                    foreach (var s in Globals.Instance.GetSkinsBySubclass(scd.Id))
+                    {
+                        if (s == null || s.SkinGo != heroSkin) continue;
+                        if (string.Equals(s.SkinId, active, System.StringComparison.OrdinalIgnoreCase)) { skinId = s.SkinId; break; }
+                        if (skinId == null || ModRegistry.SkinVisualGraphs.ContainsKey(s.SkinId ?? "")) skinId = s.SkinId;
+                    }
+                }
+                if (string.IsNullOrEmpty(skinId)) return;
+                if (!ModRegistry.TryResolveVisualGraphForSkin(skinId, out var graph)) return;
+
+                var host = VisualGraphHost.GetOrAdd(model.transform);
+                if (string.Equals(host.GraphId, graph.Id, System.StringComparison.OrdinalIgnoreCase)) return;
+                host.ApplyStatic(graph, model.transform, model.GetComponent<Animator>(), 2000, SortingLayer.NameToID("UI"),
+                    new VisualGraphBinding { Kind = VisualGraphBindingKind.HeroSkin, PrimaryId = skinId });
+            }
+            catch (System.Exception ex)
+            {
+                Plugin.Log.LogError($"[Patches] Graft Sprite hero popup failed: {ex}");
+            }
+        }
+
+        [HarmonyPatch(typeof(BattleTeamManager), "CreatePet")]
+        [HarmonyPostfix]
+        public static void BattleTeamManagerCreatePet_Postfix(
+            Cards.CardRealtimeData petCard, GameObject charGO, Hero _hero, NPC _npc,
+            bool _fromEnchant, string _enchantName)
+        {
+            try
+            {
+                if (petCard == null || charGO == null) return;
+                CompiledCharacterVisualGraph graph;
+                if (!ModRegistry.TryResolveVisualGraphForPet(petCard.Id, petCard.InternalId, out graph)) return;
+                string childName = _fromEnchant ? "thePetEnchantment" + (_enchantName ?? "") : "thePet";
+                Transform petRoot = charGO.transform.Find(childName);
+                NPCItem petItem = petRoot == null ? null : petRoot.GetComponent<NPCItem>();
+                if (petItem == null)
+                {
+                    Plugin.Log.LogWarning($"[Patches] Visual graph '{graph.Id}' pet '{petCard.Id}' child '{childName}' has no NPCItem.");
+                    return;
+                }
+                VisualGraphHost.GetOrAdd(petRoot).Apply(graph, petRoot, petItem, petItem.Anim,
+                    new VisualGraphBinding
+                    {
+                        Kind = _fromEnchant ? VisualGraphBindingKind.EnchantmentPet : VisualGraphBindingKind.Pet,
+                        PrimaryId = petCard.Id,
+                        SecondaryId = petCard.InternalId
+                    });
+            }
+            catch (System.Exception ex)
+            {
+                Plugin.Log.LogError($"[Patches] Visual graph pet attachment failed: {ex}");
             }
         }
     }

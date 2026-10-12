@@ -1,0 +1,26 @@
+{
+  "PackId": "myc_pack_thornhide",
+  "PackName": "Thornhide",
+  "RequiredClassId": "",
+  "PackClass": "Scout",
+  "CardIds": [
+    "barbedwire",
+    "spikedshield",
+    "myccapshield",
+    "mycrootlash",
+    "guard",
+    "intercept",
+    "mycrootbound",
+    "mycbracket"
+  ],
+  "SpecialCardIds": [
+    "thousandneedles",
+    "stockade"
+  ],
+  "PerkIds": [
+    "mainperkthorns0",
+    "mainperkthorns1a",
+    "mainperkthorns1b",
+    "mainperkthorns1c"
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "Id": "mainperkmycrot2c",
+  "CardClass": "None",
+  "MainPerk": true,
+  "IconTextValue": "+1",
+  "SpriteSource": "aura:myc_sporerot",
+  "CustomDescription": "When an enemy with 4 or more Spore Rot dies, this hero heals 4 HP."
+}

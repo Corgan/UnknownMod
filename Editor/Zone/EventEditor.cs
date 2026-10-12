@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Newtonsoft.Json;
 using System.Linq;
 using UnityEngine;
 using UnknownMod.Core;
@@ -13,7 +14,7 @@ namespace UnknownMod.Editor
     /// Supports full 4-branch outcomes (Success, Fail, Crit Success, Crit Fail)
     /// with all game-matching fields.
     /// </summary>
-    public class EventEditor
+    public partial class EventEditor : IEntityActions
     {
         private readonly ModEditor _parent;
         private int _expandedReply = -1;
@@ -39,12 +40,82 @@ namespace UnknownMod.Editor
             System.Array.Resize(ref _secFlc, newSize);
         }
 
-        public EventEditor(ModEditor parent) => _parent = parent;
+        private readonly EntityHistory<EventDef> _history;
+        private RenameTracker _ren;
+        private RenameTracker Ren => _ren ??= new RenameTracker("event", (p, patch) => patch ? p.EventPatches : p.Events, (cur, orig, patch) => _history.Rename(cur, orig, patch));
+
+        public EventEditor(ModEditor parent)
+        {
+            _parent = parent;
+            _history = new EntityHistory<EventDef>
+            {
+                NewDict = p => p.Events,
+                PatchDict = p => p.EventPatches,
+                Save = (p, d, isPatch) => ModProjectLoader.SaveEntity(p, "events", d.EventId, d, isPatch),
+                DeleteFiles = (p, id, isPatch) => ModProjectLoader.DeleteEntity(p, "events", id, isPatch),
+                GetSelected = () => _parent.SelectedEventId,
+                Select = id => { _parent.SelectedEventId = id; _expandedReply = -1; },
+            };
+        }
+
+        private string _pendingRemoveId;
+
+        public bool CanDuplicate
+        {
+            get
+            {
+                var p = ModManagerPanel.ActiveProject;
+                string id = _parent.SelectedEventId;
+                return p != null && !string.IsNullOrEmpty(id) && (p.Events.ContainsKey(id) || p.EventPatches.ContainsKey(id));
+            }
+        }
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Run(EditorCommand command)
+        {
+            switch (command)
+            {
+                case EditorCommand.Duplicate: DuplicateSelected(); break;
+                case EditorCommand.Undo: _history.Undo(); break;
+                case EditorCommand.Redo: _history.Redo(); break;
+            }
+        }
+
+        private void DuplicateSelected()
+        {
+            var proj = ModManagerPanel.ActiveProject;
+            string id = _parent.SelectedEventId;
+            if (proj == null || string.IsNullOrEmpty(id)) return;
+            EventDef src;
+            if (!proj.Events.TryGetValue(id, out src)) proj.EventPatches.TryGetValue(id, out src);
+            if (src == null) return;
+
+            var copy = JsonConvert.DeserializeObject<EventDef>(JsonConvert.SerializeObject(src));
+            string newId = id + "copy";
+            int n = 2;
+            while (proj.Events.ContainsKey(newId) || proj.EventPatches.ContainsKey(newId) || DataHelper.GetExistingEvent(newId) != null)
+                newId = id + "copy" + n++;
+
+            copy.EventId = newId;
+            proj.Events[newId] = copy;
+            _parent.SelectedEventId = newId;
+            _expandedReply = -1;
+            System.Array.Clear(_secSs, 0, _secSs.Length);
+            System.Array.Clear(_secFl, 0, _secFl.Length);
+            System.Array.Clear(_secSsc, 0, _secSsc.Length);
+            System.Array.Clear(_secFlc, 0, _secFlc.Length);
+            ModProjectLoader.SaveEntity(proj, "events", newId, copy);
+            _history.RecordCreated(newId, false, "duplicate");
+            proj.IsDirty = true;
+            InlineIssues.Invalidate();
+            EditorStatus.Toast("Duplicated " + id + " as " + newId);
+        }
 
         public void DrawPanel()
         {
             var proj = ModManagerPanel.ActiveProject;
             if (proj == null) { GUILayout.Label("No project loaded."); return; }
+            EditorActions.Register(this);
 
             // Build combined events dict (new + patches)
             var allEvents = new Dictionary<string, EventDef>();
@@ -78,46 +149,50 @@ namespace UnknownMod.Editor
 
             if (GUILayout.Button("+ New Event", EditorStyles.MiniButton, GUILayout.Width(90)))
             {
-                string newId = $"{proj.ModId}_evt_{proj.Events.Count}";
+                string newId = $"{ModProjectLoader.IdPrefix(proj.ModId)}_evt_{proj.Events.Count}";
                 int suffix = 0;
                 while (proj.Events.ContainsKey(newId) || proj.EventPatches.ContainsKey(newId))
-                    newId = $"{proj.ModId}_evt_{++suffix}";
+                    newId = $"{ModProjectLoader.IdPrefix(proj.ModId)}_evt_{++suffix}";
 
                 var def = new EventDef { EventId = newId, EventName = "New Event" };
                 proj.Events[newId] = def;
                 _parent.SelectedEventId = newId;
                 _expandedReply = -1;
                 ModProjectLoader.SaveEntity(proj, "events", newId, def);
+                _history.RecordCreated(newId, false, "new event");
                 proj.IsDirty = true;
             }
 
             if (GUILayout.Button("Patch Base \u25BE", EditorStyles.MiniButton, GUILayout.Width(100)))
                 _showPatchBrowser = !_showPatchBrowser;
 
+            if (GUILayout.Button("Templates \u25BE", EditorStyles.MiniButton, GUILayout.Width(90)))
+                _showGallery = !_showGallery;
+
             if (!string.IsNullOrEmpty(_parent.SelectedEventId))
             {
                 bool isNew = proj.Events.ContainsKey(_parent.SelectedEventId);
                 bool isPatch = proj.EventPatches.ContainsKey(_parent.SelectedEventId);
-                if (isNew)
+                if (GUILayout.Button(new GUIContent("Duplicate", "Copy this event (Ctrl+D)"), EditorStyles.MiniButton, GUILayout.Width(70)))
+                    EditorActions.Pending = EditorCommand.Duplicate;
+                if (isNew || isPatch)
                 {
-                    if (GUILayout.Button("Delete", EditorStyles.DangerButton, GUILayout.Width(60)))
+                    bool armed = _pendingRemoveId == _parent.SelectedEventId;
+                    string lbl = armed ? "Confirm?" : (isNew ? "Delete" : "Revert");
+                    if (GUILayout.Button(lbl, EditorStyles.DangerButton, GUILayout.Width(70)))
                     {
-                        proj.Events.Remove(_parent.SelectedEventId);
-                        ModProjectLoader.DeleteEntity(proj, "events", _parent.SelectedEventId);
-                        _parent.SelectedEventId = eventIds.FirstOrDefault(k => k != _parent.SelectedEventId);
-                        _expandedReply = -1;
-                        proj.IsDirty = true;
-                    }
-                }
-                else if (isPatch)
-                {
-                    if (GUILayout.Button("Revert", EditorStyles.DangerButton, GUILayout.Width(60)))
-                    {
-                        proj.EventPatches.Remove(_parent.SelectedEventId);
-                        ModProjectLoader.DeleteEntity(proj, "events", _parent.SelectedEventId, true);
-                        _parent.SelectedEventId = eventIds.FirstOrDefault(k => k != _parent.SelectedEventId);
-                        _expandedReply = -1;
-                        proj.IsDirty = true;
+                        if (!armed) _pendingRemoveId = _parent.SelectedEventId;
+                        else
+                        {
+                            string rid = _parent.SelectedEventId;
+                            _history.Delete(rid, !isNew, isNew ? "delete" : "revert");
+                            _parent.SelectedEventId = eventIds.FirstOrDefault(k => k != rid);
+                            _expandedReply = -1;
+                            _pendingRemoveId = null;
+                            proj.IsDirty = true;
+                            InlineIssues.Invalidate();
+                            EditorStatus.Toast((isNew ? "Deleted " : "Reverted ") + rid + " (Ctrl+Z to undo)");
+                        }
                     }
                 }
             }
@@ -128,6 +203,9 @@ namespace UnknownMod.Editor
             if (_showPatchBrowser)
                 DrawPatchBrowser(proj);
 
+            if (_showGallery)
+                DrawGallery(proj, allEvents);
+
             EditorStyles.Separator();
 
             if (_parent.SelectedEventId == null || !allEvents.TryGetValue(_parent.SelectedEventId, out var ed))
@@ -137,8 +215,15 @@ namespace UnknownMod.Editor
             }
 
             // ── Basic fields ─────────────────────────────────────
+            bool edIsPatch = !proj.Events.ContainsKey(ed.EventId);
+            _history.BeginEdit(ed.EventId, edIsPatch, ed);
+            Ren.ApplyUnlessSelected(ed.EventId);
+            Ren.Draw();
+            bool renamed = false;
             string prevEventId = ed.EventId;
             ed.EventId = EditorFields.TextField("Event ID", ed.EventId);
+            if (ed.EventId != prevEventId && !ModProjectLoader.IsSafeName(ed.EventId))
+                ed.EventId = prevEventId; // would not be a valid file name
             if (ed.EventId != prevEventId && !string.IsNullOrEmpty(ed.EventId))
             {
                 bool wasNew = proj.Events.ContainsKey(prevEventId);
@@ -148,9 +233,11 @@ namespace UnknownMod.Editor
                 {
                     dict.Remove(prevEventId);
                     dict[ed.EventId] = ed;
-                    ModProjectLoader.DeleteEntity(proj, "events", prevEventId, wasPatch);
-                    ModProjectLoader.SaveEntity(proj, "events", ed.EventId, ed, wasPatch);
+                    ModProjectLoader.RenameEntity(proj, "events", prevEventId, ed.EventId, ed, wasPatch);
                     _parent.SelectedEventId = ed.EventId;
+                    Ren.Note(proj, prevEventId, ed.EventId, wasPatch, ModReferences.FamilyOf(proj, dict));
+                    _history.RecordRenamed(prevEventId, ed.EventId, wasPatch);
+                    renamed = true;
                 }
                 else
                     ed.EventId = prevEventId;
@@ -160,9 +247,13 @@ namespace UnknownMod.Editor
             ed.DescriptionAction = EditorFields.TextField("Action Text", ed.DescriptionAction);
             ed.EventTier = EditorFields.EnumField("Event Tier", ed.EventTier, "evt_tier");
             ed.ReplyRandom = EditorFields.IntField("Reply Random", ed.ReplyRandom);
-            ed.RequirementId = EditorFields.IdDropdown("Requirement ID", ed.RequirementId, DataHelper.GetAllEventRequirementIds(), "evt_reqid", pickerMode: EntityPicker.Mode.Requirement);
-            ed.SpriteSource = EditorFields.IdDropdown("Sprite Source", ed.SpriteSource, DataHelper.GetAllEventIds(), "evt_sprsrc", pickerMode: EntityPicker.Mode.Event);
-            ed.RequiredClassId = EditorFields.IdDropdown("Required Class", ed.RequiredClassId, DataHelper.GetAllSubClassIds(), "evt_reqclass", pickerMode: EntityPicker.Mode.Hero);
+            ed.RequirementId = EditorFields.IdDropdown("Requirement ID", ed.RequirementId, RefIds.Requirements(), "evt_reqid", pickerMode: EntityPicker.Mode.Requirement);
+            ed.SpriteSource = EditorFields.IdDropdown("Sprite Source", ed.SpriteSource, RefIds.Events(), "evt_sprsrc", pickerMode: EntityPicker.Mode.Event);
+            var evtSprites = EditorFields.CachedIds("spriteName", () => MapEditor.GetAllSpriteNames());
+            ed.SpriteMap = EditorFields.IdDropdown("Map Icon Sprite", ed.SpriteMap, evtSprites, "evt_sprmap", pickerMode: EntityPicker.Mode.Sprite);
+            ed.SpriteDecor = EditorFields.IdDropdown("Map Decor Sprite", ed.SpriteDecor, evtSprites, "evt_sprdecor", pickerMode: EntityPicker.Mode.Sprite);
+            ed.SpriteBook = EditorFields.IdDropdown("Book Image Sprite", ed.SpriteBook, evtSprites, "evt_sprbook", pickerMode: EntityPicker.Mode.Sprite);
+            ed.RequiredClassId = EditorFields.IdDropdown("Required Class", ed.RequiredClassId, RefIds.SubClasses(), "evt_reqclass", pickerMode: EntityPicker.Mode.Hero);
             ed.EventIconShader = EditorFields.EnumField("Icon Shader", ed.EventIconShader, "evt_shader");
             ed.HistoryMode = EditorFields.Toggle("History Mode", ed.HistoryMode);
             ed.EventUniqueId = EditorFields.TextField("Unique ID", ed.EventUniqueId);
@@ -181,7 +272,8 @@ namespace UnknownMod.Editor
                 .Concat(proj.LootPatches.Keys)
                 .Distinct().OrderBy(k => k).ToList();
 
-            // Grow toggle arrays if needed (preserve existing state)\n            EnsureToggleCapacity(ed.Replies.Count);
+            // Grow toggle arrays if needed (preserve existing state)
+            EnsureToggleCapacity(ed.Replies.Count);
 
             for (int i = 0; i < ed.Replies.Count; i++)
             {
@@ -203,15 +295,15 @@ namespace UnknownMod.Editor
                 r.DustCost = EditorFields.IntField("Dust Cost", r.DustCost);
 
                 // ── Requirements ─────────────────────────────────
-                r.RequirementId = EditorFields.IdDropdown("Requirement", r.RequirementId, DataHelper.GetAllEventRequirementIds(), $"rep_req_{i}", pickerMode: EntityPicker.Mode.Requirement);
-                r.RequirementBlockedId = EditorFields.IdDropdown("Blocked By", r.RequirementBlockedId, DataHelper.GetAllEventRequirementIds(), $"rep_blocked_{i}", pickerMode: EntityPicker.Mode.Requirement);
-                r.RequiredClassId = EditorFields.IdDropdown("Required Class", r.RequiredClassId, DataHelper.GetAllSubClassIds(), $"rep_reqclass_{i}", pickerMode: EntityPicker.Mode.Hero);
-                r.RequiredClassForBlockedId = EditorFields.IdDropdown("Blocked Class", r.RequiredClassForBlockedId, DataHelper.GetAllSubClassIds(), $"rep_reqclassblk_{i}", pickerMode: EntityPicker.Mode.Hero);
+                r.RequirementId = EditorFields.IdDropdown("Requirement", r.RequirementId, RefIds.Requirements(), $"rep_req_{i}", pickerMode: EntityPicker.Mode.Requirement);
+                r.RequirementBlockedId = EditorFields.IdDropdown("Blocked By", r.RequirementBlockedId, RefIds.Requirements(), $"rep_blocked_{i}", pickerMode: EntityPicker.Mode.Requirement);
+                r.RequiredClassId = EditorFields.IdDropdown("Required Class", r.RequiredClassId, RefIds.SubClasses(), $"rep_reqclass_{i}", pickerMode: EntityPicker.Mode.Hero);
+                r.RequiredClassForBlockedId = EditorFields.IdDropdown("Blocked Class", r.RequiredClassForBlockedId, RefIds.SubClasses(), $"rep_reqclassblk_{i}", pickerMode: EntityPicker.Mode.Hero);
                 r.RequirementSku = EditorFields.TextField("Requirement SKU", r.RequirementSku);
-                r.RequirementItemId = EditorFields.IdDropdown("Req Item", r.RequirementItemId, DataHelper.GetAllItemIds(), $"rep_reqitem_{i}", pickerMode: EntityPicker.Mode.Item);
-                DrawIdList("Req Items", r.RequirementItemIds, DataHelper.GetAllItemIds(), $"rep_reqitems_{i}", EntityPicker.Mode.Item);
-                DrawIdList("Req Cards", r.RequirementCardIds, DataHelper.GetAllCardIds(), $"rep_reqcards_{i}", EntityPicker.Mode.Card);
-                r.ReplyShowCardId = EditorFields.IdDropdown("Show Card", r.ReplyShowCardId, DataHelper.GetAllCardIds(), $"rep_showcard_{i}", pickerMode: EntityPicker.Mode.Card);
+                r.RequirementItemId = EditorFields.IdDropdown("Req Item", r.RequirementItemId, RefIds.Items(), $"rep_reqitem_{i}", pickerMode: EntityPicker.Mode.Item);
+                DrawIdList("Req Items", r.RequirementItemIds, RefIds.Items(), $"rep_reqitems_{i}", EntityPicker.Mode.Item);
+                DrawIdList("Req Cards", r.RequirementCardIds, RefIds.Cards(), $"rep_reqcards_{i}", EntityPicker.Mode.Card);
+                r.ReplyShowCardId = EditorFields.IdDropdown("Show Card", r.ReplyShowCardId, RefIds.Cards(), $"rep_showcard_{i}", pickerMode: EntityPicker.Mode.Card);
                 r.RequirementMultiplayer = EditorFields.Toggle("Multiplayer Only", r.RequirementMultiplayer);
                 r.ChooseReplacementHero = EditorFields.Toggle("Choose Replacement Hero", r.ChooseReplacementHero);
 
@@ -283,6 +375,10 @@ namespace UnknownMod.Editor
                 _expandedReply = ed.Replies.Count - 1;
                 GUI.changed = true;
             }
+
+            DrawHeroReplies(proj, ed);
+
+            if (!renamed) _history.EndEdit(ed.EventId, edIsPatch, ed);
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -319,6 +415,7 @@ namespace UnknownMod.Editor
                     _parent.SelectedEventId = id;
                     _expandedReply = -1;
                     ModProjectLoader.SaveEntity(proj, "events", id, patch, isPatch: true);
+                    _history.RecordCreated(id, true, "patch");
                     _showPatchBrowser = false;
                     proj.IsDirty = true;
                 }
@@ -358,24 +455,24 @@ namespace UnknownMod.Editor
             o.NodeTravelId = EditorFields.IdDropdown("Node Travel", o.NodeTravelId, nodeIds, $"o_node_{k}", pickerMode: EntityPicker.Mode.Node);
 
             // ── Requirements ─────────────────────────────────────
-            o.RequirementUnlockId = EditorFields.IdDropdown("Req Unlock", o.RequirementUnlockId, DataHelper.GetAllEventRequirementIds(), $"o_requnlock_{k}", pickerMode: EntityPicker.Mode.Requirement);
-            o.RequirementUnlock2Id = EditorFields.IdDropdown("Req Unlock 2", o.RequirementUnlock2Id, DataHelper.GetAllEventRequirementIds(), $"o_requnlock2_{k}", pickerMode: EntityPicker.Mode.Requirement);
-            o.RequirementLockId = EditorFields.IdDropdown("Req Lock", o.RequirementLockId, DataHelper.GetAllEventRequirementIds(), $"o_reqlock_{k}", pickerMode: EntityPicker.Mode.Requirement);
+            o.RequirementUnlockId = EditorFields.IdDropdown("Req Unlock", o.RequirementUnlockId, RefIds.Requirements(), $"o_requnlock_{k}", pickerMode: EntityPicker.Mode.Requirement);
+            o.RequirementUnlock2Id = EditorFields.IdDropdown("Req Unlock 2", o.RequirementUnlock2Id, RefIds.Requirements(), $"o_requnlock2_{k}", pickerMode: EntityPicker.Mode.Requirement);
+            o.RequirementLockId = EditorFields.IdDropdown("Req Lock", o.RequirementLockId, RefIds.Requirements(), $"o_reqlock_{k}", pickerMode: EntityPicker.Mode.Requirement);
             if (prefix == "Ss")
-                o.RequirementLock2Id = EditorFields.IdDropdown("Req Lock 2", o.RequirementLock2Id, DataHelper.GetAllEventRequirementIds(), $"o_reqlock2_{k}", pickerMode: EntityPicker.Mode.Requirement);
+                o.RequirementLock2Id = EditorFields.IdDropdown("Req Lock 2", o.RequirementLock2Id, RefIds.Requirements(), $"o_reqlock2_{k}", pickerMode: EntityPicker.Mode.Requirement);
 
             // ── Loot / Shop ──────────────────────────────────────
             o.LootId = EditorFields.IdDropdown("Loot", o.LootId, lootIds, $"o_loot_{k}", pickerMode: EntityPicker.Mode.Loot);
             o.ShopId = EditorFields.IdDropdown("Shop", o.ShopId, lootIds, $"o_shop_{k}", pickerMode: EntityPicker.Mode.Loot);
 
             // ── Add items/cards ──────────────────────
-            o.AddItemId = EditorFields.IdDropdown("Add Item", o.AddItemId, DataHelper.GetAllItemIds(), $"o_item_{k}", pickerMode: EntityPicker.Mode.Item);
-            o.AddCard1Id = EditorFields.IdDropdown("Add Card 1", o.AddCard1Id, DataHelper.GetAllCardIds(), $"o_card1_{k}", pickerMode: EntityPicker.Mode.Card);
-            o.AddCard2Id = EditorFields.IdDropdown("Add Card 2", o.AddCard2Id, DataHelper.GetAllCardIds(), $"o_card2_{k}", pickerMode: EntityPicker.Mode.Card);
-            o.AddCard3Id = EditorFields.IdDropdown("Add Card 3", o.AddCard3Id, DataHelper.GetAllCardIds(), $"o_card3_{k}", pickerMode: EntityPicker.Mode.Card);
+            o.AddItemId = EditorFields.IdDropdown("Add Item", o.AddItemId, RefIds.Items(), $"o_item_{k}", pickerMode: EntityPicker.Mode.Item);
+            o.AddCard1Id = EditorFields.IdDropdown("Add Card 1", o.AddCard1Id, RefIds.Cards(), $"o_card1_{k}", pickerMode: EntityPicker.Mode.Card);
+            o.AddCard2Id = EditorFields.IdDropdown("Add Card 2", o.AddCard2Id, RefIds.Cards(), $"o_card2_{k}", pickerMode: EntityPicker.Mode.Card);
+            o.AddCard3Id = EditorFields.IdDropdown("Add Card 3", o.AddCard3Id, RefIds.Cards(), $"o_card3_{k}", pickerMode: EntityPicker.Mode.Card);
 
             // ── Reward tier / shop params ────────────────────────
-            o.RewardTier = EditorFields.TextField("Reward Tier", o.RewardTier);
+            o.RewardTier = EditorFields.IdDropdown("Reward Tier", o.RewardTier, RefIds.Tiers());
             o.Discount = EditorFields.IntField("Discount", o.Discount);
             o.MaxQuantity = EditorFields.IntField("Max Quantity", o.MaxQuantity);
 
@@ -391,17 +488,29 @@ namespace UnknownMod.Editor
             o.ItemCorruptionUI = EditorFields.Toggle("Item Corrupt UI", o.ItemCorruptionUI);
             o.RemoveItemSlot = EditorFields.EnumField("Remove Item Slot", o.RemoveItemSlot, $"o_remslot_{k}");
             o.CorruptItemSlot = EditorFields.EnumField("Corrupt Item Slot", o.CorruptItemSlot, $"o_corslot_{k}");
-            o.UnlockClassId = EditorFields.IdDropdown("Unlock Class", o.UnlockClassId, DataHelper.GetAllSubClassIds(), $"o_unlock_{k}", pickerMode: EntityPicker.Mode.Hero);
+            o.UnlockClassId = EditorFields.IdDropdown("Unlock Class", o.UnlockClassId, RefIds.SubClasses(), $"o_unlock_{k}", pickerMode: EntityPicker.Mode.Hero);
             o.UnlockSteamAchievement = EditorFields.TextField("Unlock Achievement", o.UnlockSteamAchievement);
             o.CardPlayerGame = EditorFields.Toggle("Card Game", o.CardPlayerGame);
             if (o.CardPlayerGame)
-                o.CardPlayerGamePackId = EditorFields.IdDropdown("Card Game Pack", o.CardPlayerGamePackId, DataHelper.GetAllPackIds(), $"o_cgpack_{k}", pickerMode: EntityPicker.Mode.Pack);
+                o.CardPlayerGamePackId = EditorFields.IdDropdown("Card Game Pack", o.CardPlayerGamePackId, RefIds.CardPlayerPacks(), $"o_cgpack_{k}");
             o.CardPlayerPairsGame = EditorFields.Toggle("Pairs Game", o.CardPlayerPairsGame);
             if (o.CardPlayerPairsGame)
-                o.CardPlayerPairsGamePackId = EditorFields.IdDropdown("Pairs Pack", o.CardPlayerPairsGamePackId, DataHelper.GetAllPackIds(), $"o_pppack_{k}", pickerMode: EntityPicker.Mode.Pack);
-            o.CharacterReplacementId = EditorFields.IdDropdown("Char Replace", o.CharacterReplacementId, DataHelper.GetAllSubClassIds(), $"o_charrep_{k}", pickerMode: EntityPicker.Mode.Hero);
-            if (!string.IsNullOrEmpty(o.CharacterReplacementId))
-                o.CharacterReplacementPosition = EditorFields.IntField("Replace Position", o.CharacterReplacementPosition, 0, 3);
+                o.CardPlayerPairsGamePackId = EditorFields.IdDropdown("Pairs Pack", o.CardPlayerPairsGamePackId, RefIds.CardPlayerPairsPacks(), $"o_pppack_{k}");
+            if (prefix == "Ss") // the game only applies character replacement on the success branch
+            {
+                o.CharacterReplacementId = EditorFields.IdDropdown("Char Replace", o.CharacterReplacementId, RefIds.SubClasses(), $"o_charrep_{k}", pickerMode: EntityPicker.Mode.Hero);
+                if (!string.IsNullOrEmpty(o.CharacterReplacementId))
+                    o.CharacterReplacementPosition = EditorFields.IntField("Replace Position", o.CharacterReplacementPosition, 0, 3);
+            }
+
+            if (prefix == "Ss" || prefix == "Fl")
+            {
+                o.CardDestruction = EditorFields.Toggle("Card Destruction", o.CardDestruction);
+                if (o.CardDestruction)
+                    o.CardDestructionAmount = EditorFields.IntFieldMin("Destroy Amount", o.CardDestructionAmount, 0);
+            }
+            if (prefix == "Ss")
+                o.ClearCraftedCards = EditorFields.Toggle("Clear Crafted Cards", o.ClearCraftedCards);
 
             // Finish flags only on Ss/Ssc
             if (prefix == "Ss" || prefix == "Ssc")
@@ -411,10 +520,10 @@ namespace UnknownMod.Editor
                 if (prefix == "Ss")
                 {
                     o.FinishObeliskMap = EditorFields.Toggle("Finish Obelisk", o.FinishObeliskMap);
-                    o.PerkDataId = EditorFields.TextField("Perk Data ID", o.PerkDataId);
-                    o.PerkData1Id = EditorFields.TextField("Perk Data 1 ID", o.PerkData1Id);
+                    o.PerkDataId = EditorFields.IdDropdown("Perk Data ID", o.PerkDataId, RefIds.Perks(), "evt_perk0", pickerMode: EntityPicker.Mode.Perk);
+                    o.PerkData1Id = EditorFields.IdDropdown("Perk Data 1 ID", o.PerkData1Id, RefIds.Perks(), "evt_perk1", pickerMode: EntityPicker.Mode.Perk);
                     o.SteamStat = EditorFields.TextField("Steam Stat", o.SteamStat);
-                    o.UnlockSkinId = EditorFields.IdDropdown("Unlock Skin", o.UnlockSkinId, DataHelper.GetAllSkinIds(), $"o_unlockskin_{k}", pickerMode: EntityPicker.Mode.Skin);
+                    o.UnlockSkinId = EditorFields.IdDropdown("Unlock Skin", o.UnlockSkinId, RefIds.Skins(), $"o_unlockskin_{k}", pickerMode: EntityPicker.Mode.Skin);
                 }
             }
         }
@@ -446,23 +555,20 @@ namespace UnknownMod.Editor
             for (int j = 0; j < list.Count; j++)
             {
                 string jLabel = j == 0 ? label : "";
-                list[j] = EditorFields.IdDropdown(jLabel, list[j], allIds, $"{keyPrefix}_{j}", pickerMode: mode);
                 GUILayout.BeginHorizontal();
-                GUILayout.Space(100f);
-                if (GUILayout.Button("X", EditorStyles.MiniButton, GUILayout.Width(22)))
-                {
-                    list.RemoveAt(j);
-                    GUI.changed = true;
-                    GUILayout.EndHorizontal();
-                    break;
-                }
-                if (j == list.Count - 1 && GUILayout.Button("+", EditorStyles.MiniButton, GUILayout.Width(22)))
-                {
-                    list.Add("");
-                    GUI.changed = true;
-                }
+                list[j] = EditorFields.IdDropdown(jLabel, list[j], allIds, $"{keyPrefix}_{j}", pickerMode: mode);
+                var rowOp = EditorFields.InlineRowOps(j, list.Count);
                 GUILayout.EndHorizontal();
+                if (EditorFields.ApplyRowOp(list, j, rowOp)) break;
             }
+            GUILayout.BeginHorizontal();
+            GUILayout.Space(100f);
+            if (GUILayout.Button("+", EditorStyles.MiniButton, GUILayout.Width(22)))
+            {
+                list.Add("");
+                GUI.changed = true;
+            }
+            GUILayout.EndHorizontal();
         }
     }
 }

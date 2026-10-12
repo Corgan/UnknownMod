@@ -1,0 +1,9 @@
+{
+  "Id": "mainperkmycrot1",
+  "CardClass": "None",
+  "MainPerk": true,
+  "IconTextValue": "+1",
+  "SpriteSource": "aura:myc_sporerot",
+  "AuracurseBonus": "myc_sporerot",
+  "AuracurseBonusValue": 1
+}

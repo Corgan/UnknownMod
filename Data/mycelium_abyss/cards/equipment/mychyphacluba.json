@@ -1,0 +1,18 @@
+{
+  "Id": "mychyphacluba",
+  "Name": "Hyphae Cudgel",
+  "Description": "Blunt damage <acb>+6</acb>.<br2>Spore Rot charges <acb>+1</acb>.",
+  "CardClass": "Item",
+  "CardType": "Weapon",
+  "CardRarity": "Common",
+  "SpriteSource": "myc_art_hyphaclub",
+  "Item": {
+    "Activation": "PreBeginCombat",
+    "DamageFlatBonus": "Blunt",
+    "DamageFlatBonusValue": 6,
+    "AuracurseBonus1": "myc_sporerot",
+    "AuracurseBonusValue1": 1
+  },
+  "CardUpgraded": "A",
+  "BaseCardId": "mychyphaclub"
+}

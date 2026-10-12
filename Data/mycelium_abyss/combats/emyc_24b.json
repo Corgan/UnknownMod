@@ -1,0 +1,24 @@
+{
+  "CombatId": "emyc_24b",
+  "Description": "The nexus lashes out through its guardians.",
+  "NpcIds": [
+    "myc_golem",
+    "myc_thrall",
+    "myc_blightcaller",
+    ""
+  ],
+  "CombatTier": "T4",
+  "Background": "Sewers",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 1,
+      "Target": "Monsters"
+    }
+  ]
+}

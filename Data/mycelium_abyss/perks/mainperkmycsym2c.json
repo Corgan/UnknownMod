@@ -1,0 +1,8 @@
+{
+  "Id": "mainperkmycsym2c",
+  "CardClass": "None",
+  "MainPerk": true,
+  "IconTextValue": "+1",
+  "SpriteSource": "aura:myc_symbiosis",
+  "CustomDescription": "Symbiosis jumps to the ally with the lowest health instead of a random ally."
+}

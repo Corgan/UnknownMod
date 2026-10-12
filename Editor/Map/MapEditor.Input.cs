@@ -26,6 +26,10 @@ namespace UnknownMod.Editor
             Vector2 mp = e.mousePosition;
             if (!vp.Contains(mp) && _dragNodeId == null && _dragWPRoadKey == null && _dragLayerName == null && _scaleLayerName == null) return;
 
+            // A click in the viewport takes keyboard focus from any text box; while a box has focus, keys belong to it.
+            if (e.type == EventType.MouseDown && vp.Contains(mp)) GUIUtility.keyboardControl = 0;
+            if (e.type == EventType.KeyDown && GUIUtility.keyboardControl != 0) return;
+
             var subTab = _parent?.ZoneTab?.ActiveZoneInnerTab ?? ZoneTabEditor.ZoneInnerTab.Map;
 
             // Update hover state (only for relevant subtabs)
@@ -792,6 +796,11 @@ namespace UnknownMod.Editor
 
         private void RemoveRoad(string key, ZoneDef zone)
         {
+            if (ZoneEditingService.IsBaseRoadInPatch(key))
+            {
+                Plugin.Log.LogWarning($"[MapEditor] Road '{key}' is part of the base-game map; a zone patch can reshape it but not remove it.");
+                return;
+            }
             RoadEditor.ParseRoadKey(key, out var fromId, out var toId);
             _roads.RemoveRoad(key);
 
@@ -816,6 +825,8 @@ namespace UnknownMod.Editor
 
         private void DeleteWaypoint(string roadKey, int wpIndex, ZoneDef zone)
         {
+            if (ZoneEditingService.IsBaseRoadInPatch(roadKey) && _roads.RoadWaypoints.TryGetValue(roadKey, out var roadPts) && roadPts.Count <= 2)
+                return; // would delete a base-game road
             bool roadRemoved = _roads.DeleteWaypoint(roadKey, wpIndex);
             if (roadRemoved)
             {
@@ -847,6 +858,11 @@ namespace UnknownMod.Editor
 
         private void DeleteNode(string nodeId, ZoneDef zone)
         {
+            if (ZoneEditingService.IsBaseNodeInPatch(nodeId))
+            {
+                Plugin.Log.LogWarning($"[MapEditor] Node '{nodeId}' is part of the base-game map; a zone patch can change it but not delete it.");
+                return;
+            }
             string prefix = zone.IdPrefix;
             if (nodeId == $"{prefix}_0" || nodeId == $"{prefix}_1")
             {
@@ -871,6 +887,74 @@ namespace UnknownMod.Editor
 
             ZoneEditingService.DeleteNode(nodeId);
             Plugin.Log.LogInfo($"[MapEditor] Deleted node '{nodeId}'");
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  PANEL ENTRY POINTS (NodeEditor toolbar). Call from a pending action, not mid-draw.
+        // ═══════════════════════════════════════════════════════════════
+
+        public bool IsProtectedNode(ZoneDef zone, string nodeId)
+            => zone != null && (nodeId == $"{zone.IdPrefix}_0" || nodeId == $"{zone.IdPrefix}_1");
+
+        /// <summary>Adds a node beside <paramref name="nearId"/> (optionally linked to it) and selects it.</summary>
+        public string AddNodeNear(string nearId, bool connect)
+        {
+            var zone = ZoneEditingService.CurrentZone;
+            if (zone == null) return null;
+            float x = 0f, y = 0f;
+            if (nearId != null && zone.Nodes.TryGetValue(nearId, out var near)) { x = near.PosX + 1.5f; y = near.PosY - 1f; }
+
+            string id = ZoneEditingService.AddNode(x, y);
+            if (id == null) return null;
+            if (_nodesContainer != null) CreateNodeVisual(id, x, y, zone); else ForceRebuild();
+            if (connect && nearId != null) ConnectNodes(nearId, id);
+            _parent.SelectedNodeId = id;
+            return id;
+        }
+
+        public void DeleteNodeById(string nodeId)
+        {
+            var zone = ZoneEditingService.CurrentZone;
+            if (zone == null || !zone.Nodes.ContainsKey(nodeId) || IsProtectedNode(zone, nodeId)) return;
+            if (_roads == null)
+            {
+                ZoneEditingService.DeleteNode(nodeId);
+                ForceRebuild();
+            }
+            else DeleteNode(nodeId, zone);
+            if (_parent.SelectedNodeId == nodeId) _parent.SelectedNodeId = null;
+        }
+
+        /// <summary>Links two nodes both ways; creates a road when the preview is built.</summary>
+        public void ConnectNodes(string a, string b)
+        {
+            var zone = ZoneEditingService.CurrentZone;
+            if (zone == null || a == b || !zone.Nodes.ContainsKey(a) || !zone.Nodes.ContainsKey(b)) return;
+            if (_roads != null)
+            {
+                if (_roads.RoadWaypoints.ContainsKey(a + "-" + b) || _roads.RoadWaypoints.ContainsKey(b + "-" + a)) return;
+                if (_nodeGOs.ContainsKey(a) && _nodeGOs.ContainsKey(b)) { CreateRoad(a, b, zone); return; }
+            }
+            if (!zone.Nodes[a].Connections.Contains(b)) zone.Nodes[a].Connections.Add(b);
+            if (!zone.Nodes[b].Connections.Contains(a)) zone.Nodes[b].Connections.Add(a);
+            ZoneEditingService.MarkDirty();
+            ForceRebuild();
+        }
+
+        /// <summary>Removes the link (and any road) between two nodes in both directions.</summary>
+        public void DisconnectNodes(string a, string b)
+        {
+            var zone = ZoneEditingService.CurrentZone;
+            if (zone == null || string.IsNullOrEmpty(b)) return;
+            if (ZoneEditingService.IsBaseRoadInPatch(a + "-" + b) || ZoneEditingService.IsBaseRoadInPatch(b + "-" + a)) return;
+            if (_roads != null)
+            {
+                if (_roads.RoadWaypoints.ContainsKey(a + "-" + b)) RemoveRoad(a + "-" + b, zone);
+                else if (_roads.RoadWaypoints.ContainsKey(b + "-" + a)) RemoveRoad(b + "-" + a, zone);
+            }
+            if (zone.Nodes.TryGetValue(a, out var na)) na.Connections.Remove(b);
+            if (zone.Nodes.TryGetValue(b, out var nb)) nb.Connections.Remove(a);
+            ZoneEditingService.MarkDirty();
         }
     }
 }

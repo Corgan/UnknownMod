@@ -1,0 +1,40 @@
+{
+  "EventId": "e_myc_34",
+  "EventName": "The Rotmaw's Larder",
+  "Description": "Something has been storing food here. Cocooned shapes hang from the ceiling in rows, and a wet, heavy breathing echoes from deeper in the larder. Whatever lives here is not home right now.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Raid the larder.",
+      "Action": 23,
+      "SsGold": 90,
+      "SsXP": 25,
+      "FlCombatId": "emyc_34a",
+      "HasRoll": true,
+      "RollDC": 1,
+      "RollTarget": 3,
+      "RepeatForAllWarriors": true,
+      "SsText": "You cut down a few cocoons and slip away with their contents before anything notices.",
+      "FlText": "A wet roar answers the sound of tearing silk. The owner has come home.",
+      "RollMode": 1
+    },
+    {
+      "ReplyText": "Leave a gift of supplies for the owner.",
+      "Action": 16,
+      "GoldCost": 40,
+      "SsXP": 30,
+      "SsUpgradeRandomCard": true,
+      "SsText": "The breathing stops, then slowly resumes. A mound of glowing spores is left in your path, and your cards feel sharper for it."
+    },
+    {
+      "ReplyText": "Leave quietly.",
+      "Action": 11,
+      "SsXP": 10,
+      "SsText": "You back out without disturbing the cocoons."
+    }
+  ]
+}

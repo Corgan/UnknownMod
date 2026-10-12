@@ -1,0 +1,24 @@
+{
+  "CombatId": "cmyc_w4",
+  "Description": "The devourer eats what the others spare.",
+  "NpcIds": [
+    "myc_devourer",
+    "myc_sproutling",
+    "myc_lurker",
+    "myc_blightcaller"
+  ],
+  "CombatTier": "T4",
+  "Background": "Sewers",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 1,
+      "Target": "Monsters"
+    }
+  ]
+}

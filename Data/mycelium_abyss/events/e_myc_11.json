@@ -1,31 +1,37 @@
 {
   "EventId": "e_myc_11",
-  "EventName": "The Fungal Laboratory",
-  "Description": "You stumble upon a pre-collapse druid's alchemy station, somehow still functioning after centuries. Glass vessels bubble with strange green and amber concoctions, and vine-wrapped shelves hold crumbling journals. Notes scattered across the bench describe experiments merging plant and animal life.",
-  "DescriptionAction": "What catches your interest?",
-  "SpriteSource": "e_aquar18_a",
+  "EventName": "The Cleansing Chamber",
+  "Description": "Water trickles through a ring of ancient stone basins, each one lined with pale moss that filters the spores from the air. Someone built this place as a refuge a long time ago, and it still works.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
   "EventTier": "T0",
   "ReplyRandom": 0,
   "RequirementId": "",
   "Replies": [
     {
-      "ReplyText": "Drink the green potion.",
-      "Action": 30,
+      "ReplyText": "Pay the shrine tithe and bathe in the basins.",
+      "Action": 27,
+      "GoldCost": 80,
+      "SsText": "The cold water washes the spores from your wounds. You emerge refreshed and whole.",
+      "SsHealPercent": 60.0
+    },
+    {
+      "ReplyText": "Boil the moss into a restorative tonic.",
+      "Action": 42,
       "HasRoll": true,
-      "RollDC": 4,
-      "SsText": "The potion tastes of pine and honey. A fortifying warmth spreads through your limbs, hardening your skin against further corruption. You feel resilient and protected.",
-      "FlText": "The concoction burns like acid going down. Your vision swims and your muscles weaken as the failed formula attacks your body. Poison courses through your veins."
+      "RollDC": 1,
+      "SsText": "The tonic comes out clear and potent. You bottle several doses for later.",
+      "SsXP": 20,
+      "SsLootId": "myc_forage",
+      "FlText": "The brew boils over, scalding the party.",
+      "FlHealFlat": -12,
+      "RollMode": 1
     },
     {
-      "ReplyText": "Take the research notes.",
-      "Action": 29,
-      "SsText": "You carefully gather the druid's journals and loose pages. The research within is invaluable — detailed observations of the Mycelium's behavior and weaknesses. A loose card falls from between the pages.",
-      "SsXP": 60
-    },
-    {
-      "ReplyText": "Reverse-engineer the formula. [Mage]",
-      "Action": 29,
-      "SsText": "Your arcane training allows you to decipher the druid's formulas. You synthesize a potent antifungal compound from the remaining ingredients — it could prove invaluable deeper in the Mycelium."
+      "ReplyText": "Rest by the water.",
+      "Action": 20,
+      "SsText": "You rest for a while, listening to the dripping water. It is peaceful.",
+      "SsHealPercent": 15.0
     }
   ]
 }

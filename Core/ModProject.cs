@@ -35,8 +35,13 @@ namespace UnknownMod.Core
         public Dictionary<string, RequirementDef> Requirements = new();
         public Dictionary<string, CardbackDef> Cardbacks = new();
         public Dictionary<string, TierRewardDef> TierRewards = new();
+        public Dictionary<string, KeyNoteDef> KeyNotes = new();
+        public Dictionary<string, CinematicDef> Cinematics = new();
+        public Dictionary<string, CorruptionPackDef> CorruptionPacks = new();
+        public Dictionary<string, ChallengeTraitDef> ChallengeTraits = new();
+        public Dictionary<string, WeeklyChallengeDef> WeeklyChallenges = new();
         [JsonProperty("Sprites")]
-        public Dictionary<string, CharacterOverrideDef> SpriteSkins = new();
+        public Dictionary<string, CharacterVisualDef> VisualGraphs = new();
         public Dictionary<string, PackDef> Packs = new();
         public Dictionary<string, CardPlayerPackDef> CardPlayerPacks = new();
         public Dictionary<string, CardPlayerPairsPackDef> CardPlayerPairsPacks = new();
@@ -44,6 +49,13 @@ namespace UnknownMod.Core
         public Dictionary<string, BackgroundDef> Backgrounds = new();
         public Dictionary<string, EventDef> Events = new();
         public Dictionary<string, CombatDef> Combats = new();
+        public Dictionary<string, ThermometerDef> Thermometers = new();
+        public Dictionary<string, ThermometerTierDef> ThermometerTiers = new();
+        public Dictionary<string, BettingTeamDef> BettingTeams = new();
+        public Dictionary<string, MemorySequenceDef> MemorySequences = new();
+        public Dictionary<string, CardPairRewardDef> CardPairRewards = new();
+        public Dictionary<string, RuleSetDef> RuleSets = new();
+        public Dictionary<string, EconomyDef> Economies = new();
 
         // ── Overrides of base-game entities (stored in _patches/) ─
 
@@ -59,8 +71,12 @@ namespace UnknownMod.Core
         public Dictionary<string, RequirementDef> RequirementPatches = new();
         public Dictionary<string, CardbackDef> CardbackPatches = new();
         public Dictionary<string, TierRewardDef> TierRewardPatches = new();
-        [JsonProperty("SpritePatches")]
-        public Dictionary<string, CharacterOverrideDef> SpriteSkinPatches = new();
+        public Dictionary<string, KeyNoteDef> KeyNotePatches = new();
+        public Dictionary<string, CinematicDef> CinematicPatches = new();
+        public Dictionary<string, CorruptionPackDef> CorruptionPackPatches = new();
+        public Dictionary<string, ChallengeTraitDef> ChallengeTraitPatches = new();
+        public Dictionary<string, WeeklyChallengeDef> WeeklyChallengePatches = new();
+        public Dictionary<string, CharacterVisualDef> VisualGraphPatches = new();
         public Dictionary<string, PackDef> PackPatches = new();
         public Dictionary<string, CardPlayerPackDef> CardPlayerPackPatches = new();
         public Dictionary<string, CardPlayerPairsPackDef> CardPlayerPairsPackPatches = new();
@@ -88,6 +104,9 @@ namespace UnknownMod.Core
         /// <summary>Has unsaved changes.</summary>
         [Newtonsoft.Json.JsonIgnore]
         public bool IsDirty { get; set; }
+
+        /// <summary>The mod's metadata file exists but could not be parsed, so its dependency list is unknown.</summary>
+        public bool MetadataUnreadable { get; set; }
 
         /// <summary>Timestamp of last change (for auto-save debounce).</summary>
         [Newtonsoft.Json.JsonIgnore]

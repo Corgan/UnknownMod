@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -184,7 +184,7 @@ namespace UnknownMod.Core
                 _baseVisualLayersCache[zoneId] = layers;
                 _baseLayerSpriteCache[zoneId] = layerSprites;
 
-                // Also maintain the legacy single-bg cache for backward compat
+                // Single-bg cache
                 if (bestBgSprite != null)
                 {
                     _baseZoneBgCache[zoneId] = bestBgSprite;
@@ -462,18 +462,15 @@ namespace UnknownMod.Core
                 cached++;
             }
 
-            // Also scan mapList prefabs
-            if (mapMgr.mapList != null)
+            // Also scan the lazily loaded map prefabs
+            foreach (var prefab in GameResources.GetAllMapPrefabs())
             {
-                foreach (var prefab in mapMgr.mapList)
-                {
-                    if (prefab == null) continue;
-                    string zoneId = prefab.name;
-                    if (_positionCache.ContainsKey(zoneId)) continue;
+                if (prefab == null) continue;
+                string zoneId = prefab.name;
+                if (_positionCache.ContainsKey(zoneId)) continue;
 
-                    CacheZoneFromTransform(zoneId, prefab.transform);
-                    cached++;
-                }
+                CacheZoneFromTransform(zoneId, prefab.transform);
+                cached++;
             }
 
             if (cached > 0)
@@ -488,6 +485,16 @@ namespace UnknownMod.Core
         /// </summary>
         public static void PreloadScenes()
         {
+            // A failed load is retried (bounded) on the next editor open once the scene has unloaded.
+            if (_sceneLoadFailed && _positionCache.Count == 0 && _sceneLoadRetries < 3
+                && !SceneManager.GetSceneByName("Map").isLoaded)
+            {
+                _sceneLoadRetries++;
+                _sceneLoadFailed = false;
+                _sceneLoadRequested = false;
+                _cacheFailures.Clear();
+            }
+
             // Map scene  zone backgrounds, node positions, roads, visual layers
             if (_positionCache.Count == 0 && !_sceneLoadRequested && !_sceneLoadFailed)
             {
@@ -668,6 +675,9 @@ namespace UnknownMod.Core
             d.NpcToSummonOnKilledId = c.NpcToSummonOnNpcKilled != null ? c.NpcToSummonOnNpcKilled.Id ?? "" : "";
             d.EventDataId = c.EventData != null ? c.EventData.EventId ?? "" : "";
             d.EventRequirementId = c.EventRequirementData != null ? c.EventRequirementData.RequirementId ?? "" : "";
+            d.CinematicId = c.CinematicData != null ? c.CinematicData.CinematicId ?? "" : "";
+            d.CombatBasedCorruptionCardId = c.CombatBasedCorruption != null ? c.CombatBasedCorruption.Id ?? "" : "";
+            d.ThermometerTierId = c.ThermometerTierData != null ? c.ThermometerTierData.ThermometerTierId ?? "" : "";
 
             if (c.CombatEffect != null)
             {
@@ -696,6 +706,7 @@ namespace UnknownMod.Core
                 DescriptionAction = e.DescriptionAction ?? "",
                 EventTier = e.EventTier,
                 ReplyRandom = e.ReplyRandom,
+                EventUniqueId = e.EventUniqueId ?? "",
             };
 
             if (e.Requirement != null)
@@ -731,10 +742,13 @@ namespace UnknownMod.Core
 
             // Reply-level fields
             if (r.RequiredClass != null) d.RequiredClassId = r.RequiredClass.SubClassName ?? "";
-            if (r.RequirementItem != null) d.RequirementItemId = r.RequirementItem.Id ?? "";
-            if (r.RequirementItems != null)
+            if (r.RequiredClassForBlocked != null) d.RequiredClassForBlockedId = r.RequiredClassForBlocked.SubClassName ?? "";
+            d.RequirementSku = r.RequirementSku ?? "";
+            d.ChooseReplacementHero = r.ChooseReplacementHero;
+            if (r.RequiredItem != null) d.RequirementItemId = r.RequiredItem.Id ?? "";
+            if (r.RequiredItems != null)
             {
-                foreach (var item in r.RequirementItems)
+                foreach (var item in r.RequiredItems)
                 {
                     if (item != null && !string.IsNullOrEmpty(item.Id))
                         d.RequirementItemIds.Add(item.Id);
@@ -772,6 +786,14 @@ namespace UnknownMod.Core
             return d;
         }
 
+        private static void SnapshotOutcomeCards(List<CardDataNew> cards, OutcomeDef d)
+        {
+            if (cards == null) return;
+            if (cards.Count > 0 && cards[0] != null) d.AddCard1Id = cards[0].Id ?? "";
+            if (cards.Count > 1 && cards[1] != null) d.AddCard2Id = cards[1].Id ?? "";
+            if (cards.Count > 2 && cards[2] != null) d.AddCard3Id = cards[2].Id ?? "";
+        }
+
         private static OutcomeDef SnapshotOutcomeSs(EventReplyData r)
         {
             var d = new OutcomeDef();
@@ -792,10 +814,8 @@ namespace UnknownMod.Core
             d.LootId = r.SsLootList != null ? r.SsLootList.Id ?? "" : "";
             d.ShopId = r.SsShopList != null ? r.SsShopList.Id ?? "" : "";
             d.AddItemId = r.SsAddItem != null ? r.SsAddItem.Id ?? "" : "";
-            d.AddCard1Id = r.SsAddCard1 != null ? r.SsAddCard1.Id ?? "" : "";
-            d.AddCard2Id = r.SsAddCard2 != null ? r.SsAddCard2.Id ?? "" : "";
-            d.AddCard3Id = r.SsAddCard3 != null ? r.SsAddCard3.Id ?? "" : "";
-            d.RewardTier = r.SsRewardTier != null ? r.SsRewardTier.name ?? "" : "";
+            SnapshotOutcomeCards(r.SsAddCards, d);
+            d.RewardTier = r.SsRewardTier != null ? r.SsRewardTier.TierNum.ToString() : "";
             d.Discount = r.SsDiscount;
             d.MaxQuantity = r.SsMaxQuantity;
             d.HealerUI = r.SsHealerUI;
@@ -818,6 +838,14 @@ namespace UnknownMod.Core
             d.UnlockSteamAchievement = r.SsUnlockSteamAchievement ?? "";
             if (r.SsCharacterReplacement != null) d.CharacterReplacementId = r.SsCharacterReplacement.SubClassName ?? "";
             d.CharacterReplacementPosition = r.SsCharacterReplacementPosition;
+            if (r.SsPerkData != null) d.PerkDataId = r.SsPerkData.Id ?? "";
+            if (r.SsPerkData1 != null) d.PerkData1Id = r.SsPerkData1.Id ?? "";
+            d.SteamStat = r.SsSteamStat ?? "";
+            if (r.SsUnlockSkin != null) d.UnlockSkinId = r.SsUnlockSkin.SkinId ?? "";
+            d.FinishEarlyAccess = r.SsFinishEarlyAccess;
+            d.CardDestruction = r.SsCardDestruction;
+            d.CardDestructionAmount = r.SsCardDestructionAmount;
+            d.ClearCraftedCards = r.SsClearCraftedCards;
             return d;
         }
 
@@ -841,10 +869,8 @@ namespace UnknownMod.Core
             d.LootId = r.FlLootList != null ? r.FlLootList.Id ?? "" : "";
             d.ShopId = r.FlShopList != null ? r.FlShopList.Id ?? "" : "";
             d.AddItemId = r.FlAddItem != null ? r.FlAddItem.Id ?? "" : "";
-            d.AddCard1Id = r.FlAddCard1 != null ? r.FlAddCard1.Id ?? "" : "";
-            d.AddCard2Id = r.FlAddCard2 != null ? r.FlAddCard2.Id ?? "" : "";
-            d.AddCard3Id = r.FlAddCard3 != null ? r.FlAddCard3.Id ?? "" : "";
-            d.RewardTier = r.FlRewardTier != null ? r.FlRewardTier.name ?? "" : "";
+            SnapshotOutcomeCards(r.FlAddCards, d);
+            d.RewardTier = r.FlRewardTier != null ? r.FlRewardTier.TierNum.ToString() : "";
             d.Discount = r.FlDiscount;
             d.MaxQuantity = r.FlMaxQuantity;
             d.HealerUI = r.FlHealerUI;
@@ -864,6 +890,8 @@ namespace UnknownMod.Core
             d.CardPlayerPairsGame = r.FlCardPlayerPairsGame;
             if (r.FlCardPlayerPairsGamePackData != null) d.CardPlayerPairsGamePackId = r.FlCardPlayerPairsGamePackData.PackId ?? "";
             d.UnlockSteamAchievement = r.FlUnlockSteamAchievement ?? "";
+            d.CardDestruction = r.FlCardDestruction;
+            d.CardDestructionAmount = r.FlCardDestructionAmount;
             return d;
         }
 
@@ -887,10 +915,8 @@ namespace UnknownMod.Core
             d.LootId = r.SscLootList != null ? r.SscLootList.Id ?? "" : "";
             d.ShopId = r.SscShopList != null ? r.SscShopList.Id ?? "" : "";
             d.AddItemId = r.SscAddItem != null ? r.SscAddItem.Id ?? "" : "";
-            d.AddCard1Id = r.SscAddCard1 != null ? r.SscAddCard1.Id ?? "" : "";
-            d.AddCard2Id = r.SscAddCard2 != null ? r.SscAddCard2.Id ?? "" : "";
-            d.AddCard3Id = r.SscAddCard3 != null ? r.SscAddCard3.Id ?? "" : "";
-            d.RewardTier = r.SscRewardTier != null ? r.SscRewardTier.name ?? "" : "";
+            SnapshotOutcomeCards(r.SscAddCards, d);
+            d.RewardTier = r.SscRewardTier != null ? r.SscRewardTier.TierNum.ToString() : "";
             d.Discount = r.SscDiscount;
             d.MaxQuantity = r.SscMaxQuantity;
             d.HealerUI = r.SscHealerUI;
@@ -900,6 +926,7 @@ namespace UnknownMod.Core
             d.CorruptionUI = r.SscCorruptionUI;
             d.UpgradeRandomCard = r.SscUpgradeRandomCard;
             d.FinishGame = r.SscFinishGame;
+            d.FinishEarlyAccess = r.SscFinishEarlyAccess;
             // Ssc has no FinishObeliskMap
             d.CraftUIMaxType = r.SscCraftUIMaxType;
             d.ItemCorruptionUI = r.SscItemCorruptionUI;
@@ -934,10 +961,8 @@ namespace UnknownMod.Core
             d.LootId = r.FlcLootList != null ? r.FlcLootList.Id ?? "" : "";
             d.ShopId = r.FlcShopList != null ? r.FlcShopList.Id ?? "" : "";
             d.AddItemId = r.FlcAddItem != null ? r.FlcAddItem.Id ?? "" : "";
-            d.AddCard1Id = r.FlcAddCard1 != null ? r.FlcAddCard1.Id ?? "" : "";
-            d.AddCard2Id = r.FlcAddCard2 != null ? r.FlcAddCard2.Id ?? "" : "";
-            d.AddCard3Id = r.FlcAddCard3 != null ? r.FlcAddCard3.Id ?? "" : "";
-            d.RewardTier = r.FlcRewardTier != null ? r.FlcRewardTier.name ?? "" : "";
+            SnapshotOutcomeCards(r.FlcAddCards, d);
+            d.RewardTier = r.FlcRewardTier != null ? r.FlcRewardTier.TierNum.ToString() : "";
             d.Discount = r.FlcDiscount;
             d.MaxQuantity = r.FlcMaxQuantity;
             d.HealerUI = r.FlcHealerUI;

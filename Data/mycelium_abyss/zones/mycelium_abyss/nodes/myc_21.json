@@ -15,7 +15,8 @@
   "CombatTier": "T0",
   "CombatPercent": 0,
   "EventIds": [
-    "e_myc_21"
+    "e_myc_21",
+    "e_myc_34"
   ],
   "EventPercent": 100,
   "NodeEventTier": "T0",

@@ -19,8 +19,8 @@ namespace MyceliumAbyss
     /// <summary>
     /// Custom boss handler for The Mycelarch.
     /// Phase 1 (100%–60%): AICards handle card rotation normally.
-    /// Phase 2 (60%–30%): Gains Powerful×2 + Thorns×3 + comic text.
-    /// Phase 3 (0%–30%): Gains Fury×4, spawns 2 extra Shamblers.
+    /// Phase 2 (60%–30%): Gains Powerful×2 + Thorns×3 + Symbiosis×6 (hops to its adds) + comic text.
+    /// Phase 3 (0%–30%): Gains Fury×4, rots every hero (the rot hops between them), spawns 2 extra Shamblers.
     /// </summary>
     public class MycelarchBoss : BossNPC
     {
@@ -32,23 +32,12 @@ namespace MyceliumAbyss
         {
             _npcRef = npc;
 
-            MatchManager.OnCharacterDamaged = (Action<Character, int, int>)Delegate.Combine(
-                MatchManager.OnCharacterDamaged,
-                new Action<Character, int, int>(OnCharacterDamaged));
-
             MatchManager.Instance.DoComic(_npcRef,
                 "The cavern trembles. Ancient roots stir with malice.", 6f);
         }
 
-        public override void Dispose()
-        {
-            base.Dispose();
-            MatchManager.OnCharacterDamaged = (Action<Character, int, int>)Delegate.Remove(
-                MatchManager.OnCharacterDamaged,
-                new Action<Character, int, int>(OnCharacterDamaged));
-        }
-
-        public override void OnCharacterDamaged(Character character, int damage, int hpCurrent)
+        // The game calls this on MatchManager.BossNpc for every character whose HP changes.
+        public override void OnCharacterDamaged(Character character, int damageTaken)
         {
             if (character.NpcData == null || !character.NpcData.Id.StartsWith("myc_mycelarch"))
                 return;
@@ -79,9 +68,11 @@ namespace MyceliumAbyss
 
             boss.SetAuraTrait(boss, "powerful", 2);
             boss.SetAuraTrait(boss, "thorns", 3);
+            // The network shares the boss's wounds: its Symbiosis heals it, then hops to an add.
+            GameApi.AddAura(boss, Myc.Symbiosis, 6, boss, false);
 
             if (_npcRef?.NPCItem?.CharImageT != null)
-                EffectsManager.Instance.PlayEffect("meleecastbuff",
+                EffectsManager.Instance.PlayEffect("healerself",
                     _npcRef.NPCItem.CharImageT);
         }
 
@@ -95,16 +86,20 @@ namespace MyceliumAbyss
             boss.SetAuraTrait(boss, "fury", 4);
             boss.SetAuraTrait(boss, "fortify", 3);
 
+            // Spore storm: every hero is rotted, and the rot hops between the party.
+            foreach (var hero in GameApi.Heroes)
+                GameApi.AddAura(hero, Myc.Rot, 4, boss, false);
+
             var shambler = Globals.Instance.GetNPC("myc_shambler");
             if (shambler != null)
             {
-                NPC[] team = MatchManager.Instance.GetTeamNPC();
+                var team = MatchManager.Instance.GetTeamNPC();
                 int spawned = 0;
-                for (int i = 0; i < team.Length && spawned < 2; i++)
+                for (int i = 0; i < team.Count && spawned < 2; i++)
                 {
                     if (team[i] == null || !team[i].Alive)
                     {
-                        MatchManager.Instance.CreateNPC(shambler, "", i);
+                        MatchManager.Instance.TeamManager.CreateNPC(shambler, "", i, isSummon: true);
                         spawned++;
                     }
                 }

@@ -1,0 +1,307 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CharacterVisualDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "BasePresentation": {
+      "type": "string"
+    },
+    "FlipX": {
+      "type": "boolean"
+    },
+    "TintHex": {
+      "type": "string"
+    },
+    "Alpha": {
+      "type": "number"
+    },
+    "HueShift": {
+      "type": "number"
+    },
+    "Effects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/RigEffectDef"
+      }
+    },
+    "Nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/VisualNodeDef"
+      }
+    },
+    "HostParts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/HostPartDef"
+      }
+    },
+    "HostHiddenRenderers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CanonicalTransformRef"
+      }
+    }
+  },
+  "definitions": {
+    "RigEffectDef": {
+      "type": "object",
+      "properties": {
+        "Type": {
+          "type": "string",
+          "enum": [
+            "Pulse",
+            "Rainbow",
+            "Flicker",
+            "FadePulse",
+            "Float",
+            "Shake",
+            "Breathe",
+            "Sway",
+            "Sparkles",
+            "Embers",
+            "Spores",
+            "Smoke",
+            "Snow",
+            "Bubbles"
+          ]
+        },
+        "ColorHex": {
+          "type": "string"
+        },
+        "Intensity": {
+          "type": "number"
+        },
+        "Speed": {
+          "type": "number"
+        }
+      }
+    },
+    "VisualNodeDef": {
+      "type": "object",
+      "properties": {
+        "NodeId": {
+          "type": "string"
+        },
+        "AttachmentKind": {
+          "type": "string",
+          "enum": [
+            "RigidAttachment",
+            "ExtractedSourceSubRig",
+            "HostBoundContent",
+            "FullPresentationReplacement"
+          ]
+        },
+        "HostSocketRef": {
+          "$ref": "#/definitions/CanonicalTransformRef"
+        },
+        "SourcePrefabRef": {
+          "type": "string"
+        },
+        "SourceAnchorRef": {
+          "$ref": "#/definitions/CanonicalTransformRef"
+        },
+        "SourceSubtreeRef": {
+          "$ref": "#/definitions/CanonicalTransformRef"
+        },
+        "Pivot": {
+          "type": "string",
+          "enum": [
+            "Anchor",
+            "SpriteCenter"
+          ]
+        },
+        "RendererRefs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CanonicalTransformRef"
+          }
+        },
+        "LocalAttachmentTransform": {
+          "$ref": "#/definitions/LocalAttachmentTransform"
+        },
+        "FacingPolicy": {
+          "type": "string",
+          "enum": [
+            "InheritHost",
+            "MirrorX",
+            "MirrorY",
+            "Authored"
+          ]
+        },
+        "SortingPolicy": {
+          "$ref": "#/definitions/VisualSortingPolicy"
+        },
+        "AnimationPolicy": {
+          "$ref": "#/definitions/AnimationPolicyDef"
+        },
+        "Overrides": {
+          "$ref": "#/definitions/VisualNodeOverrides"
+        }
+      }
+    },
+    "CanonicalTransformRef": {
+      "type": "object",
+      "properties": {
+        "Path": {
+          "type": "string"
+        }
+      }
+    },
+    "LocalAttachmentTransform": {
+      "type": "object",
+      "properties": {
+        "PositionX": {
+          "type": "number"
+        },
+        "PositionY": {
+          "type": "number"
+        },
+        "Rotation": {
+          "type": "number"
+        },
+        "ScaleX": {
+          "type": "number"
+        },
+        "ScaleY": {
+          "type": "number"
+        }
+      }
+    },
+    "VisualSortingPolicy": {
+      "type": "object",
+      "properties": {
+        "Strategy": {
+          "type": "string",
+          "enum": [
+            "HostLayer",
+            "ExplicitLayerOrder",
+            "SourceLayerOffset"
+          ]
+        },
+        "Layer": {
+          "type": "integer"
+        },
+        "Order": {
+          "type": "integer"
+        },
+        "OrderOffset": {
+          "type": "integer"
+        },
+        "Placement": {
+          "type": "string",
+          "enum": [
+            "Auto",
+            "Front",
+            "Back",
+            "InFrontOfPart",
+            "BehindPart"
+          ]
+        },
+        "ReferencePath": {
+          "type": "string"
+        }
+      }
+    },
+    "AnimationPolicyDef": {
+      "type": "object",
+      "properties": {
+        "Mode": {
+          "type": "string",
+          "enum": [
+            "Static",
+            "HostBound",
+            "SourceSynced",
+            "Procedural"
+          ]
+        },
+        "ClipMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "Fallback": {
+          "type": "string",
+          "enum": [
+            "None",
+            "StaticPose",
+            "HostBound",
+            "SkipNode"
+          ]
+        },
+        "AnchorPolicy": {
+          "type": "string",
+          "enum": [
+            "LockedAnchor",
+            "PreserveSourceMotion"
+          ]
+        },
+        "ProceduralControllerRef": {
+          "type": "string"
+        }
+      }
+    },
+    "VisualNodeOverrides": {
+      "type": "object",
+      "properties": {
+        "Visible": {
+          "type": "boolean"
+        },
+        "TintHex": {
+          "type": "string"
+        },
+        "Alpha": {
+          "type": "number"
+        },
+        "Scale": {
+          "type": "number"
+        },
+        "HueShift": {
+          "type": "number"
+        }
+      }
+    },
+    "HostPartDef": {
+      "type": "object",
+      "properties": {
+        "HostRef": {
+          "$ref": "#/definitions/CanonicalTransformRef"
+        },
+        "PositionX": {
+          "type": "number"
+        },
+        "PositionY": {
+          "type": "number"
+        },
+        "Rotation": {
+          "type": "number"
+        },
+        "ScaleX": {
+          "type": "number"
+        },
+        "ScaleY": {
+          "type": "number"
+        },
+        "HueShift": {
+          "type": "number"
+        },
+        "TintHex": {
+          "type": "string"
+        },
+        "Alpha": {
+          "type": "number"
+        },
+        "Effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RigEffectDef"
+          }
+        }
+      }
+    }
+  }
+}

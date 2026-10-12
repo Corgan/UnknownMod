@@ -87,16 +87,18 @@ namespace UnknownMod
         static void SortCharacterSprites_Postfix(MatchManager __instance)
         {
             // Energy counter — parent of energyCounterBg holds the whole group
-            if (__instance.energyCounterBg != null)
-                BumpAllRenderers(__instance.energyCounterBg.transform.parent);
+            var energyCounter = __instance.EnergyCounter;
+            if (energyCounter != null && energyCounter.energyCounterBg != null)
+                BumpAllRenderers(energyCounter.energyCounterBg.transform.parent);
 
             // End turn / bot next turn button
             if (__instance.botEndTurn != null)
                 BumpAllRenderers(__instance.botEndTurn);
 
             // Round tracker (ThermoRound) and deck counter — move above Characters layer
-            if (__instance.roundTransform != null)
-                MoveAboveCharactersAndBump(__instance.roundTransform);
+            var initiativesManager = __instance.InitiativesManager;
+            if (initiativesManager != null && initiativesManager.roundTransform != null)
+                MoveAboveCharactersAndBump(initiativesManager.roundTransform);
             if (__instance.deckCounter != null)
                 MoveAboveCharactersAndBump(__instance.deckCounter);
 

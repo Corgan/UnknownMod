@@ -3,7 +3,7 @@
   "Name": "The Mycelarch",
   "Description": "",
   "SpriteSource": "elderdryad",
-  "Hp": 675,
+  "Hp": 545,
   "Speed": 15,
   "Energy": 10,
   "EnergyTurn": 0,
@@ -19,7 +19,7 @@
   "ResShadow": 45,
   "AiCards": [
     {
-      "CardId": "myc_toxicraina",
+      "CardId": "myctoxicraina",
       "Priority": 5,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -34,7 +34,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_fungalbarriera",
+      "CardId": "mycfungalbarriera",
       "Priority": 6,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -49,7 +49,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_sporevolleya",
+      "CardId": "mycsporevolleya",
       "Priority": 4,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -64,7 +64,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_sporespawna",
+      "CardId": "mycsporespawna",
       "Priority": 3,
       "AddCardRound": 1,
       "OnlyCastIf": "Always",
@@ -79,7 +79,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_hallucinobursta",
+      "CardId": "mychallucinobursta",
       "Priority": 7,
       "AddCardRound": 3,
       "OnlyCastIf": "Always",
@@ -94,7 +94,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_pandemica",
+      "CardId": "mycpandemica",
       "Priority": 6,
       "AddCardRound": 3,
       "OnlyCastIf": "Always",
@@ -109,7 +109,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_neurallinka",
+      "CardId": "mycneurallinka",
       "Priority": 8,
       "AddCardRound": 3,
       "OnlyCastIf": "TargetHasNotAuraCurse",
@@ -119,12 +119,12 @@
       "PercentToCast": 0.0,
       "StartsAtObeliskMadnessLevel": 0,
       "StartsAtSingularityMadnessLevel": 0,
-      "AuracurseCastIf": "",
+      "AuracurseCastIf": "powerful",
       "SecondOnlyCastIf": "Always",
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_myceliumapoca",
+      "CardId": "mycmyceliumapoca",
       "Priority": 9,
       "AddCardRound": 6,
       "OnlyCastIf": "Always",
@@ -140,8 +140,8 @@
     }
   ],
   "XpReward": 150,
-  "GoldReward": 100,
-  "TierReward": 3,
+  "GoldReward": 120,
+  "TierReward": 8,
   "IsBoss": true,
   "IsNamed": false,
   "FinishCombatOnDead": true,
@@ -150,7 +150,7 @@
   "PreferredPos": "Front",
   "Immunities": [
     "paralyze",
-    "stun",
+    "sleep",
     "doom"
   ],
   "UpgradedMobId": "myc_mycelarch_plus_b",

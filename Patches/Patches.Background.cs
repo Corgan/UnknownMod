@@ -1,4 +1,5 @@
 using System;
+using BattleMatch;
 using HarmonyLib;
 using UnityEngine;
 using UnknownMod.Core;
@@ -6,154 +7,126 @@ using UnknownMod.Core;
 namespace UnknownMod
 {
     /// <summary>
-    /// Patches MatchManager.DoBackground() to support custom mod-defined backgrounds.
+    /// Patches MatchBackground.DoBackground() to support custom mod-defined backgrounds.
     /// When a CombatData has a custom background ID registered in DataHelper.CombatCustomBackgrounds,
     /// it overrides the enum-based background lookup with the custom prefab name.
     /// </summary>
     public static partial class Patches
     {
-        [HarmonyPatch(typeof(MatchManager), "DoBackground")]
+        [HarmonyPatch(typeof(MatchBackground), "DoBackground", new[] { typeof(ICombatDataProvider) })]
         [HarmonyPrefix]
-        public static void DoBackground_Prefix(MatchManager __instance)
+        public static bool DoBackground_Prefix(MatchBackground __instance, ICombatDataProvider combatDataProvider)
         {
-            var trav = Traverse.Create(__instance);
-            var cd = trav.Field<CombatData>("combatData").Value;
-            if (cd == null) return;
+            var cd = combatDataProvider?.CombatData;
+            if (cd == null) return true;
 
-            if (!DataHelper.CombatCustomBackgrounds.TryGetValue(cd.CombatId, out var customBgId))
-                return;
-            if (string.IsNullOrEmpty(customBgId)) return;
+            if (!DataHelper.CombatCustomBackgrounds.TryGetValue(DataHelper.NormalizeKey(cd.CombatId), out var customBgId))
+                return true;
+            customBgId = DataHelper.NormalizeBackgroundId(customBgId);
+            if (string.IsNullOrEmpty(customBgId) ||
+                !DataHelper.CustomBackgroundPrefabs.TryGetValue(customBgId, out var prefab) || prefab == null)
+                return true;
 
-            Plugin.Log.LogInfo($"[BG Prefix] Found custom bg '{customBgId}' for combat '{cd.CombatId}'");
+            var backgroundTransform = __instance?.backgroundTransform;
+            if (backgroundTransform == null) return true;
 
-            // Clean up all existing background children to prevent stacking
-            // on rollback/reload. The vanilla code only checks for duplicates
-            // by name but never destroys old backgrounds, so a reload would
-            // stack the new vanilla BG on top of the old custom BG.
-            var bgTransform = __instance.backgroundTransform;
-            if (bgTransform != null)
+            var audioManager = AudioManager.Instance;
+            var gameManager = GameManager.Instance;
+            if (gameManager != null && audioManager != null)
+                gameManager.PlayAudio(audioManager.soundCombatBegins);
+
+            var traverse = Traverse.Create(__instance);
+            for (int i = backgroundTransform.childCount - 1; i >= 0; i--)
             {
-                for (int i = bgTransform.childCount - 1; i >= 0; i--)
-                    UnityEngine.Object.Destroy(bgTransform.GetChild(i).gameObject);
-                // Clear the stale reference so vanilla code doesn't skip instantiation
-                trav.Field<GameObject>("backgroundPrefab").Value = null;
+                var child = backgroundTransform.GetChild(i);
+                child.gameObject.SetActive(false);
+                child.SetParent(null, false);
+                DataHelper.DestroyLiveCustomBackground(child.gameObject);
+                if (child != null) UnityEngine.Object.Destroy(child.gameObject);
             }
 
-            // Ensure the custom prefab is in backgroundPrefabs
-            if (DataHelper.CustomBackgroundPrefabs.TryGetValue(customBgId, out var prefab) && prefab != null)
+            traverse.Field<GameObject>("backgroundPrefab").Value = null;
+            traverse.Field<Transform>("backgroundSahtiAlive").Value = null;
+            traverse.Field<Transform>("backgroundSahtiDead").Value = null;
+            traverse.Field<string>("backgroundActive").Value = customBgId;
+
+            var instance = UnityEngine.Object.Instantiate(prefab, Vector3.zero, Quaternion.identity, backgroundTransform);
+            instance.name = prefab.name;
+            instance.transform.localScale = new Vector3(0.545f, 0.545f, 1f);
+            instance.SetActive(true);
+            DataHelper.RegisterLiveCustomBackground(instance);
+            traverse.Field<GameObject>("backgroundPrefab").Value = instance;
+
+            bool spooky = false;
+            bool christmas = false;
+            bool lunar = false;
+            if (gameManager != null && gameManager.IsWeeklyChallenge())
             {
-                bool found = false;
-                for (int i = 0; i < __instance.backgroundPrefabs.Count; i++)
+                var weeklyData = Globals.Instance != null && AtOManager.Instance != null
+                    ? Globals.Instance.GetWeeklyData(AtOManager.Instance.GetWeekly())
+                    : null;
+                spooky = weeklyData?.IdSteam == "challengeSpooky";
+                christmas = weeklyData?.IdSteam == "challengeChristmas";
+                lunar = weeklyData?.IdSteam == "challengeLunar";
+            }
+
+            var halloween = instance.transform.Find("halloween");
+            if (halloween != null)
+            {
+                if (spooky || christmas)
                 {
-                    if (__instance.backgroundPrefabs[i] != null &&
-                        string.Equals(__instance.backgroundPrefabs[i].name, customBgId, StringComparison.OrdinalIgnoreCase))
+                    halloween.gameObject.SetActive(true);
+                    if (christmas && __instance.decorationsT != null)
                     {
-                        found = true;
-                        break;
+                        for (int i = 0; i < halloween.childCount; i++)
+                        {
+                            var child = halloween.GetChild(i);
+                            if (!child.gameObject.activeSelf) continue;
+                            var source = child.GetComponent<SpriteRenderer>();
+                            if (source == null && child.childCount > 0)
+                                source = child.GetChild(0).GetComponent<SpriteRenderer>();
+                            if (source == null || source.sprite == null) continue;
+
+                            var decorationName = source.sprite.name.Replace("halloween", "christmas").Replace("_front", "");
+                            foreach (var decoration in __instance.decorationsT)
+                            {
+                                if (decoration == null || decoration.name != decorationName) continue;
+                                var replacement = UnityEngine.Object.Instantiate(decoration, child.position, Quaternion.identity, halloween);
+                                replacement.transform.localScale = child.localScale;
+                                var replacementRenderer = replacement.GetComponent<SpriteRenderer>();
+                                if (replacementRenderer != null)
+                                {
+                                    replacementRenderer.sortingOrder = source.sortingOrder;
+                                    replacementRenderer.sortingLayerName = source.sortingLayerName;
+                                }
+                                break;
+                            }
+                            child.gameObject.SetActive(false);
+                        }
                     }
-                }
-                if (!found)
-                {
-                    __instance.backgroundPrefabs.Add(prefab);
-                    Plugin.Log.LogInfo($"[BG Prefix] Injected prefab '{customBgId}' into backgroundPrefabs (now {__instance.backgroundPrefabs.Count})");
                 }
                 else
                 {
-                    Plugin.Log.LogInfo($"[BG Prefix] Prefab '{customBgId}' already in backgroundPrefabs");
+                    halloween.gameObject.SetActive(false);
                 }
             }
-            else
+
+            var lunarTransform = instance.transform.Find("Lunar");
+            if (lunarTransform != null)
+                lunarTransform.gameObject.SetActive(lunar);
+
+            if (cd.IsRift && __instance.riftPrefab != null)
+                UnityEngine.Object.Instantiate(__instance.riftPrefab, Vector3.zero, Quaternion.identity, backgroundTransform);
+            if (audioManager != null)
             {
-                Plugin.Log.LogWarning($"[BG Prefix] Custom prefab '{customBgId}' not found in CustomBackgroundPrefabs!");
+                if (cd.CombatMusic != null) audioManager.DoBSOAudioClip(cd.CombatMusic);
+                string nativeBackground = Enum.GetName(typeof(Enums.CombatBackground), cd.CombatBackground);
+                if (nativeBackground == "Senenthia_Dia") audioManager.DoAmbience("forest_ambience_day");
+                else if (nativeBackground == "Senenthia_Tarde" || nativeBackground == "Senenthia_LobosTarde" || nativeBackground == "Senenthia_Bosque" || nativeBackground == "Faeborg_Bosque" || nativeBackground == "Faeborg_BosqueCastor") audioManager.DoAmbience("forest_ambience_sunset");
+                else if (nativeBackground == "Senenthia_LobosNoche" || nativeBackground == "Senenthia_BosqueEntrada" || nativeBackground == "Senenthia_BosqueBoss") audioManager.DoAmbience("forest_ambience_night");
+                else if (nativeBackground == "Sectarium" || nativeBackground == "Spider_Lair" || nativeBackground == "Sewers") audioManager.DoAmbience("cave_ambience");
             }
-        }
-
-        /// <summary>
-        /// After the vanilla DoBackground sets backgroundActive from the enum,
-        /// override it with our custom background ID and re-run the instantiation
-        /// if the vanilla logic didn't find a match.
-        /// </summary>
-        [HarmonyPatch(typeof(MatchManager), "DoBackground")]
-        [HarmonyPostfix]
-        public static void DoBackground_Postfix(MatchManager __instance)
-        {
-            var trav = Traverse.Create(__instance);
-            var cd = trav.Field<CombatData>("combatData").Value;
-            if (cd == null) return;
-
-            if (!DataHelper.CombatCustomBackgrounds.TryGetValue(cd.CombatId, out var customBgId))
-                return;
-            if (string.IsNullOrEmpty(customBgId)) return;
-
-            var bgActiveField = trav.Field<string>("backgroundActive");
-            string currentBgActive = bgActiveField.Value;
-            Plugin.Log.LogInfo($"[BG Postfix] currentBgActive='{currentBgActive}', customBgId='{customBgId}'");
-
-            // If vanilla already instantiated the right background, nothing to do
-            if (string.Equals(currentBgActive, customBgId, StringComparison.OrdinalIgnoreCase))
-            {
-                Plugin.Log.LogInfo("[BG Postfix] Vanilla already set correct bg, skipping");
-                return;
-            }
-
-            // Override backgroundActive
-            bgActiveField.Value = customBgId;
-
-            var bgPrefabField = trav.Field<GameObject>("backgroundPrefab");
-
-            // Find and instantiate the custom prefab
-            for (int i = 0; i < __instance.backgroundPrefabs.Count; i++)
-            {
-                var bp = __instance.backgroundPrefabs[i];
-                if (bp == null) continue;
-                if (!string.Equals(bp.name, customBgId, StringComparison.OrdinalIgnoreCase)) continue;
-
-                Plugin.Log.LogInfo($"[BG Postfix] Found custom prefab at index {i}, name='{bp.name}', children={bp.transform.childCount}");
-
-                // Check if already instantiated under backgroundTransform
-                bool exists = false;
-                for (int j = 0; j < __instance.backgroundTransform.childCount; j++)
-                {
-                    if (__instance.backgroundTransform.GetChild(j).gameObject.name == bp.name)
-                    {
-                        exists = true;
-                        break;
-                    }
-                }
-                if (exists)
-                {
-                    Plugin.Log.LogInfo("[BG Postfix] Custom bg already instantiated, skipping");
-                    break;
-                }
-
-                // Destroy the vanilla-instantiated background if it's wrong
-                var oldPrefab = bgPrefabField.Value;
-                if (oldPrefab != null)
-                {
-                    Plugin.Log.LogInfo($"[BG Postfix] Destroying vanilla bg '{oldPrefab.name}'");
-                    UnityEngine.Object.Destroy(oldPrefab);
-                    bgPrefabField.Value = null;
-                }
-
-                // Instantiate our custom background
-                var inst = UnityEngine.Object.Instantiate(
-                    bp, Vector3.zero, Quaternion.identity, __instance.backgroundTransform);
-                inst.name = bp.name;
-                inst.transform.localScale = new Vector3(0.545f, 0.545f, 1f);
-                inst.SetActive(true);
-                bgPrefabField.Value = inst;
-
-                // Log child state
-                for (int c = 0; c < inst.transform.childCount; c++)
-                {
-                    var child = inst.transform.GetChild(c);
-                    var sr = child.GetComponent<SpriteRenderer>();
-                    Plugin.Log.LogInfo($"[BG Postfix]   child[{c}] '{child.name}' active={child.gameObject.activeSelf} sprite={sr?.sprite?.name ?? "(null)"} order={sr?.sortingOrder}");
-                }
-
-                Plugin.Log.LogInfo($"[BG Postfix] Custom bg instantiated: '{inst.name}' active={inst.activeSelf} scale={inst.transform.localScale}");
-                break;
-            }
+            return false;
         }
     }
 }

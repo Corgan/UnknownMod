@@ -26,7 +26,7 @@ namespace UnknownMod.Core
         public static List<string> GetAllEventRequirementIds()
         {
             if (_eventReqIds != null) return _eventReqIds;
-            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, EventRequirementData>>("_EventRequirementSource").Value;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, EventRequirementData>>("_Requirements").Value;
             _eventReqIds = dict != null ? dict.Keys.OrderBy(k => k).ToList() : new List<string>();
             return _eventReqIds;
         }
@@ -40,11 +40,34 @@ namespace UnknownMod.Core
             return _npcIds;
         }
 
+        /// <summary>Sorted list of all KeyNote IDs (base game plus registered mods).</summary>
+        public static List<string> GetAllKeyNoteIds()
+        {
+            if (_keyNoteIds != null) return _keyNoteIds;
+            var dict = Globals.Instance?.KeyNotes;
+            _keyNoteIds = dict != null ? dict.Keys.OrderBy(k => k).ToList() : new List<string>();
+            return _keyNoteIds;
+        }
+        /// <summary>Sorted list of all Cinematic IDs (base game plus registered mods).</summary>
+        public static List<string> GetAllCinematicIds()
+        {
+            if (_cinematicIds != null) return _cinematicIds;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CinematicData>>("_Cinematics").Value;
+            _cinematicIds = dict != null ? dict.Keys.OrderBy(k => k).ToList() : new List<string>();
+            return _cinematicIds;
+        }
+
+        public static CinematicData GetCinematic(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            return Globals.Instance?.GetCinematicData(NormalizeKey(id));
+        }
+
         /// <summary>Sorted list of all base-game Card IDs.</summary>
         public static List<string> GetAllCardIds()
         {
             if (_cardIds != null) return _cardIds;
-            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CardData>>("_CardsSource").Value;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CardDataNew>>("_CardsSource").Value;
             _cardIds = dict != null ? dict.Keys.OrderBy(k => k).ToList() : new List<string>();
             return _cardIds;
         }
@@ -53,10 +76,10 @@ namespace UnknownMod.Core
         public static List<string> GetAllPetModelCardIds()
         {
             if (_petModelCardIds != null) return _petModelCardIds;
-            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CardData>>("_CardsSource").Value;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CardDataNew>>("_CardsSource").Value;
             if (dict == null) { _petModelCardIds = new List<string>(); return _petModelCardIds; }
             _petModelCardIds = dict
-                .Where(kvp => kvp.Value.PetModel != null)
+                .Where(kvp => kvp.Value.PetData != null)
                 .Select(kvp => kvp.Key)
                 .OrderBy(k => k)
                 .ToList();
@@ -221,7 +244,16 @@ namespace UnknownMod.Core
 
         // ── Single-Entity Lookups ────────────────────────────────
 
-        public static NPCData GetExistingNPC(string id)
+        private static readonly HashSet<string> _missWarned = new HashSet<string>();
+
+        /// <summary>Warn once per (kind,id) so a missing reference can't flood the log from per-frame editor lookups.</summary>
+        private static void WarnMissOnce(string kind, string id, string message)
+        {
+            if (_missWarned.Add(kind + ":" + id)) Plugin.Log.LogWarning(message);
+        }
+
+        /// <param name="warn">false for forward-reference probes that are re-resolved in a later pass.</param>
+        public static NPCData GetExistingNPC(string id, bool warn = true)
         {
             id = NormalizeKey(id);
             if (_npcCache.TryGetValue(id, out var cached)) return cached;
@@ -232,11 +264,11 @@ namespace UnknownMod.Core
                 _npcCache[id] = npc;
                 return npc;
             }
-            Plugin.Log.LogWarning($"[DataHelper] NPC '{id}' not found for sprite borrowing");
+            if (warn) WarnMissOnce("npc", id, $"[DataHelper] NPC '{id}' not found");
             return null;
         }
 
-        public static AuraCurseData GetAuraCurse(string id)
+        public static AuraCurseData GetAuraCurse(string id, bool warn = true)
         {
             if (string.IsNullOrEmpty(id)) return null;
             id = NormalizeKey(id);
@@ -244,7 +276,7 @@ namespace UnknownMod.Core
 
             var ac = Globals.Instance.GetAuraCurseData(id);
             if (ac != null) _acCache[id] = ac;
-            else Plugin.Log.LogWarning($"[DataHelper] AuraCurse '{id}' not found");
+            else if (warn) WarnMissOnce("ac", id, $"[DataHelper] AuraCurse '{id}' not found");
             return ac;
         }
 
@@ -257,7 +289,7 @@ namespace UnknownMod.Core
         {
             if (string.IsNullOrEmpty(id)) return null;
             id = NormalizeKey(id);
-            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, EventRequirementData>>("_EventRequirementSource").Value;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, EventRequirementData>>("_Requirements").Value;
             if (dict != null && dict.TryGetValue(id, out var req))
                 return req;
             Plugin.Log.LogWarning($"[DataHelper] EventRequirement '{id}' not found");
@@ -312,13 +344,23 @@ namespace UnknownMod.Core
             return null;
         }
 
-        public static CardData GetCard(string id)
+        public static Cards.CardRealtimeData GetCard(string id)
         {
             if (string.IsNullOrEmpty(id)) return null;
             id = NormalizeKey(id);
-            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CardData>>("_CardsSource").Value;
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, Cards.CardRealtimeData>>("_Cards").Value;
             if (dict != null && dict.TryGetValue(id, out var card))
                 return card;
+            return null;
+        }
+
+        public static CardDataNew GetCardSource(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            id = NormalizeKey(id);
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, CardDataNew>>("_CardsSource").Value;
+            if (dict != null && dict.TryGetValue(id, out var card)) return card;
+            Plugin.Log.LogWarning($"[DataHelper] Card source '{id}' not found");
             return null;
         }
 

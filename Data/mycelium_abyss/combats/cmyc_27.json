@@ -1,0 +1,24 @@
+{
+  "CombatId": "cmyc_27",
+  "Description": "The gallery crumbles as the hive pours through the cracks.",
+  "NpcIds": [
+    "myc_thrall",
+    "myc_lurker",
+    "myc_blightcaller",
+    "myc_lurker"
+  ],
+  "CombatTier": "T4",
+  "Background": "Sewers",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 1,
+      "Target": "Monsters"
+    }
+  ]
+}

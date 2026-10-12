@@ -1,14 +1,13 @@
 {
   "CombatId": "cmyc_8",
-  "Description": "A horde of mindless warriors surges forward, sustained by dark magic.",
+  "Description": "A robed figure commands the fungal horde.",
   "NpcIds": [
-    "myc_thrall",
-    "myc_thrall",
-    "myc_thrall",
-    "myc_blightcaller"
+    "myc_blightcaller",
+    "myc_shambler",
+    "myc_shambler"
   ],
-  "CombatTier": "T4",
-  "Background": "Spider_Lair",
+  "CombatTier": "T3",
+  "Background": "Velkarath_Cave",
   "NpcRemoveInMadness0Index": -1,
   "HealHeroes": false,
   "IsRift": false,

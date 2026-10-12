@@ -1,0 +1,34 @@
+{
+  "NodeId": "myc_29",
+  "NodeName": "Wagon Hollow",
+  "Description": "",
+  "PosX": -3.889,
+  "PosY": 0.558,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "PoisonousAir",
+  "NodeRequirementId": "",
+  "CombatTier": "T0",
+  "CombatPercent": 0,
+  "EventIds": [
+    "e_myc_38",
+    "e_myc_29"
+  ],
+  "EventPercent": 100,
+  "NodeEventTier": "T0",
+  "NodeEventPriority": [
+    0,
+    1
+  ],
+  "NodeEventPercent": [
+    100,
+    100
+  ],
+  "Connections": [
+    "myc_4"
+  ]
+}

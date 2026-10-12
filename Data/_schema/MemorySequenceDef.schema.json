@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MemorySequenceDef",
+  "type": "object",
+  "properties": {
+    "ZoneId": {
+      "type": "string"
+    },
+    "CardGroups": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/MemorySequenceGroupDef"
+      }
+    },
+    "ExtraPoolCardIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "definitions": {
+    "MemorySequenceGroupDef": {
+      "type": "object",
+      "properties": {
+        "CardType": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Melee_Attack",
+            "Ranged_Attack",
+            "Magic_Attack",
+            "Defense",
+            "Fire_Spell",
+            "Cold_Spell",
+            "Lightning_Spell",
+            "Mind_Spell",
+            "Shadow_Spell",
+            "Holy_Spell",
+            "Curse_Spell",
+            "Healing_Spell",
+            "Book",
+            "Small_Weapon",
+            "Song",
+            "Skill",
+            "Power",
+            "Injury",
+            "Attack",
+            "Spell",
+            "Boon",
+            "Weapon",
+            "Armor",
+            "Jewelry",
+            "Accesory",
+            "Pet",
+            "Corruption",
+            "Enchantment",
+            "Food",
+            "Flask",
+            "Petrare",
+            "EchoEconomy",
+            "EchoOverpowered",
+            "Echo_Spell"
+          ]
+        },
+        "Count": {
+          "type": "integer"
+        },
+        "PoolCardIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

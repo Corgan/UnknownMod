@@ -1,0 +1,25 @@
+{
+  "NodeId": "myc_32",
+  "NodeName": "Mycologist's Camp",
+  "Description": "",
+  "PosX": -2.106,
+  "PosY": -2.132,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "PoisonousAir",
+  "NodeRequirementId": "",
+  "CombatTier": "T0",
+  "CombatPercent": 0,
+  "EventIds": [
+    "e_myc_32"
+  ],
+  "EventPercent": 100,
+  "NodeEventTier": "T0",
+  "Connections": [
+    "myc_18"
+  ]
+}

@@ -17,8 +17,10 @@ namespace UnknownMod.Core
         {
             foreach (var kvp in _cache)
             {
-                if (kvp.Value != null && kvp.Value.texture != null)
-                    Object.Destroy(kvp.Value.texture);
+                if (kvp.Value == null) continue;
+                var texture = kvp.Value.texture;
+                Object.Destroy(kvp.Value);
+                if (texture != null) Object.Destroy(texture);
             }
             _cache.Clear();
         }

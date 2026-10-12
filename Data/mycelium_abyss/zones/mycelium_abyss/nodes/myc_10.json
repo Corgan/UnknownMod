@@ -13,7 +13,8 @@
   "NodeGround": "DampCavern",
   "NodeRequirementId": "",
   "CombatIds": [
-    "cmyc_8"
+    "cmyc_10",
+    "cmyc_w4"
   ],
   "CombatTier": "T4",
   "CombatPercent": 100,

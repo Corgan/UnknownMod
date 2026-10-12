@@ -24,6 +24,8 @@ namespace UnknownMod.Definitions
         public string SoundSource = "";
         /// <summary>Base-game pet card ID to copy the pet model prefab from.</summary>
         public string PetModelSource = "";
+        public string PetVisualGraphId = "";
+        public bool ShouldSerializePetVisualGraphId() => !string.IsNullOrEmpty(PetVisualGraphId);
 
         // ── Card Classification ──────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
@@ -51,9 +53,9 @@ namespace UnknownMod.Definitions
         public bool EnergyReductionToZeroTemporal = false;
 
         // ── Flags ────────────────────────────────────────────────
-        public bool Playable = false;
+        public bool Playable = true;
         public bool Visible = false;
-        public bool ShowInTome = false;
+        public bool ShowInTome = true;
         public bool AutoplayDraw = false;
         public bool AutoplayEndTurn = false;
         public bool Vanish = false;
@@ -62,6 +64,7 @@ namespace UnknownMod.Definitions
         public bool Corrupted = false;
         public bool EndTurn = false;
         public bool Starter = false;
+        public bool CombatBased = false;
         public bool FlipSprite = false;
         public bool ModifiedByTrait = false;
         public bool OnlyInWeekly = false;
@@ -91,8 +94,16 @@ namespace UnknownMod.Definitions
 
         public bool IgnoreBlock = false;
         public bool IgnoreBlock2 = false;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public bool? IgnoreBlockSelf = null;
+        [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+        public bool? IgnoreBlockSelf2 = null;
         public int DamageSelf = 0;
         public int DamageSelf2 = 0;
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.DamageType? DamageSelfType = null;
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.DamageType? DamageSelfType2 = null;
 
         // ── Curses (applied to target) ───────────────────────────
         public string Curse = "";
@@ -163,7 +174,7 @@ namespace UnknownMod.Definitions
         public int EffectRepeatMaxBonus = 0;
         public int EffectRepeatModificator = 0;
         [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.EffectRepeatTarget EffectRepeatTarget = Enums.EffectRepeatTarget.NoRepeat;
+        public Enums.EffectRepeatTarget EffectRepeatTarget = Enums.EffectRepeatTarget.Same;
 
         // ── Misc Mechanics ───────────────────────────────────────
         public bool MoveToCenter = false;
@@ -172,7 +183,6 @@ namespace UnknownMod.Definitions
         public int PullTarget = 0;
         public int DrawCard = 0;
         public int DiscardCard = 0;
-        public int EnergyRecharge = 0;
         public int GoldGainQuantity = 0;
         public int ShardsGainQuantity = 0;
         public int ExhaustCounter = 0;
@@ -197,9 +207,9 @@ namespace UnknownMod.Definitions
         public Enums.CardType[] AddCardTypeAux = Array.Empty<Enums.CardType>();
         public int AddCardChoose = 0;
         [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.CardFrom AddCardFrom = Enums.CardFrom.Game;
+        public Enums.CardFrom AddCardFrom = Enums.CardFrom.Deck;
         [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.CardPlace AddCardPlace = Enums.CardPlace.Hand;
+        public Enums.CardPlace AddCardPlace = Enums.CardPlace.Discard;
         public int AddCardReducedCost = 0;
         public bool AddCardCostTurn = false;
         public bool AddCardVanish = false;
@@ -230,61 +240,64 @@ namespace UnknownMod.Definitions
         public int AcEnergyBonusQuantity = 0;
         public string AcEnergyBonus2 = "";   // AC ID
         public int AcEnergyBonus2Quantity = 0;
-        public bool ChooseOneOfAvailableAuras = false;
 
-        // ── Special Value System ─────────────────────────────────
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.CardSpecialValue SpecialValueGlobal = Enums.CardSpecialValue.None;
-        public float SpecialValueModifierGlobal = 0f;
-        public string SpecialAuraCurseNameGlobal = "";  // AC ID
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.CardSpecialValue SpecialValue1 = Enums.CardSpecialValue.None;
-        public float SpecialValueModifier1 = 0f;
-        public string SpecialAuraCurseName1 = "";       // AC ID
-        [JsonConverter(typeof(StringEnumConverter))]
-        public Enums.CardSpecialValue SpecialValue2 = Enums.CardSpecialValue.None;
-        public float SpecialValueModifier2 = 0f;
-        public string SpecialAuraCurseName2 = "";       // AC ID
+        // ── Special Values / Effect Conditions (current card model) ──
+        // Per-effect extras keyed by slot: Damage, Damage2, DamageSelf, DamageSelf2, Heal, HealSelf,
+        // Aura, Aura2, Aura3, AuraSelf, AuraSelf2, AuraSelf3, Curse, Curse2, Curse3, CurseSelf, CurseSelf2, CurseSelf3.
+        public Dictionary<string, CardEffectExtrasDef> EffectExtras = new();
+        public CardSpecialValueDef SelfHealthLossSpecialValue = new();
+        public CardSpecialValueDef DrawCardSpecialValue = new();
+        /// <summary>Card-wide special value used by the description resolver (CardDataNew.cardSpecialValue).</summary>
+        public CardSpecialValueDef CardSpecialValue = new();
+        public List<CardEnergyRechargeDef> EnergyRecharges = new();
+        /// <summary>Effects that do not fit the fixed slots above (side-targeted damage, team heals, extra auras, ...).</summary>
+        public List<CardExtraEffectDef> ExtraEffects = new();
 
-        // ── Special Value Scaling Flags ──────────────────────────
-        public bool DamageSpecialValueGlobal = false;
-        public bool DamageSpecialValue1 = false;
-        public bool DamageSpecialValue2 = false;
-        public bool Damage2SpecialValueGlobal = false;
-        public bool Damage2SpecialValue1 = false;
-        public bool Damage2SpecialValue2 = false;
-        public bool HealSpecialValueGlobal = false;
-        public bool HealSpecialValue1 = false;
-        public bool HealSpecialValue2 = false;
-        public bool HealSelfSpecialValueGlobal = false;
-        public bool HealSelfSpecialValue1 = false;
-        public bool HealSelfSpecialValue2 = false;
-        public bool SelfHealthLossSpecialGlobal = false;
-        public bool SelfHealthLossSpecialValue1 = false;
-        public bool SelfHealthLossSpecialValue2 = false;
-        public bool EnergyRechargeSpecialValueGlobal = false;
-        public bool DrawCardSpecialValueGlobal = false;
+        // ── Combat mechanics added by newer game versions ────────
+        public int GrantStanza = 0;
+        public bool IgnoreStealth = false;
+        public bool EchoCard = false;
+        public bool EchoCardResult = false;
+        public bool EchoCardResurge = false;
+        public int CopyAurasAmount = 0;
+        public bool UseRandomAura = false;
+        public bool ParodyActivation = false;
+        public bool ParodyCopyAuraCurse = false;
+        public bool ParodyPurgeDispelAuraCurseSelf = false;
+        public int ParodyCopyingTargetCardsAmount = 0;
+        public bool ParodySkipModel = false;
+        public bool ParodyCopyAurasOnly = false;
 
-        // ── Aura/Curse Charges Special Value Flags ───────────────
-        public bool AuraChargesSpecialValueGlobal = false;
-        public bool AuraChargesSpecialValue1 = false;
-        public bool AuraChargesSpecialValue2 = false;
-        public bool AuraCharges2SpecialValueGlobal = false;
-        public bool AuraCharges2SpecialValue1 = false;
-        public bool AuraCharges2SpecialValue2 = false;
-        public bool AuraCharges3SpecialValueGlobal = false;
-        public bool AuraCharges3SpecialValue1 = false;
-        public bool AuraCharges3SpecialValue2 = false;
-        public bool CurseChargesSpecialValueGlobal = false;
-        public bool CurseChargesSpecialValue1 = false;
-        public bool CurseChargesSpecialValue2 = false;
-        public bool CurseCharges2SpecialValueGlobal = false;
-        public bool CurseCharges2SpecialValue1 = false;
-        public bool CurseCharges2SpecialValue2 = false;
-        public bool CurseCharges3SpecialValueGlobal = false;
-        public bool CurseCharges3SpecialValue1 = false;
-        public bool CurseCharges3SpecialValue2 = false;
+        // ── Add-card extras ──────────────────────────────────────
+        [JsonProperty(ItemConverterType = typeof(StringEnumConverter))]
+        public Enums.CardType[] SkipCardTypes = Array.Empty<Enums.CardType>();
+        public bool CopyNameFromOriginal = false;
+        public bool CopyImageFromOriginal = false;
+        public bool CopyCardUpgradedFromOriginal = false;
+        public bool CopyCardTypeFromOriginal = false;
+        public List<CardHeroClassTypesDef> AddCardTypeByHeroClass = new();
+        public List<CardHeroClassCardsDef> AddCardListByHeroClass = new();
 
+        // ── Additional summons (different units from the same card) ──
+        public List<CardSummonDef> ExtraSummons = new();
+
+        // ── Description templates ────────────────────────────────
+        public string PreDescriptionId = "";
+        public string DescriptionId = "";
+        public string PostDescriptionId = "";
+        public bool UseDescriptionFromCard = false;
+        public string[] PreDescriptionArgs = Array.Empty<string>();
+        public string[] DescriptionArgs = Array.Empty<string>();
+        public string[] PostDescriptionArgs = Array.Empty<string>();
+        /// <summary>Custom description templates ({Damage}, {Aura}, {card:Id} tokens, game tags). DescriptionText replaces the generated text; Pre/Post wrap it. Registered as mod texts at build time.</summary>
+        public string DescriptionText = "";
+        public string PreDescriptionText = "";
+        public string PostDescriptionText = "";
+        public bool ShouldSerializeDescriptionText() => !string.IsNullOrEmpty(DescriptionText);
+        public bool ShouldSerializePreDescriptionText() => !string.IsNullOrEmpty(PreDescriptionText);
+        public bool ShouldSerializePostDescriptionText() => !string.IsNullOrEmpty(PostDescriptionText);
+        /// <summary>KeyNote ids shown as tooltips on the card (base-game or mod-defined).</summary>
+        public List<string> KeyNoteIds = new();
         // ── FX / Effects ─────────────────────────────────────────
         public string EffectCaster = "";
         public string EffectTarget = "";
@@ -294,7 +307,7 @@ namespace UnknownMod.Definitions
         public bool EffectCastCenter = false;
         public string EffectTrail = "";
         public bool EffectTrailRepeat = false;
-        public float EffectTrailSpeed = 0f;
+        public float EffectTrailSpeed = 1f;
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.EffectTrailAngle EffectTrailAngle = Enums.EffectTrailAngle.Horizontal;
         public float EffectPostTargetDelay = 0f;
@@ -341,6 +354,9 @@ namespace UnknownMod.Definitions
         [JsonIgnore]
         public bool HasItemData => Item != null;
 
+        public bool ShouldSerializeIgnoreBlockSelf() => IgnoreBlockSelf.HasValue;
+        public bool ShouldSerializeIgnoreBlockSelf2() => IgnoreBlockSelf2.HasValue;
+
         // ── Build Pipeline Conversion ────────────────────────────
 
         /// <summary>
@@ -358,6 +374,7 @@ namespace UnknownMod.Definitions
                 SpriteSource = SpriteSource,
                 SoundSource = SoundSource,
                 PetModelSource = PetModelSource,
+                SpriteBossDrop = it.SpriteBossDrop,
                 CardType = CardType,
                 Rarity = CardRarity,
                 CardUpgraded = CardUpgraded,
@@ -444,6 +461,12 @@ namespace UnknownMod.Definitions
                 AuracurseGain3SpecialValue = it.AuracurseGain3SpecialValue,
                 Acg3MultiplyByEnergyUsed = it.Acg3MultiplyByEnergyUsed,
                 ChooseOneACToGain = it.ChooseOneACToGain,
+                ActivationSelf = it.ActivationSelf,
+                HealPercentQuantitySelfBase = it.HealPercentQuantitySelfBase,
+                ResurgeChoose = it.ResurgeChoose,
+                CombatCorruption = it.CombatCorruption,
+                ShiftElementalResistance = it.ShiftElementalResistance,
+                EchoAdaptationValues = it.EchoAdaptationValues,
                 // AC Gain (self)
                 AuracurseGainSelf1 = it.AuracurseGainSelf1,
                 AuracurseGainSelfValue1 = it.AuracurseGainSelfValue1,
@@ -477,7 +500,7 @@ namespace UnknownMod.Definitions
                 CardToGain = it.CardToGain,
                 CardToGainType = it.CardToGainType,
                 CardPlace = it.CardPlace,
-                CardToGainList = it.CardToGainList != null ? new List<string>(it.CardToGainList) : new(),
+                CardToGainList = it.CardToGainList != null ? new List<string>(it.CardToGainList) : null,
                 // Cost / Economy
                 CostZero = it.CostZero,
                 CostReduction = it.CostReduction,
@@ -539,7 +562,7 @@ namespace UnknownMod.Definitions
         /// <summary>
         /// Populate this CardDef from a base-game ItemData + paired CardData snapshot.
         /// </summary>
-        public static CardDef SnapshotFromItem(ItemData itemData, CardData pairedCard)
+        public static CardDef SnapshotFromItem(ItemData itemData, Cards.CardRealtimeData pairedCard)
         {
             var cd = pairedCard != null
                 ? UnknownMod.Core.ModProjectBuilder.SnapshotCard(pairedCard)
@@ -628,6 +651,12 @@ namespace UnknownMod.Definitions
             it.AuracurseGain3SpecialValue = snap.AuracurseGain3SpecialValue;
             it.Acg3MultiplyByEnergyUsed = snap.Acg3MultiplyByEnergyUsed;
             it.ChooseOneACToGain = snap.ChooseOneACToGain;
+            it.ActivationSelf = snap.ActivationSelf;
+            it.HealPercentQuantitySelfBase = snap.HealPercentQuantitySelfBase;
+            it.ResurgeChoose = snap.ResurgeChoose;
+            it.CombatCorruption = snap.CombatCorruption;
+            it.ShiftElementalResistance = snap.ShiftElementalResistance;
+            it.EchoAdaptationValues = snap.EchoAdaptationValues;
             it.AuracurseGainSelf1 = snap.AuracurseGainSelf1;
             it.AuracurseGainSelfValue1 = snap.AuracurseGainSelfValue1;
             it.AuracurseGainSelf2 = snap.AuracurseGainSelf2;
@@ -656,7 +685,7 @@ namespace UnknownMod.Definitions
             it.CardToGain = snap.CardToGain;
             it.CardToGainType = snap.CardToGainType;
             it.CardPlace = snap.CardPlace;
-            it.CardToGainList = snap.CardToGainList ?? new();
+            it.CardToGainList = snap.CardToGainList != null ? new List<string>(snap.CardToGainList) : null;
             it.CostZero = snap.CostZero;
             it.CostReduction = snap.CostReduction;
             it.CardsReduced = snap.CardsReduced;

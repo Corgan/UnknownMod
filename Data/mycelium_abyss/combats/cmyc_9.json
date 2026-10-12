@@ -1,14 +1,14 @@
 {
   "CombatId": "cmyc_9",
-  "Description": "Every strain of the mycelia converges on your position.",
+  "Description": "Spore-choked scavengers stumble out of the haze.",
   "NpcIds": [
-    "myc_golem",
-    "myc_blightcaller",
+    "myc_spitter",
+    "myc_spitter",
     "myc_shambler",
-    "myc_spitter"
+    ""
   ],
-  "CombatTier": "T4",
-  "Background": "Spider_Lair",
+  "CombatTier": "T3",
+  "Background": "Senenthia_BosqueEntrada_Nightmare",
   "NpcRemoveInMadness0Index": -1,
   "HealHeroes": false,
   "IsRift": false,

@@ -39,6 +39,9 @@ namespace UnknownMod.Editor
         private bool _secIdentity = true;
         private bool _secConfig = false;
         private bool _secVisual = false;
+        private bool _secBuilder = false;
+        private bool _secAnim = false;
+        private bool _secPortrait = false;
         private bool _secSelection = false;
 
 
@@ -68,10 +71,11 @@ namespace UnknownMod.Editor
             // ── Config ───────────────────────────────────────────
             if (EditorFields.Section("Config", ref _secConfig))
             {
-                var heroIds = DataHelper.GetAllSubClassIds();
+                var heroIds = RefIds.SubClasses();
                 d.SkinSubclass = EditorFields.IdDropdown("Subclass", d.SkinSubclass, heroIds, "skin_sub");
                 d.SkinOrder = EditorFields.IntField("Sort Order", d.SkinOrder);
                 d.BaseSkin = EditorFields.Toggle("Base Skin", d.BaseSkin);
+                d.HideInGame = EditorFields.Toggle("Hide In Game", d.HideInGame);
                 d.PerkLevel = EditorFields.IntField("Perk Level", d.PerkLevel);
                 d.Sku = EditorFields.TextField("SKU", d.Sku);
                 d.SteamStat = EditorFields.TextField("Steam Stat", d.SteamStat);
@@ -80,26 +84,44 @@ namespace UnknownMod.Editor
             // ── Visual Source ────────────────────────────────────
             if (EditorFields.Section("Visual Source", ref _secVisual))
             {
-                var scIds = DataHelper.GetAllSubClassIds();
-                d.SpriteSource = EditorFields.IdDropdown("Sprite Source", d.SpriteSource, scIds, "skin_sprsrc", pickerMode: EntityPicker.Mode.Hero);
+                var skinIds = EditorFields.CachedIds("skin_or_npc", () => DataHelper.GetAllSkinIds().Concat(DataHelper.GetAllNpcIds()).Distinct().OrderBy(x => x).ToList());
+                GraftSpriteFields.DrawSource(proj, "Rig", ref d.SpriteSource, ref d.VisualGraphId,
+                    skinIds, "skin", EntityPicker.Mode.Skin);
+                GUILayout.Label("<color=#888>Rig = the in-battle animated model: a hero skin or a monster (use a graft with Flip Horizontally so it faces the right way).</color>", EditorStyles.RichLabel);
+            }
 
-                // ── SpriteSkin Override (HeroSkin skins only) ──
-                var skinIds = proj.SpriteSkins
-                    .Where(kvp => kvp.Value.SkinTarget == SkinTargetType.HeroSkin)
-                    .Select(kvp => kvp.Key)
-                    .Concat(proj.SpriteSkinPatches
-                        .Where(kvp => kvp.Value.SkinTarget == SkinTargetType.HeroSkin)
-                        .Select(kvp => kvp.Key))
-                    .Distinct().OrderBy(k => k).ToList();
-                d.OverrideId = EditorFields.IdDropdown("SpriteSkin Override", d.OverrideId,
-                    skinIds, "skin_override", pickerMode: EntityPicker.Mode.SpriteSkin);
+            // ── Model builder ────────────────────────────────────
+            if (EditorFields.Section("Model Builder", ref _secBuilder))
+            {
+                var rigChoices = EditorFields.CachedIds("skin_or_npc", () => DataHelper.GetAllSkinIds().Concat(DataHelper.GetAllNpcIds()).Distinct().OrderBy(x => x).ToList());
+                RigBuilderFields.Draw(proj, d.Id, "skinrb_" + d.Id, true, rigChoices, EntityPicker.Mode.Skin,
+                    ref d.SpriteSource, ref d.VisualGraphId, ref d.FlipPortrait, d.AnimTriggers, ref d.AnimNoFallback);
+            }
 
-                if (!string.IsNullOrEmpty(d.OverrideId))
-                {
-                    GUILayout.Label(
-                        "<size=10><color=#999>Prefab built at load; per-frame overrides applied via LateUpdate component.</color></size>",
-                        EditorStyles.RichLabel);
-                }
+            // ── Animation ────────────────────────────────────────
+            if (EditorFields.Section("Animation", ref _secAnim))
+                AnimFields.Draw(d.AnimTriggers, ref d.AnimNoFallback, "skinanim_" + d.Id);
+
+            // ── Portrait & Silhouette ────────────────────────────
+            if (EditorFields.Section("Portrait & Silhouette", ref _secPortrait))
+            {
+                d.PortraitSource = EditorFields.IdDropdown("Portrait Source", d.PortraitSource,
+                    EditorFields.CachedIds("skin_or_npc", () => DataHelper.GetAllSkinIds().Concat(DataHelper.GetAllNpcIds()).Distinct().OrderBy(x => x).ToList()), "skin_portsrc", pickerMode: EntityPicker.Mode.Skin);
+                GUILayout.Label("<color=#888>Base skin to take portraits and silhouettes from. Empty = the rig's. The sprite names below override it.</color>", EditorStyles.RichLabel);
+                var sprites = EditorFields.CachedIds("spriteName", () => MapEditor.GetAllSpriteNames());
+                d.Portrait = EditorFields.IdDropdown("Portrait", d.Portrait, sprites, "skin_port", pickerMode: EntityPicker.Mode.Sprite);
+                d.PortraitLarge = EditorFields.IdDropdown("Portrait (Large)", d.PortraitLarge, sprites, "skin_portl", pickerMode: EntityPicker.Mode.Sprite);
+                d.Silhouette = EditorFields.IdDropdown("Silhouette", d.Silhouette, sprites, "skin_sil", pickerMode: EntityPicker.Mode.Sprite);
+                d.SilhouetteLarge = EditorFields.IdDropdown("Silhouette (Large)", d.SilhouetteLarge, sprites, "skin_sill", pickerMode: EntityPicker.Mode.Sprite);
+                d.FlipPortrait = EditorFields.Toggle("Flip Portraits", d.FlipPortrait);
+                d.PortraitScale = EditorFields.FloatField("Portrait Scale", d.PortraitScale);
+                d.PortraitOffsetX = EditorFields.FloatField("Portrait Offset X", d.PortraitOffsetX);
+                d.PortraitOffsetY = EditorFields.FloatField("Portrait Offset Y", d.PortraitOffsetY);
+                GUILayout.Label("<color=#888>Scale zooms the art inside its frame (1 = unchanged, 0.1-4). Offsets shift it as a fraction of the frame; Y is up.</color>", EditorStyles.RichLabel);
+                GUILayout.Space(4);
+                // The captured art already faces the rig's way, so any portrait flip meant for the old source art is dropped
+                if (PortraitCaptureFields.Draw(proj, "skincap_" + d.Id, d.Id, d.VisualGraphId, d.SpriteSource, true, ref d.Portrait, ref d.PortraitLarge, ref d.Silhouette, ref d.SilhouetteLarge))
+                    d.FlipPortrait = false;
             }
 
             // ── Selection Screen ─────────────────────────────────

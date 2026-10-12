@@ -1,0 +1,19 @@
+{
+  "Id": "mycthornbloomringa",
+  "Name": "Thornbloom Ring",
+  "Description": "Thorns and Symbiosis charges <acb>+1</acb>.<br2>Max HP <acb>+14</acb>.",
+  "CardClass": "Item",
+  "CardType": "Jewelry",
+  "CardRarity": "Rare",
+  "SpriteSource": "myc_art_thornbloomring",
+  "Item": {
+    "Activation": "PreBeginCombat",
+    "AuracurseBonus1": "thorns",
+    "AuracurseBonusValue1": 1,
+    "AuracurseBonus2": "myc_symbiosis",
+    "AuracurseBonusValue2": 1,
+    "MaxHealth": 14
+  },
+  "CardUpgraded": "A",
+  "BaseCardId": "mycthornbloomring"
+}

@@ -1,0 +1,19 @@
+{
+  "Id": "mychivesigneta",
+  "Name": "Hivemind Signet",
+  "Description": "Shadow damage <acb>+15%</acb>.<br2>Symbiosis charges <acb>+2</acb>.",
+  "CardClass": "Item",
+  "CardType": "Jewelry",
+  "CardRarity": "Mythic",
+  "SpriteSource": "myc_art_signet",
+  "Item": {
+    "Activation": "PreBeginCombat",
+    "DamagePercentBonus": "Shadow",
+    "DamagePercentBonusValue": 15,
+    "AuracurseBonus1": "myc_symbiosis",
+    "AuracurseBonusValue1": 2,
+    "DropOnly": true
+  },
+  "CardUpgraded": "A",
+  "BaseCardId": "mychivesignet"
+}

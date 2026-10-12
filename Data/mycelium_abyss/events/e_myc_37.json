@@ -1,0 +1,29 @@
+{
+  "EventId": "e_myc_37",
+  "EventName": "The Heart of the Roots",
+  "Description": "Behind the Mycelarch's fallen throne, the roots go slack and sag. Wrapped in them like a cocoon hangs a figure in a tattered scholar's coat, mushrooms blooming from his shoulders, his chest rising and falling. Morel. The Mycelium kept him alive, to speak for it.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "SpriteMap": "quest-loremaster",
+  "EventIconShader": "Orange",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Cut Morel free.",
+      "Action": 54,
+      "SsText": "The threads part and fall away. Morel coughs out a cloud of spores, then laughs, hoarse and astonished. \"It stopped singing. It let go.\" He shakes the dust from his cap and falls in beside your party.",
+      "SsXP": 120,
+      "SsUnlockClassId": "myceliumancer",
+      "RequirementId": "myc_morel_p3",
+      "SsRequirementLockId": "myc_morel_quest",
+      "SsRequirementLock2Id": "myc_morel_p3"
+    },
+    {
+      "ReplyText": "Leave him to the Mycelium.",
+      "Action": 11,
+      "SsText": "You back away. The roots close slowly over him, and the hum begins again."
+    }
+  ]
+}

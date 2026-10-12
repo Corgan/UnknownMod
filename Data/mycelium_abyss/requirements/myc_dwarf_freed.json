@@ -1,0 +1,13 @@
+{
+  "Id": "myc_dwarf_freed",
+  "RequirementName": "Freed Dwarf",
+  "Description": "You freed the assimilated merchant from the Mycelium.",
+  "AssignToPlayerAtBegin": false,
+  "RequirementTrack": false,
+  "ItemTrack": false,
+  "RequirementZoneFinishTrack": "None",
+  "RequirementZoneFinishTrackAlternate": "None",
+  "WitheredValeUniqueCheck": false,
+  "TrackCard": "",
+  "SpriteSource": ""
+}

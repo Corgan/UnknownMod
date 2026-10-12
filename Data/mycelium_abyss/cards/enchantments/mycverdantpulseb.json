@@ -1,0 +1,29 @@
+{
+  "Id": "mycverdantpulseb",
+  "Name": "Verdant Pulse",
+  "Description": "Whenever a Healing spell is cast, heal the lowest-HP hero for 10% of max HP and give them 2 Symbiosis.",
+  "Fluff": "The mycelium answers every mending with a pulse of its own.",
+  "CardClass": "Special",
+  "CardType": "Enchantment",
+  "CardRarity": "Rare",
+  "CardUpgraded": "B",
+  "BaseCardId": "mycverdantpulse",
+  "EnergyCost": 0,
+  "TargetSide": "Self",
+  "TargetType": "Single",
+  "TargetPos": "Anywhere",
+  "EffectCaster": "green",
+  "SoundSource": "healingflasks",
+  "Vanish": true,
+  "SpriteSource": "myc_art_verdantpulse",
+  "Item": {
+    "IsEnchantment": true,
+    "Activation": "FinishCast",
+    "CastedCardType": "Healing_Spell",
+    "ItemTarget": "LowestFlatHpHero",
+    "HealPercentQuantity": 10,
+    "AuracurseGain1": "myc_symbiosis",
+    "AuracurseGainValue1": 2,
+    "DestroyAfterUses": 4
+  }
+}

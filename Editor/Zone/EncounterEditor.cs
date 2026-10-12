@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
 using UnityEngine;
 using UnknownMod.Core;
 using UnknownMod.Definitions;
@@ -13,7 +14,7 @@ namespace UnknownMod.Editor
     /// IMGUI panel for editing combat encounters (NPC lists, tier, background).
     /// Uses EntitySelector dropdown instead of a full list.
     /// </summary>
-    public class EncounterEditor
+    public partial class EncounterEditor : IEntityActions
     {
         private readonly ModEditor _parent;
 
@@ -28,7 +29,72 @@ namespace UnknownMod.Editor
         private Vector2 _patchBrowserScroll;
         private string _patchFilter = "";
 
-        public EncounterEditor(ModEditor parent) => _parent = parent;
+        private readonly EntityHistory<CombatDef> _history;
+        private RenameTracker _ren;
+        private RenameTracker Ren => _ren ??= new RenameTracker("combat", (p, patch) => patch ? p.CombatPatches : p.Combats, (cur, orig, patch) => _history.Rename(cur, orig, patch));
+
+        public EncounterEditor(ModEditor parent)
+        {
+            _parent = parent;
+            _history = new EntityHistory<CombatDef>
+            {
+                NewDict = p => p.Combats,
+                PatchDict = p => p.CombatPatches,
+                Save = (p, d, isPatch) => ModProjectLoader.SaveEntity(p, "combats", d.CombatId, d, isPatch),
+                DeleteFiles = (p, id, isPatch) => ModProjectLoader.DeleteEntity(p, "combats", id, isPatch),
+                GetSelected = () => _parent.SelectedCombatId,
+                Select = id => _parent.SelectedCombatId = id,
+            };
+        }
+
+        private string _pendingRemoveId;
+
+        public bool CanDuplicate
+        {
+            get
+            {
+                var p = ModManagerPanel.ActiveProject;
+                string id = _parent.SelectedCombatId;
+                return p != null && !string.IsNullOrEmpty(id) && (p.Combats.ContainsKey(id) || p.CombatPatches.ContainsKey(id));
+            }
+        }
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+        public void Run(EditorCommand command)
+        {
+            switch (command)
+            {
+                case EditorCommand.Duplicate: DuplicateSelected(); break;
+                case EditorCommand.Undo: _history.Undo(); break;
+                case EditorCommand.Redo: _history.Redo(); break;
+            }
+        }
+
+        private void DuplicateSelected()
+        {
+            var proj = ModManagerPanel.ActiveProject;
+            string id = _parent.SelectedCombatId;
+            if (proj == null || string.IsNullOrEmpty(id)) return;
+            CombatDef src;
+            if (!proj.Combats.TryGetValue(id, out src)) proj.CombatPatches.TryGetValue(id, out src);
+            if (src == null) return;
+
+            var copy = JsonConvert.DeserializeObject<CombatDef>(JsonConvert.SerializeObject(src));
+            string newId = id + "copy";
+            int n = 2;
+            while (proj.Combats.ContainsKey(newId) || proj.CombatPatches.ContainsKey(newId) || DataHelper.GetExistingCombat(newId) != null)
+                newId = id + "copy" + n++;
+
+            copy.CombatId = newId;
+            proj.Combats[newId] = copy;
+            _parent.SelectedCombatId = newId;
+
+            ModProjectLoader.SaveEntity(proj, "combats", newId, copy);
+            _history.RecordCreated(newId, false, "duplicate");
+            proj.IsDirty = true;
+            InlineIssues.Invalidate();
+            EditorStatus.Toast("Duplicated " + id + " as " + newId);
+        }
 
         /// <summary>Build the combined NPC list from mod project + base game.</summary>
         private static List<string> GetAllNpcIds()
@@ -57,6 +123,7 @@ namespace UnknownMod.Editor
             Dictionary<string, CombatDef> combats = null;
             var proj = ModManagerPanel.ActiveProject;
             if (proj == null) { GUILayout.Label("No project loaded."); return; }
+            EditorActions.Register(this);
 
             combats = new Dictionary<string, CombatDef>();
             foreach (var kvp in proj.Combats) combats[kvp.Key] = kvp.Value;
@@ -81,15 +148,16 @@ namespace UnknownMod.Editor
 
             if (GUILayout.Button("+ New Encounter", EditorStyles.MiniButton, GUILayout.Width(110)))
             {
-                string newId = $"{proj.ModId}_combat_{proj.Combats.Count}";
+                string newId = $"{ModProjectLoader.IdPrefix(proj.ModId)}_combat_{proj.Combats.Count}";
                 int suffix = 0;
                 while (proj.Combats.ContainsKey(newId) || proj.CombatPatches.ContainsKey(newId))
-                    newId = $"{proj.ModId}_combat_{++suffix}";
+                    newId = $"{ModProjectLoader.IdPrefix(proj.ModId)}_combat_{++suffix}";
 
                 var def = new CombatDef { CombatId = newId, Description = "New Encounter" };
                 proj.Combats[newId] = def;
                 _parent.SelectedCombatId = newId;
                 ModProjectLoader.SaveEntity(proj, "combats", newId, def);
+                _history.RecordCreated(newId, false, "new encounter");
                 proj.IsDirty = true;
             }
 
@@ -100,24 +168,29 @@ namespace UnknownMod.Editor
             {
                 bool isNew = proj.Combats.ContainsKey(_parent.SelectedCombatId);
                 bool isPatch = proj.CombatPatches.ContainsKey(_parent.SelectedCombatId);
-                if (isNew)
+                if (GUILayout.Button(new GUIContent("\u25B6 Test", "Launch this fight in Practice mode"), EditorStyles.MiniButton, GUILayout.Width(55)))
+                    _parent.OpenTestFight("combat", _parent.SelectedCombatId);
+                if (GUILayout.Button(new GUIContent("Simulate", "Run this fight many times in the simulator"), EditorStyles.MiniButton, GUILayout.Width(65)))
+                    _parent.OpenSimulator("combat", _parent.SelectedCombatId);
+                if (GUILayout.Button(new GUIContent("Duplicate", "Copy this encounter (Ctrl+D)"), EditorStyles.MiniButton, GUILayout.Width(70)))
+                    EditorActions.Pending = EditorCommand.Duplicate;
+                if (isNew || isPatch)
                 {
-                    if (GUILayout.Button("Delete", EditorStyles.DangerButton, GUILayout.Width(60)))
+                    bool armed = _pendingRemoveId == _parent.SelectedCombatId;
+                    string lbl = armed ? "Confirm?" : (isNew ? "Delete" : "Revert");
+                    if (GUILayout.Button(lbl, EditorStyles.DangerButton, GUILayout.Width(70)))
                     {
-                        proj.Combats.Remove(_parent.SelectedCombatId);
-                        ModProjectLoader.DeleteEntity(proj, "combats", _parent.SelectedCombatId);
-                        _parent.SelectedCombatId = combatIds.FirstOrDefault(k => k != _parent.SelectedCombatId);
-                        proj.IsDirty = true;
-                    }
-                }
-                else if (isPatch)
-                {
-                    if (GUILayout.Button("Revert", EditorStyles.DangerButton, GUILayout.Width(60)))
-                    {
-                        proj.CombatPatches.Remove(_parent.SelectedCombatId);
-                        ModProjectLoader.DeleteEntity(proj, "combats", _parent.SelectedCombatId, true);
-                        _parent.SelectedCombatId = combatIds.FirstOrDefault(k => k != _parent.SelectedCombatId);
-                        proj.IsDirty = true;
+                        if (!armed) _pendingRemoveId = _parent.SelectedCombatId;
+                        else
+                        {
+                            string rid = _parent.SelectedCombatId;
+                            _history.Delete(rid, !isNew, isNew ? "delete" : "revert");
+                            _parent.SelectedCombatId = combatIds.FirstOrDefault(k => k != rid);
+                            _pendingRemoveId = null;
+                            proj.IsDirty = true;
+                            InlineIssues.Invalidate();
+                            EditorStatus.Toast((isNew ? "Deleted " : "Reverted ") + rid + " (Ctrl+Z to undo)");
+                        }
                     }
                 }
             }
@@ -143,8 +216,15 @@ namespace UnknownMod.Editor
             }
 
             //  Basic fields 
+            bool cdIsPatch = !proj.Combats.ContainsKey(cd.CombatId);
+            _history.BeginEdit(cd.CombatId, cdIsPatch, cd);
+            Ren.ApplyUnlessSelected(cd.CombatId);
+            Ren.Draw();
+            bool renamed = false;
             string prevCombatId = cd.CombatId;
             cd.CombatId = EditorFields.TextField("Combat ID", cd.CombatId);
+            if (cd.CombatId != prevCombatId && !ModProjectLoader.IsSafeName(cd.CombatId))
+                cd.CombatId = prevCombatId; // would not be a valid file name
             if (cd.CombatId != prevCombatId && !string.IsNullOrEmpty(cd.CombatId))
             {
                 bool wasNew = proj.Combats.ContainsKey(prevCombatId);
@@ -154,9 +234,11 @@ namespace UnknownMod.Editor
                 {
                     dict.Remove(prevCombatId);
                     dict[cd.CombatId] = cd;
-                    ModProjectLoader.DeleteEntity(proj, "combats", prevCombatId, wasPatch);
-                    ModProjectLoader.SaveEntity(proj, "combats", cd.CombatId, cd, wasPatch);
+                    ModProjectLoader.RenameEntity(proj, "combats", prevCombatId, cd.CombatId, cd, wasPatch);
                     _parent.SelectedCombatId = cd.CombatId;
+                    Ren.Note(proj, prevCombatId, cd.CombatId, wasPatch, ModReferences.FamilyOf(proj, dict));
+                    _history.RecordRenamed(prevCombatId, cd.CombatId, wasPatch);
+                    renamed = true;
                 }
                 else
                     cd.CombatId = prevCombatId;
@@ -250,6 +332,8 @@ namespace UnknownMod.Editor
                 }
             }
 
+            DrawComposer(cd, proj);
+
             //  Combat Effects 
             if (EditorFields.Section($"Combat Effects ({cd.CombatEffects.Count})", ref _secEffects))
             {
@@ -257,17 +341,13 @@ namespace UnknownMod.Editor
                 {
                     var eff = cd.CombatEffects[i];
                     GUILayout.BeginVertical(EditorStyles.CompactBox);
+                    var effOp = EditorFields.RowHeader($"<b>#{i + 1}</b>  {eff.AuraCurse}", i, cd.CombatEffects.Count);
                     eff.AuraCurse = EditorFields.IdDropdown("AuraCurse", eff.AuraCurse, EditorFields.CachedIds("ac", DataHelper.GetAllAuraCurseIds), $"enc_eff_ac_{i}", pickerMode: EntityPicker.Mode.AuraCurse);
                     eff.Charges = EditorFields.IntFieldMin("Charges", eff.Charges, 0);
                     eff.Target = EditorFields.EnumField("Target", eff.Target, $"enc_eff_tgt_{i}");
-                    if (GUILayout.Button("X", EditorStyles.MiniButton, GUILayout.Width(22)))
-                    {
-                        cd.CombatEffects.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndVertical();
-                        break;
-                    }
+                    bool effChanged = EditorFields.ApplyRowOp(cd.CombatEffects, i, effOp);
                     GUILayout.EndVertical();
+                    if (effChanged) break;
                 }
                 if (GUILayout.Button("+ Combat Effect", EditorStyles.MiniButton))
                 {
@@ -291,8 +371,14 @@ namespace UnknownMod.Editor
                 advEventIds.AddRange(EditorFields.CachedIds("event", DataHelper.GetAllEventIds));
                 advEventIds = advEventIds.Distinct().OrderBy(k => k).ToList();
                 cd.EventDataId = EditorFields.IdDropdown("Post-Combat Event", cd.EventDataId, advEventIds, "enc_postevt", pickerMode: EntityPicker.Mode.Event);
-                cd.EventRequirementId = EditorFields.IdDropdown("Event Requirement", cd.EventRequirementId, DataHelper.GetAllEventRequirementIds(), "enc_evtreq", pickerMode: EntityPicker.Mode.Requirement);
+                cd.EventRequirementId = EditorFields.IdDropdown("Event Requirement", cd.EventRequirementId, RefIds.Requirements(), "enc_evtreq", pickerMode: EntityPicker.Mode.Requirement);
+                cd.CinematicId = EditorFields.IdDropdown("Cinematic", cd.CinematicId, RefIds.Cinematics(), "enc_cine");
+                cd.CombatBasedCorruptionCardId = EditorFields.IdDropdown("Combat Corruption Card", cd.CombatBasedCorruptionCardId, EditorFields.BuildCardIdList(proj), "enc_corrcard", pickerMode: EntityPicker.Mode.Card);
+                cd.ThermometerTierId = EditorFields.IdDropdown("Thermometer Tier", cd.ThermometerTierId, RefIds.ThermometerTiers(proj), "enc_thermo");
+                cd.CombatMusic = AssetFields.AudioField("Combat Music", cd.CombatMusic, "enc_music");
             }
+
+            DrawWaveGenerator(cd, proj);
 
             //  Used by nodes 
             if (EditorFields.Section("Used by Nodes", ref _secUsedBy))
@@ -310,6 +396,8 @@ namespace UnknownMod.Editor
                     }
                 }
             }
+
+            if (!renamed) _history.EndEdit(cd.CombatId, cdIsPatch, cd);
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -344,6 +432,7 @@ namespace UnknownMod.Editor
                     proj.CombatPatches[id] = patch;
                     _parent.SelectedCombatId = id;
                     ModProjectLoader.SaveEntity(proj, "combats", id, patch, isPatch: true);
+                    _history.RecordCreated(id, true, "patch");
                     _showPatchBrowser = false;
                     proj.IsDirty = true;
                 }

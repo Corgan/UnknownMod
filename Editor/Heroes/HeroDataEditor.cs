@@ -67,7 +67,7 @@ namespace UnknownMod.Editor
             if (EditorFields.Section("Class", ref _secClass))
             {
                 d.HeroClass = EditorFields.EnumField("Hero Class", d.HeroClass);
-                d.HeroSubClassId = EditorFields.TextField("SubClass ID", d.HeroSubClassId);
+                d.HeroSubClassId = EditorFields.IdDropdown("SubClass ID", d.HeroSubClassId, RefIds.SubClasses(), "herodata_subclass");
             }
         }
     }

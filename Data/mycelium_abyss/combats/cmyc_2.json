@@ -4,7 +4,8 @@
   "NpcIds": [
     "myc_lurker",
     "myc_lurker",
-    "myc_shambler"
+    "myc_shambler",
+    ""
   ],
   "CombatTier": "T3",
   "Background": "Spider_Lair",
@@ -12,6 +13,6 @@
   "HealHeroes": false,
   "IsRift": false,
   "NpcToSummonOnKilledId": "",
-  "EventDataId": "",
+  "EventDataId": "e_myc_36",
   "CombatEffects": []
 }

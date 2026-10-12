@@ -1,0 +1,21 @@
+{
+  "Id": "myceliumancer",
+  "SkinName": "Morel",
+  "SkinSubclass": "myceliumancer",
+  "BaseSkin": true,
+  "SkinOrder": 0,
+  "PerkLevel": 0,
+  "Sku": "",
+  "SteamStat": "",
+  "SkinTextId": "myceliumancer",
+  "HideInGame": false,
+  "SpriteSource": "advisor",
+  "VisualGraphId": "mycelium_abyss_visual_graph",
+  "Portrait": "myceliumancer_portrait",
+  "PortraitLarge": "myceliumancer_portrait_large",
+  "Silhouette": "myceliumancer_silhouette",
+  "SilhouetteLarge": "myceliumancer_silhouette_large",
+  "PortraitScale": 0.98,
+  "HeroSelectionScreenScale": 1.0,
+  "HeroSelectionScreenOffsetX": 0.0
+}

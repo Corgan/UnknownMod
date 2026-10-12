@@ -23,6 +23,16 @@ namespace UnknownMod.Core
             // ── Edge cases: array ────────────────────────────────
             ac.DisabledCardTypes = d.DisabledCardTypes ?? Array.Empty<Enums.CardType>();
 
+            // ── Edge cases: asset refs (icon + sounds). Without these a rebuilt aura/patch loses its icon and audio ──
+            // A patch of a base-game aura falls back to the original asset when the name does not resolve.
+            var original = !string.IsNullOrEmpty(d.Id) ? DataHelper.GetAuraCurse(d.Id, false) : null;
+            ac.Sprite = UnknownMod.Runtime.SpriteUtils.FindSpriteByName(d.Sprite) ?? original?.Sprite;
+            ac.Sprite = FitToBaseAuraSize(ac.Sprite);
+            ac.Sound = FindAudioClipByName(d.Sound) ?? original?.Sound;
+            ac.SoundRework = FindAudioClipByName(d.SoundRework) ?? original?.SoundRework;
+            if (ac.Sprite == null)
+                Plugin.Log.LogWarning($"[AuraCurse] \"{d.Id}\" has no resolvable Sprite (\"{d.Sprite}\"); the icon will be blank.");
+
             // ── Edge cases: ACBonusData list ─────────────────────
             if (d.ACBonusData != null && d.ACBonusData.Count > 0)
             {
@@ -119,6 +129,33 @@ namespace UnknownMod.Core
 
             return d;
         }
+
+        private static readonly Dictionary<Sprite, Sprite> _auraFitCache = new();
+
+        /// <summary>
+        /// Mod icons load with an arbitrary pixels-per-unit, so they render far larger than base-game aura icons.
+        /// Re-wrap mod sprites so their world size matches a base-game aura icon.
+        /// </summary>
+        private static Sprite FitToBaseAuraSize(Sprite sprite)
+        {
+            if (sprite == null || !ModRegistry.IsModImageSprite(sprite)) return sprite;
+            if (_auraFitCache.TryGetValue(sprite, out var cached) && cached != null) return cached;
+
+            var reference = DataHelper.GetAuraCurse("poison", false)?.Sprite;
+            if (reference == null) return sprite;
+            float targetSize = Mathf.Max(reference.bounds.size.x, reference.bounds.size.y);
+            if (targetSize <= 0f) return sprite;
+
+            var tex = sprite.texture;
+            float ppu = Mathf.Max(tex.width, tex.height) / targetSize;
+            var fitted = Sprite.Create(tex, sprite.textureRect, new Vector2(0.5f, 0.5f), ppu);
+            fitted.name = sprite.name;
+            ModRegistry.MarkDerivedSprite(fitted);
+            _auraFitCache[sprite] = fitted;
+            return fitted;
+        }
+
+        private static AudioClip FindAudioClipByName(string name) => UnknownMod.Runtime.AudioUtils.Find(name);
 
         internal static void RegisterAuraCurse(AuraCurseData ac)
         {

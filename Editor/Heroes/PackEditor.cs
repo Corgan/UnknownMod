@@ -62,7 +62,7 @@ namespace UnknownMod.Editor
                 d.PackName = EditorFields.TextField("Pack Name", d.PackName);
                 d.PackClass = EditorFields.EnumField("Class", d.PackClass, "pack_class");
 
-                var heroIds = DataHelper.GetAllSubClassIds();
+                var heroIds = RefIds.SubClasses();
                 d.RequiredClassId = EditorFields.IdDropdown("Required Class", d.RequiredClassId, heroIds, "pack_reqclass");
             }
 
@@ -74,14 +74,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     d.CardIds[i] = EditorFields.IdDropdown("", d.CardIds[i], cardIds, $"pk_card_{i}");
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.CardIds.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, d.CardIds.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.CardIds, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Card", EditorStyles.MiniButton, GUILayout.Width(80)))
                 {
@@ -98,14 +93,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     d.SpecialCardIds[i] = EditorFields.IdDropdown("", d.SpecialCardIds[i], cardIds, $"pk_sp_{i}");
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.SpecialCardIds.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, d.SpecialCardIds.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.SpecialCardIds, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Special Card", EditorStyles.MiniButton, GUILayout.Width(110)))
                 {
@@ -122,14 +112,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     d.PerkIds[i] = EditorFields.IdDropdown("", d.PerkIds[i], perkIds, $"pk_perk_{i}");
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.PerkIds.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, d.PerkIds.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.PerkIds, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Perk", EditorStyles.MiniButton, GUILayout.Width(80)))
                 {

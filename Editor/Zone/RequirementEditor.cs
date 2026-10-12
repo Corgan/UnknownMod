@@ -80,6 +80,7 @@ namespace UnknownMod.Editor
             {
                 d.RequirementZoneFinishTrack = EditorFields.EnumField("Zone Finish", d.RequirementZoneFinishTrack, "req_zone");
                 d.RequirementZoneFinishTrackAlternate = EditorFields.EnumField("Zone Finish Alt", d.RequirementZoneFinishTrackAlternate, "req_zone_alt");
+                d.WitheredValeUniqueCheck = EditorFields.Toggle("Withered Vale Unique", d.WitheredValeUniqueCheck);
             }
 
             // ── Card Reference ───────────────────────────────────

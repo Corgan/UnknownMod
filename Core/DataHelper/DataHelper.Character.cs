@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using HarmonyLib;
 using UnknownMod.Definitions;
+using UnknownMod.Runtime;
 using UnityEngine;
 
 namespace UnknownMod.Core
@@ -24,7 +25,9 @@ namespace UnknownMod.Core
             trait.Description = d.Description ?? "";
 
             // Activation
-            trait.Activation = d.Activation;
+            trait.Activations = d.Activations != null
+                ? new List<Enums.EventActivation>(d.Activations)
+                : new List<Enums.EventActivation>();
             trait.ActivateOnRuneTypeAdded = d.ActivateOnRuneTypeAdded;
             trait.TryActivateOnEveryEvent = d.TryActivateOnEveryEvent;
             trait.TimesPerTurn = d.TimesPerTurn;
@@ -32,9 +35,9 @@ namespace UnknownMod.Core
 
             // Cards
             if (!string.IsNullOrEmpty(d.TraitCard))
-                trait.TraitCard = GetCard(d.TraitCard);
+                trait.TraitCard = GetCardSource(d.TraitCard);
             if (!string.IsNullOrEmpty(d.TraitCardForAllHeroes))
-                trait.TraitCardForAllHeroes = GetCard(d.TraitCardForAllHeroes);
+                trait.TraitCardForAllHeroes = GetCardSource(d.TraitCardForAllHeroes);
 
             // Character Stat
             trait.CharacterStatModified = d.CharacterStatModified;
@@ -92,17 +95,21 @@ namespace UnknownMod.Core
             // HideTimesPerTurnText (private field)
             Traverse.Create(trait).Field("hideTimesPerTurnText").SetValue(d.HideTimesPerTurnText);
 
-            // KeyNotes
-            if (d.KeyNotes != null && d.KeyNotes.Count > 0)
-            {
-                var knList = new List<KeyNotesData>();
+            trait.TraitCardDisplayOnly = d.TraitCardDisplayOnly;
+            if (!string.IsNullOrEmpty(d.DamageFlatNecessaryAuraCurse))
+                trait.DamageFlatNecessaryAuraCurse = GetAuraCurse(d.DamageFlatNecessaryAuraCurse);
+            trait.DamageFlatNecessaryAuraCurseCharges = d.DamageFlatNecessaryAuraCurseCharges;
+            trait.DamageBonusFlatPerAuraCurseStack = d.DamageBonusFlatPerAuraCurseStack;
+
+            // KeyNotes: always non-null; PopupManager.SetTrait dereferences .Count
+            var knList = new List<KeyNotesData>();
+            if (d.KeyNotes != null)
                 foreach (var knId in d.KeyNotes)
                 {
                     var kn = Globals.Instance?.GetKeyNotesData(knId);
                     if (kn != null) knList.Add(kn);
                 }
-                Traverse.Create(trait).Field("keyNotes").SetValue(knList);
-            }
+            Traverse.Create(trait).Field("keyNotes").SetValue(knList);
 
             return trait;
         }
@@ -116,7 +123,9 @@ namespace UnknownMod.Core
             d.Description = trait.Description ?? "";
 
             // Activation
-            d.Activation = trait.Activation;
+            d.Activations = trait.Activations != null
+                ? new List<Enums.EventActivation>(trait.Activations)
+                : new List<Enums.EventActivation>();
             d.ActivateOnRuneTypeAdded = trait.ActivateOnRuneTypeAdded;
             d.TryActivateOnEveryEvent = trait.TryActivateOnEveryEvent;
             d.TimesPerTurn = trait.TimesPerTurn;
@@ -177,6 +186,11 @@ namespace UnknownMod.Core
             d.MaxBleedDamagePerTurn = trait.MaxBleedDamagePerTurn;
             d.HideTimesPerTurnText = Traverse.Create(trait).Field<bool>("hideTimesPerTurnText").Value;
 
+            d.TraitCardDisplayOnly = trait.TraitCardDisplayOnly;
+            d.DamageFlatNecessaryAuraCurse = GetACId(trait.DamageFlatNecessaryAuraCurse);
+            d.DamageFlatNecessaryAuraCurseCharges = trait.DamageFlatNecessaryAuraCurseCharges;
+            d.DamageBonusFlatPerAuraCurseStack = trait.DamageBonusFlatPerAuraCurseStack;
+
             // KeyNotes
             var kn = trait.KeyNotes;
             d.KeyNotes = new List<string>();
@@ -190,6 +204,8 @@ namespace UnknownMod.Core
         // ── Skin Factories ───────────────────────────────────────────────
 
         /// <summary>Create a complete SkinData SO from a SkinDef.</summary>
+        private static readonly Dictionary<SubClassData, Sprite> _subclassPortraitOriginals = new();
+
         public static SkinData MakeSkin(SkinDef d)
         {
             var skin = ScriptableObject.CreateInstance<SkinData>();
@@ -202,6 +218,7 @@ namespace UnknownMod.Core
             skin.Sku = d.Sku ?? "";
             skin.SteamStat = d.SteamStat ?? "";
             skin.SkinTextId = d.SkinTextId ?? "";
+            skin.HideInGame = d.HideInGame;
             skin.HeroSelectionScreenScale = d.HeroSelectionScreenScale;
             skin.HeroSelectionScreenOffset_X = d.HeroSelectionScreenOffsetX;
 
@@ -209,11 +226,49 @@ namespace UnknownMod.Core
             if (!string.IsNullOrEmpty(d.SkinSubclass))
                 skin.SkinSubclass = GetSubClass(d.SkinSubclass);
 
-            // Copy visuals from source skin
+            // Rig: the skin's animated model comes from SpriteSource (a graft's Host Model once a graft is applied).
             if (!string.IsNullOrEmpty(d.SpriteSource))
-                CopySkinVisuals(skin, d.SpriteSource);
+                CopySkinRig(skin, d.SpriteSource);
+            if (skin.SkinGo == null)
+                Plugin.Log.LogWarning($"[DataHelper] Skin '{d.Id}' has no animated model: rig source '{d.SpriteSource}' is neither a hero skin nor a monster with an animated model.");
+
+            // Portraits and silhouettes: PortraitSource, else the rig's, then explicit sprite names.
+            string artSource = string.IsNullOrEmpty(d.PortraitSource) ? d.SpriteSource : d.PortraitSource;
+            if (!string.IsNullOrEmpty(artSource))
+                CopySkinArt(skin, artSource);
+            skin.SpritePortrait = SkinSprite(d.Id, "Portrait", d.Portrait) ?? skin.SpritePortrait;
+            skin.SpritePortraitGrande = SkinSprite(d.Id, "PortraitLarge", d.PortraitLarge) ?? skin.SpritePortraitGrande;
+            skin.SpriteSilueta = SkinSprite(d.Id, "Silhouette", d.Silhouette) ?? skin.SpriteSilueta;
+            skin.SpriteSiluetaGrande = SkinSprite(d.Id, "SilhouetteLarge", d.SilhouetteLarge) ?? skin.SpriteSiluetaGrande;
+            skin.SpriteSilueta ??= skin.SpritePortrait ?? skin.SpritePortraitGrande;
+            skin.SpriteSiluetaGrande ??= skin.SpritePortraitGrande ?? skin.SpritePortrait;
+            if (skin.SpritePortrait == null && skin.SpritePortraitGrande == null)
+                Plugin.Log.LogWarning($"[DataHelper] Skin '{d.Id}' has no portrait: set a Portrait Source (a base-game hero skin) or a Portrait sprite name.");
+            if (d.FlipPortrait || d.PortraitScale != 1f || d.PortraitOffsetX != 0f || d.PortraitOffsetY != 0f)
+            {
+                skin.SpritePortrait = SpriteUtils.TransformPortrait(skin.SpritePortrait, d.FlipPortrait, d.PortraitScale, d.PortraitOffsetX, d.PortraitOffsetY);
+                skin.SpritePortraitGrande = SpriteUtils.TransformPortrait(skin.SpritePortraitGrande, d.FlipPortrait, d.PortraitScale, d.PortraitOffsetX, d.PortraitOffsetY);
+                skin.SpriteSilueta = SpriteUtils.TransformPortrait(skin.SpriteSilueta, d.FlipPortrait, d.PortraitScale, d.PortraitOffsetX, d.PortraitOffsetY);
+                skin.SpriteSiluetaGrande = SpriteUtils.TransformPortrait(skin.SpriteSiluetaGrande, d.FlipPortrait, d.PortraitScale, d.PortraitOffsetX, d.PortraitOffsetY);
+                if (skin.BaseSkin && skin.SkinSubclass != null && skin.SpritePortrait != null)
+                {
+                    var portraitField = Traverse.Create(skin.SkinSubclass).Field("spritePortrait");
+                    if (!_subclassPortraitOriginals.ContainsKey(skin.SkinSubclass))
+                        _subclassPortraitOriginals[skin.SkinSubclass] = portraitField.GetValue<Sprite>();
+                    portraitField.SetValue(skin.SpritePortrait);
+                }
+            }
+            FillHeroVisualsFromSkin(skin);
 
             return skin;
+        }
+
+        private static Sprite SkinSprite(string skinId, string slot, string spriteName)
+        {
+            if (string.IsNullOrEmpty(spriteName)) return null;
+            var sprite = SpriteUtils.FindSpriteByName(spriteName);
+            if (sprite == null) Plugin.Log.LogWarning($"[DataHelper] Skin '{skinId}' {slot} sprite '{spriteName}' was not found.");
+            return sprite;
         }
 
         /// <summary>Snapshot a SkinData SO back into a SkinDef for override editing.</summary>
@@ -231,6 +286,7 @@ namespace UnknownMod.Core
             d.Sku = skin.Sku ?? "";
             d.SteamStat = skin.SteamStat ?? "";
             d.SkinTextId = skin.SkinTextId ?? "";
+            d.HideInGame = skin.HideInGame;
             d.HeroSelectionScreenScale = skin.HeroSelectionScreenScale;
             d.HeroSelectionScreenOffsetX = skin.HeroSelectionScreenOffset_X;
 
@@ -249,6 +305,8 @@ namespace UnknownMod.Core
 
             perk.Id = d.Id;
             perk.CustomDescription = d.CustomDescription ?? "";
+            // The tree reads Texts.GetText(CustomDescription); mods have no translation files, so literal text is served by the fallback.
+            if (!string.IsNullOrWhiteSpace(perk.CustomDescription)) SetModText(TextKey(perk.CustomDescription), perk.CustomDescription);
             perk.CardClass = d.CardClass;
             perk.MainPerk = d.MainPerk;
             perk.ObeliskPerk = d.ObeliskPerk;
@@ -352,6 +410,24 @@ namespace UnknownMod.Core
                 CopyPerkNodeVisuals(node, d.SpriteSource);
 
             return node;
+        }
+
+        /// <summary>Second pass: prerequisite/connection refs to nodes built later resolve to null in the first pass.</summary>
+        public static void WirePerkNodeRefs(PerkNodeDef d)
+        {
+            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, PerkNodeData>>("_PerksNodesSource").Value;
+            if (dict == null || !dict.TryGetValue(NormalizeKey(d.Id), out var node) || node == null) return;
+            if (!string.IsNullOrEmpty(d.PerkRequired)) node.PerkRequired = GetPerkNode(d.PerkRequired);
+            if (d.PerksConnected != null && d.PerksConnected.Count > 0)
+            {
+                var connected = new List<PerkNodeData>();
+                foreach (var cid in d.PerksConnected)
+                {
+                    var cn = GetPerkNode(cid);
+                    if (cn != null) connected.Add(cn);
+                }
+                node.PerksConnected = connected.ToArray();
+            }
         }
 
         /// <summary>Snapshot a PerkNodeData SO back into a PerkNodeDef for override editing.</summary>

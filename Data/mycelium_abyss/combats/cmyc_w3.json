@@ -1,0 +1,18 @@
+{
+  "CombatId": "cmyc_w3",
+  "Description": "A chorus of tiny sprouts shields a lumbering shambler.",
+  "NpcIds": [
+    "myc_sproutling",
+    "myc_sproutling",
+    "myc_shambler",
+    ""
+  ],
+  "CombatTier": "T3",
+  "Background": "Senenthia_BosqueEntrada_Nightmare",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

@@ -1,0 +1,26 @@
+{
+  "Id": "mycblightcascade",
+  "Name": "Blight Cascade",
+  "Description": "Whenever Spore Rot is applied, deal 6 Shadow damage to the enemy with the most HP.",
+  "Fluff": "One rotting cap lights the next.",
+  "CardClass": "Special",
+  "CardType": "Enchantment",
+  "CardRarity": "Epic",
+  "EnergyCost": 1,
+  "TargetSide": "Self",
+  "TargetType": "Single",
+  "TargetPos": "Anywhere",
+  "EffectCaster": "green",
+  "SoundSource": "healingflasks",
+  "Vanish": true,
+  "SpriteSource": "myc_art_blightcascade",
+  "Item": {
+    "IsEnchantment": true,
+    "Activation": "AuraCurseSet",
+    "AuraCurseSetted": "myc_sporerot",
+    "ItemTarget": "HighestFlatHpEnemy",
+    "DamageToTargetType": "Shadow",
+    "DamageToTarget": 6,
+    "DestroyAfterUses": 8
+  }
+}

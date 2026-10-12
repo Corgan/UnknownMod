@@ -1,0 +1,17 @@
+{
+  "Id": "mycsymbioticidola",
+  "Name": "Symbiotic Idol",
+  "Description": "At the start of combat, gain <acb>3</acb> Symbiosis.",
+  "CardClass": "Item",
+  "CardType": "Jewelry",
+  "CardRarity": "Rare",
+  "SpriteSource": "myc_art_symbioticidol",
+  "Item": {
+    "Activation": "BeginCombat",
+    "ItemTarget": "Self",
+    "AuracurseGainSelf1": "myc_symbiosis",
+    "AuracurseGainSelfValue1": 3
+  },
+  "CardUpgraded": "A",
+  "BaseCardId": "mycsymbioticidol"
+}

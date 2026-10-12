@@ -1,0 +1,13 @@
+{
+  "Id": "myc_morel_p1",
+  "RequirementName": "Morel's Field Notes (I)",
+  "Description": "Morel's journal from the survey camp. It speaks of spore-blaze waymarkers he left deeper in the cavern.",
+  "AssignToPlayerAtBegin": false,
+  "RequirementTrack": false,
+  "ItemTrack": true,
+  "RequirementZoneFinishTrack": "None",
+  "RequirementZoneFinishTrackAlternate": "None",
+  "WitheredValeUniqueCheck": false,
+  "TrackCard": "",
+  "SpriteSource": "oldjournal"
+}

@@ -1,0 +1,27 @@
+{
+  "PackId": "myc_pack_sporeling",
+  "PackName": "Sporeling",
+  "RequiredClassId": "",
+  "PackClass": "Scout",
+  "CardIds": [
+    "mycsporestrike",
+    "myccapshield",
+    "mycrootlash",
+    "defend",
+    "faststrike",
+    "intercept",
+    "mycburrow",
+    "mycmold"
+  ],
+  "SpecialCardIds": [
+    "mycregrow",
+    "mycmycelialweb",
+    "mycfruitingbody"
+  ],
+  "PerkIds": [
+    "mainperkvitality0",
+    "mainperkvitality1a",
+    "mainperkblock2",
+    "mainperkfortify0"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "EventId": "e_myc_36",
+  "EventName": "The Abandoned Survey Camp",
+  "Description": "When the husks stop moving you find what they were guarding: a survey camp, long abandoned. A bedroll, a cold lantern, and a leather satchel stitched with a mushroom sigil. A name is burned into the strap: MOREL.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Read the field notes and pack the satchel.",
+      "Action": 53,
+      "SsText": "Morel was a myceliumancer, a scholar who believed the Mycelium could be spoken to rather than fought. The journal's last page reads: \"The Mycelarch listens. I am going down to answer it. If I do not return, follow my waymarkers to its throne.\" Tucked in the satchel are a few coins.",
+      "SsXP": 30,
+      "SsGold": 40,
+      "SsRequirementUnlockId": "myc_morel_p1",
+      "SsRequirementUnlock2Id": "myc_morel_quest"
+    },
+    {
+      "ReplyText": "Leave the camp undisturbed.",
+      "Action": 11,
+      "SsText": "Whoever Morel was, his things are none of your business. You move on."
+    }
+  ]
+}

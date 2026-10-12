@@ -1,0 +1,12 @@
+{
+  "Id": "nodeperkmycsym2c",
+  "Type": 3,
+  "Column": -2,
+  "Row": 3,
+  "NotStack": true,
+  "Cost": "PerkCostAdvanced",
+  "Perk": "mainperkmycsym2c",
+  "PerkRequired": "nodeperkmycsym0",
+  "PerksConnected": [],
+  "SpriteSource": "aura:myc_symbiosis"
+}

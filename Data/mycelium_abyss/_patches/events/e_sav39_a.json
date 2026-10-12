@@ -1,0 +1,14 @@
+{
+  "EventId": "e_sav39_a",
+  "AppendReplies": true,
+  "Replies": [
+    {
+      "ReplyText": "Cross the pale portal, from which a damp, earthy warmth comes out.",
+      "Action": 29,
+      "SsText": "You step through the shimmering wall. Spores fall away like ash, and the world rearranges itself around you.",
+      "SsHealPercent": 100.0,
+      "SsNodeTravelId": "myc_0",
+      "SsRequirementUnlockId": "_tier2"
+    }
+  ]
+}

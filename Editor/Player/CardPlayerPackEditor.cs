@@ -12,7 +12,7 @@ namespace UnknownMod.Editor
     /// IMGUI panel for editing CardPlayerPackDef and CardPlayerPairsPackDef.
     /// Two sub-panels toggled at the top: Player Packs (4-slot) and Pairs Packs (6-slot).
     /// </summary>
-    public class CardPlayerPackEditor
+    public class CardPlayerPackEditor : IEntityActions
     {
         private readonly ModEditor _parent;
 
@@ -38,7 +38,54 @@ namespace UnknownMod.Editor
         private bool _secIdentityPP = true;
         private bool _secCardsPP = true;
 
-        public CardPlayerPackEditor(ModEditor parent) => _parent = parent;
+        private readonly EntityHistory<CardPlayerPackDef> _playerHistory;
+        private RenameTracker _playerRen;
+        private RenameTracker PlayerRen => _playerRen ??= new RenameTracker("player pack", (p, patch) => patch ? p.CardPlayerPackPatches : p.CardPlayerPacks, (cur, orig, patch) => _playerHistory.Rename(cur, orig, patch));
+        private readonly EntityHistory<CardPlayerPairsPackDef> _pairsHistory;
+        private RenameTracker _pairsRen;
+        private RenameTracker PairsRen => _pairsRen ??= new RenameTracker("pairs pack", (p, patch) => patch ? p.CardPlayerPairsPackPatches : p.CardPlayerPairsPacks, (cur, orig, patch) => _pairsHistory.Rename(cur, orig, patch));
+
+        public CardPlayerPackEditor(ModEditor parent)
+        {
+            _parent = parent;
+            _playerHistory = new EntityHistory<CardPlayerPackDef>
+            {
+                NewDict = p => p.CardPlayerPacks,
+                PatchDict = p => p.CardPlayerPackPatches,
+                Save = (p, d, isPatch) => ModProjectLoader.SaveEntity(p, "cardplayerpacks", d.PackId, d, isPatch),
+                DeleteFiles = (p, id, isPatch) => ModProjectLoader.DeleteEntity(p, "cardplayerpacks", id, isPatch),
+                GetSelected = () => SelectedPlayerPackId,
+                Select = id => SelectedPlayerPackId = id,
+            };
+            _pairsHistory = new EntityHistory<CardPlayerPairsPackDef>
+            {
+                NewDict = p => p.CardPlayerPairsPacks,
+                PatchDict = p => p.CardPlayerPairsPackPatches,
+                Save = (p, d, isPatch) => ModProjectLoader.SaveEntity(p, "cardplayerpairspacks", d.PackId, d, isPatch),
+                DeleteFiles = (p, id, isPatch) => ModProjectLoader.DeleteEntity(p, "cardplayerpairspacks", id, isPatch),
+                GetSelected = () => SelectedPairsPackId,
+                Select = id => SelectedPairsPackId = id,
+            };
+        }
+
+        // Duplicating is left out: pack ids are free-form and a copy is just "+ New" with the same slots.
+        public bool CanDuplicate => false;
+        public bool CanUndo => _mode == Mode.Player ? _playerHistory.CanUndo : _pairsHistory.CanUndo;
+        public bool CanRedo => _mode == Mode.Player ? _playerHistory.CanRedo : _pairsHistory.CanRedo;
+
+        public void Run(EditorCommand command)
+        {
+            if (command == EditorCommand.Undo)
+            {
+                if (_mode == Mode.Player) _playerHistory.Undo(); else _pairsHistory.Undo();
+            }
+            else if (command == EditorCommand.Redo)
+            {
+                if (_mode == Mode.Player) _playerHistory.Redo(); else _pairsHistory.Redo();
+            }
+        }
+
+        public bool PairsMode => _mode == Mode.Pairs;
 
         public void DrawPanel()
         {
@@ -49,6 +96,8 @@ namespace UnknownMod.Editor
                     EditorStyles.RichLabel);
                 return;
             }
+
+            EditorActions.Register(this);
 
             // Mode toggle
             GUILayout.BeginHorizontal();
@@ -115,6 +164,7 @@ namespace UnknownMod.Editor
                 proj.CardPlayerPacks[newId] = def;
                 SelectedPlayerPackId = newId;
                 ModProjectLoader.SaveEntity(proj, "cardplayerpacks", newId, def);
+                _playerHistory.RecordCreated(newId, false, "new pack");
                 proj.IsDirty = true;
             }
             if (GUILayout.Button("Override \u25BE", EditorStyles.MiniButton, GUILayout.Width(80)))
@@ -125,17 +175,19 @@ namespace UnknownMod.Editor
                 bool isOvr = proj.CardPlayerPackPatches.ContainsKey(SelectedPlayerPackId);
                 if (isNew && GUILayout.Button("Delete", EditorStyles.DangerButton, GUILayout.Width(60)))
                 {
-                    proj.CardPlayerPacks.Remove(SelectedPlayerPackId);
-                    ModProjectLoader.DeleteEntity(proj, "cardplayerpacks", SelectedPlayerPackId, false);
-                    SelectedPlayerPackId = allIds.FirstOrDefault(k => k != SelectedPlayerPackId);
+                    string rid = SelectedPlayerPackId;
+                    _playerHistory.Delete(rid, false, "delete");
+                    SelectedPlayerPackId = allIds.FirstOrDefault(k => k != rid);
                     proj.IsDirty = true;
+                    EditorStatus.Toast("Deleted " + rid + " (Ctrl+Z to undo)");
                 }
                 else if (isOvr && GUILayout.Button("Revert", EditorStyles.DangerButton, GUILayout.Width(60)))
                 {
-                    proj.CardPlayerPackPatches.Remove(SelectedPlayerPackId);
-                    ModProjectLoader.DeleteEntity(proj, "cardplayerpacks", SelectedPlayerPackId, true);
-                    SelectedPlayerPackId = allIds.FirstOrDefault(k => k != SelectedPlayerPackId);
+                    string rid = SelectedPlayerPackId;
+                    _playerHistory.Delete(rid, true, "revert");
+                    SelectedPlayerPackId = allIds.FirstOrDefault(k => k != rid);
                     proj.IsDirty = true;
+                    EditorStatus.Toast("Reverted " + rid + " (Ctrl+Z to undo)");
                 }
             }
             GUILayout.EndHorizontal();
@@ -155,22 +207,32 @@ namespace UnknownMod.Editor
             if (d == null) { GUILayout.Label("<i>Select or create a player pack.</i>", EditorStyles.RichLabel); return; }
 
             string prevPackId = d.PackId;
+            PlayerRen.ApplyUnlessSelected(d.PackId);
+            PlayerRen.Draw();
+            _playerHistory.BeginEdit(prevPackId, isPatch, d);
             DrawPlayerSections(d, proj);
 
+            bool renamed = false;
             if (GUI.changed)
             {
-                if (d.PackId != prevPackId && !string.IsNullOrEmpty(d.PackId))
+                if (d.PackId != prevPackId && (!ModProjectLoader.IsSafeName(d.PackId) || proj.CardPlayerPacks.ContainsKey(d.PackId) || proj.CardPlayerPackPatches.ContainsKey(d.PackId)))
+                    d.PackId = prevPackId; // empty or taken; keep the old one
+                if (d.PackId != prevPackId)
                 {
                     var dict = isPatch ? proj.CardPlayerPackPatches : proj.CardPlayerPacks;
                     dict.Remove(prevPackId);
                     dict[d.PackId] = d;
-                    ModProjectLoader.DeleteEntity(proj, "cardplayerpacks", prevPackId, isPatch);
                     SelectedPlayerPackId = d.PackId;
+                    PlayerRen.Note(proj, prevPackId, d.PackId, isPatch, ModReferences.FamilyOf(proj, dict));
+                    _playerHistory.RecordRenamed(prevPackId, d.PackId, isPatch);
+                    renamed = true;
                 }
-                ModProjectLoader.SaveEntity(proj, "cardplayerpacks", d.PackId, d, isPatch);
+                if (renamed) ModProjectLoader.RenameEntity(proj, "cardplayerpacks", prevPackId, d.PackId, d, isPatch);
+                else ModProjectLoader.SaveEntity(proj, "cardplayerpacks", d.PackId, d, isPatch);
                 proj.IsDirty = true;
                 proj.LastChangeTime = Time.realtimeSinceStartup;
             }
+            if (!renamed) _playerHistory.EndEdit(d.PackId, isPatch, d);
         }
 
         private void DrawPlayerOverrideBrowser(ModProject proj)
@@ -194,6 +256,7 @@ namespace UnknownMod.Editor
                     proj.CardPlayerPackPatches[id] = def;
                     SelectedPlayerPackId = id;
                     ModProjectLoader.SaveEntity(proj, "cardplayerpacks", id, def, true);
+                    _playerHistory.RecordCreated(id, true, "override");
                     _showOverrideBrowserPlayer = false;
                     proj.IsDirty = true;
                 }
@@ -269,6 +332,7 @@ namespace UnknownMod.Editor
                 proj.CardPlayerPairsPacks[newId] = def;
                 SelectedPairsPackId = newId;
                 ModProjectLoader.SaveEntity(proj, "cardplayerpairspacks", newId, def);
+                _pairsHistory.RecordCreated(newId, false, "new pack");
                 proj.IsDirty = true;
             }
             if (GUILayout.Button("Override \u25BE", EditorStyles.MiniButton, GUILayout.Width(80)))
@@ -279,17 +343,19 @@ namespace UnknownMod.Editor
                 bool isOvr = proj.CardPlayerPairsPackPatches.ContainsKey(SelectedPairsPackId);
                 if (isNew && GUILayout.Button("Delete", EditorStyles.DangerButton, GUILayout.Width(60)))
                 {
-                    proj.CardPlayerPairsPacks.Remove(SelectedPairsPackId);
-                    ModProjectLoader.DeleteEntity(proj, "cardplayerpairspacks", SelectedPairsPackId, false);
-                    SelectedPairsPackId = allIds.FirstOrDefault(k => k != SelectedPairsPackId);
+                    string rid = SelectedPairsPackId;
+                    _pairsHistory.Delete(rid, false, "delete");
+                    SelectedPairsPackId = allIds.FirstOrDefault(k => k != rid);
                     proj.IsDirty = true;
+                    EditorStatus.Toast("Deleted " + rid + " (Ctrl+Z to undo)");
                 }
                 else if (isOvr && GUILayout.Button("Revert", EditorStyles.DangerButton, GUILayout.Width(60)))
                 {
-                    proj.CardPlayerPairsPackPatches.Remove(SelectedPairsPackId);
-                    ModProjectLoader.DeleteEntity(proj, "cardplayerpairspacks", SelectedPairsPackId, true);
-                    SelectedPairsPackId = allIds.FirstOrDefault(k => k != SelectedPairsPackId);
+                    string rid = SelectedPairsPackId;
+                    _pairsHistory.Delete(rid, true, "revert");
+                    SelectedPairsPackId = allIds.FirstOrDefault(k => k != rid);
                     proj.IsDirty = true;
+                    EditorStatus.Toast("Reverted " + rid + " (Ctrl+Z to undo)");
                 }
             }
             GUILayout.EndHorizontal();
@@ -309,22 +375,32 @@ namespace UnknownMod.Editor
             if (d == null) { GUILayout.Label("<i>Select or create a pairs pack.</i>", EditorStyles.RichLabel); return; }
 
             string prevPackId = d.PackId;
+            PairsRen.ApplyUnlessSelected(d.PackId);
+            PairsRen.Draw();
+            _pairsHistory.BeginEdit(prevPackId, isPatch, d);
             DrawPairsSections(d, proj);
 
+            bool renamed = false;
             if (GUI.changed)
             {
-                if (d.PackId != prevPackId && !string.IsNullOrEmpty(d.PackId))
+                if (d.PackId != prevPackId && (!ModProjectLoader.IsSafeName(d.PackId) || proj.CardPlayerPairsPacks.ContainsKey(d.PackId) || proj.CardPlayerPairsPackPatches.ContainsKey(d.PackId)))
+                    d.PackId = prevPackId; // empty or taken; keep the old one
+                if (d.PackId != prevPackId)
                 {
                     var dict = isPatch ? proj.CardPlayerPairsPackPatches : proj.CardPlayerPairsPacks;
                     dict.Remove(prevPackId);
                     dict[d.PackId] = d;
-                    ModProjectLoader.DeleteEntity(proj, "cardplayerpairspacks", prevPackId, isPatch);
                     SelectedPairsPackId = d.PackId;
+                    PairsRen.Note(proj, prevPackId, d.PackId, isPatch, ModReferences.FamilyOf(proj, dict));
+                    _pairsHistory.RecordRenamed(prevPackId, d.PackId, isPatch);
+                    renamed = true;
                 }
-                ModProjectLoader.SaveEntity(proj, "cardplayerpairspacks", d.PackId, d, isPatch);
+                if (renamed) ModProjectLoader.RenameEntity(proj, "cardplayerpairspacks", prevPackId, d.PackId, d, isPatch);
+                else ModProjectLoader.SaveEntity(proj, "cardplayerpairspacks", d.PackId, d, isPatch);
                 proj.IsDirty = true;
                 proj.LastChangeTime = Time.realtimeSinceStartup;
             }
+            if (!renamed) _pairsHistory.EndEdit(d.PackId, isPatch, d);
         }
 
         private void DrawPairsOverrideBrowser(ModProject proj)
@@ -348,6 +424,7 @@ namespace UnknownMod.Editor
                     proj.CardPlayerPairsPackPatches[id] = def;
                     SelectedPairsPackId = id;
                     ModProjectLoader.SaveEntity(proj, "cardplayerpairspacks", id, def, true);
+                    _pairsHistory.RecordCreated(id, true, "override");
                     _showOverrideBrowserPairs = false;
                     proj.IsDirty = true;
                 }
@@ -373,6 +450,7 @@ namespace UnknownMod.Editor
             if (EditorFields.Section("Identity", ref _secIdentityPP))
             {
                 d.PackId = EditorFields.TextField("Pack ID", d.PackId);
+                d.RarityIfElementEmpty = EditorFields.EnumField("Rarity If Empty", d.RarityIfElementEmpty, "cppp_rarity");
             }
 
             if (EditorFields.Section("Cards (0-5)", ref _secCardsPP))

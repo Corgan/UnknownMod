@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PackDef",
+  "type": "object",
+  "properties": {
+    "PackId": {
+      "type": "string"
+    },
+    "PackName": {
+      "type": "string"
+    },
+    "RequiredClassId": {
+      "type": "string"
+    },
+    "PackClass": {
+      "type": "string",
+      "enum": [
+        "Warrior",
+        "Mage",
+        "Healer",
+        "Scout",
+        "MagicKnight",
+        "Monster",
+        "Injury",
+        "Boon",
+        "Item",
+        "Special",
+        "Enchantment",
+        "None"
+      ]
+    },
+    "CardIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "SpecialCardIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "PerkIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

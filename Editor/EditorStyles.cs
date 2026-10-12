@@ -361,108 +361,329 @@ namespace UnknownMod.Editor
         private const float LabelWidth = 100f;
         private const float FieldHeight = 20f;
 
+        // ── Labels and tooltips ──
+        private static Texture2D _tipBg;
+
+        /// <summary>Background for the shell's tooltip box.</summary>
+        public static Texture2D TooltipBackground => _tipBg != null ? _tipBg : (_tipBg = ModEditor.MakeTex(2, 2, new Color(0.08f, 0.06f, 0.12f, 0.97f)));
+
+        private static readonly Dictionary<string, string> Tips = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "SKU", "Steam DLC product this content belongs to. Leave empty for base-game content." },
+            { "SKU (DLC)", "Steam DLC product this content belongs to. Leave empty for base-game content." },
+            { "Requirement SKU", "Steam DLC product the player must own." },
+            { "Req ID", "Id of an Event Requirement that must be met. Pick one from the Requirements editor (World tab)." },
+            { "Requirement ID", "Id of an Event Requirement that must be met. Pick one from the Requirements editor (World tab)." },
+            { "Sprite Source", "Existing game sprite or skin whose art is borrowed." },
+            { "Sprite Src (self = use base skin)", "Skin whose art is used. Type 'self' to keep this skin's own base art." },
+            { "Hue Shift", "Rotates colours around the colour wheel and keeps the shading. Use this to nudge colours; Tint replaces them." },
+            { "Part Hue Shift", "Rotates this part's colours around the colour wheel and keeps the shading. Tint replaces colours instead." },
+            { "Tint (#RRGGBB)", "Replaces the sprite colour with this hex colour. Use Hue Shift to only nudge the existing colours." },
+            { "Part Tint (#RRGGBB)", "Replaces this part's colour with this hex colour. Use Part Hue Shift to only nudge the existing colours." },
+            { "Tint Hex", "Replaces the sprite colour with this hex colour. Use Hue Shift to only nudge the existing colours." },
+            { "Opacity", "1 is fully visible, 0 is invisible." },
+            { "Part Opacity", "1 is fully visible, 0 is invisible." },
+            { "Sort Order", "Lower values are listed or drawn first." },
+            { "Exists %", "Chance (0-100) that this node exists." },
+            { "Exists SKU", "Steam DLC product the player must own for this node to exist." },
+            { "Map Background Sprite", "Name of a game sprite drawn behind the node icon on the map." },
+            { "Disable When Hero In Team", "Hide this node once this hero is unlocked." },
+            { "Priority", "Lowest value is picked first." },
+            { "Connect To", "Link the selected node to another one with a road." },
+        };
+
+        /// <summary>Registers (or replaces) the hover help for a field label.</summary>
+        public static void SetTip(string label, string tip) => Tips[label] = tip;
+
+        private static GUIContent LabelContent(string label, string tip = null, string suffix = null)
+        {
+            if (tip == null && label != null) Tips.TryGetValue(label.Trim(), out tip);
+            string full = string.IsNullOrEmpty(suffix) ? tip : (tip == null ? suffix.Trim() : tip + suffix);
+            return new GUIContent(label, full);
+        }
+
+        /// <summary>Standard field label, with hover help when one is registered for the label text.</summary>
+        private static void LabelWithTip(string label) => GUILayout.Label(LabelContent(label), GUILayout.Width(LabelWidth));
+
         //  Basic fields 
+
+        private static int _numBufferKey = -1;
+        private static string _numBuffer = "";
+
+        /// <summary>
+        /// Text box for a number. While it has keyboard focus it keeps what the user typed (empty, "-", "1.") instead of
+        /// being rewritten from the parsed value every frame, which otherwise makes the box impossible to edit.
+        /// The key is the positional control id, so it is stable across events for the same call site.
+        /// </summary>
+        public static string NumText(string formatted, params GUILayoutOption[] options)
+        {
+            int key = GUIUtility.GetControlID(FocusType.Passive);
+            string name = "ef_num_" + key;
+            bool editing = _numBufferKey == key && GUI.GetNameOfFocusedControl() == name;
+            GUI.SetNextControlName(name);
+            string text = GUILayout.TextField(editing ? _numBuffer : formatted, options);
+            if (GUI.GetNameOfFocusedControl() == name) { _numBufferKey = key; _numBuffer = text; }
+            else if (_numBufferKey == key) _numBufferKey = -1;
+            return text;
+        }
+
+        /// <summary>Parses a typed decimal, accepting either '.' or ',' as the separator regardless of locale.</summary>
+        public static bool TryParseFloat(string text, out float value)
+        {
+            value = 0f;
+            if (string.IsNullOrEmpty(text)) return false;
+            return float.TryParse(text.Trim().Replace(',', '.'), System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out value);
+        }
 
         public static string TextField(string label, string value)
         {
             GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
+            LabelWithTip(label);
             value = GUILayout.TextField(value ?? "");
             GUILayout.EndHorizontal();
             return value;
         }
 
+        /// <summary>A label and a value that cannot be edited; draws the same controls whatever the state.</summary>
+        public static void ReadOnlyField(string label, string value)
+        {
+            GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
+            LabelWithTip(label);
+            GUILayout.Label(value ?? "", GUILayout.ExpandWidth(true));
+            GUILayout.EndHorizontal();
+        }
+
         public static string TextArea(string label, string value)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
+            LabelWithTip(label);
             value = GUILayout.TextArea(value ?? "", GUILayout.Height(44));
             GUILayout.EndHorizontal();
             return value;
         }
 
-        public static int IntField(string label, int value)
+        // ── Numeric rows: draggable label (scrub), text box, − / + steppers, optional slider ──
+        // Shift = ×10. Every call site always draws the same controls so IMGUI control ids stay stable.
+
+        private static int _scrubId;
+        private static double _scrubStartValue;
+        private static float _scrubStartX;
+
+        /// <summary>Label you can drag left/right to change the value. Returns the new value; sets GUI.changed when it moved.</summary>
+        private static double ScrubLabel(string label, double value, double perPixel)
+        {
+            var content = LabelContent(label, null, "  (drag to adjust)");
+            Rect r = GUILayoutUtility.GetRect(content, GUI.skin.label, GUILayout.Width(LabelWidth));
+            int id = GUIUtility.GetControlID(FocusType.Passive);
+            var e = Event.current;
+            GUI.Label(r, content);
+            switch (e.GetTypeForControl(id))
+            {
+                case EventType.MouseDown:
+                    if (e.button == 0 && r.Contains(e.mousePosition))
+                    {
+                        GUIUtility.hotControl = id; _scrubId = id; _scrubStartX = e.mousePosition.x; _scrubStartValue = value;
+                        GUI.FocusControl(null);
+                        e.Use();
+                    }
+                    break;
+                case EventType.MouseDrag:
+                    if (GUIUtility.hotControl == id && _scrubId == id)
+                    {
+                        float dx = e.mousePosition.x - _scrubStartX;
+                        double step = perPixel * (e.shift ? 10.0 : 1.0);
+                        value = _scrubStartValue + dx * step;
+                        GUI.changed = true;
+                        e.Use();
+                    }
+                    break;
+                case EventType.MouseUp:
+                    if (GUIUtility.hotControl == id) { GUIUtility.hotControl = 0; _scrubId = 0; e.Use(); }
+                    break;
+            }
+            return value;
+        }
+
+        /// <summary>The − and + buttons. Returns the signed number of steps clicked (shift = 10).</summary>
+        private static int StepButtons()
+        {
+            int dir = 0;
+            bool big = Event.current.shift;
+            if (GUILayout.Button(new GUIContent("\u2212", "Subtract (Shift = \u00d710)"), EditorStyles.MiniButton, GUILayout.Width(20))) dir = big ? -10 : -1;
+            if (GUILayout.Button(new GUIContent("+", "Add (Shift = \u00d710)"), EditorStyles.MiniButton, GUILayout.Width(20))) dir = big ? 10 : 1;
+            if (dir != 0) { GUI.changed = true; GUI.FocusControl(null); }
+            return dir;
+        }
+
+        private static int IntRow(string label, int value, int min, int max, bool showHint)
         {
             GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
-            string text = GUILayout.TextField(value.ToString(), GUILayout.Width(60));
+            value = (int)Math.Round(ScrubLabel(label, value, 1.0));
+            string text = EditorFields.NumText(value.ToString(), GUILayout.Width(60));
             if (int.TryParse(text, out int parsed)) value = parsed;
+            value += StepButtons();
+            value = Mathf.Clamp(value, min, max);
+            long range = (long)max - min;
+            if (range > 0 && range <= 100)
+            {
+                int slid = Mathf.RoundToInt(GUILayout.HorizontalSlider(value, min, max, GUILayout.MinWidth(50)));
+                if (slid != value) { value = slid; GUI.FocusControl(null); }
+            }
+            else if (showHint)
+            {
+                string hint = max == int.MaxValue ? $"[{min}+]" : $"[{min}..{max}]";
+                GUILayout.Label($"<color=#555>{hint}</color>", EditorStyles.RichLabel, GUILayout.Width(70));
+            }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
             return value;
         }
 
-        /// <summary>Integer field clamped to [min..max]. Shows a warning tint when the value was clamped.</summary>
-        public static int IntField(string label, int value, int min, int max)
+        private static float FloatRow(string label, float value, float min, float max, bool showHint)
         {
             GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
-            string text = GUILayout.TextField(value.ToString(), GUILayout.Width(60));
-            if (int.TryParse(text, out int parsed))
+            double scrubbed = ScrubLabel(label, value, 0.02);
+            if (Math.Abs(scrubbed - value) > 1e-9) value = (float)Math.Round(scrubbed, 2);
+            string text = EditorFields.NumText(value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), GUILayout.Width(70));
+            if (TryParseFloat(text, out float parsed)) value = parsed;
+            value += StepButtons() * 0.1f;
+            value = Mathf.Clamp(value, min, max);
+            float range = max - min;
+            if (range > 0f && range <= 100f)
             {
-                if (parsed < min) parsed = min;
-                else if (parsed > max) parsed = max;
-                value = parsed;
+                float slid = GUILayout.HorizontalSlider(value, min, max, GUILayout.MinWidth(50));
+                if (Mathf.Abs(slid - value) > 1e-5f) { value = (float)Math.Round(slid, 2); GUI.FocusControl(null); }
             }
-            GUILayout.Label($"<color=#555>[{min}..{max}]</color>", EditorStyles.RichLabel, GUILayout.Width(60));
+            else if (showHint)
+            {
+                GUILayout.Label($"<color=#555>[{min:F0}..{max:F0}]</color>", EditorStyles.RichLabel, GUILayout.Width(70));
+            }
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
             return value;
         }
+
+        // ── List rows: ▲ ▼ Dup X ──
+        public enum RowOp { None, Up, Down, Duplicate, Remove }
+
+        /// <summary>A "title ........ ▲ ▼ Dup X" row for one element of a list. Apply the result with <see cref="ApplyRowOp{T}"/>, then stop drawing the list this event.</summary>
+        public static RowOp RowHeader(string richTitle, int index, int count, bool allowDup = true)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(richTitle, EditorStyles.RichLabel);
+            GUILayout.FlexibleSpace();
+            var op = RowOp.None;
+            bool enabled = GUI.enabled;
+            GUI.enabled = enabled && index > 0;
+            if (GUILayout.Button(new GUIContent("\u25B2", "Move up"), EditorStyles.MiniButton, GUILayout.Width(22))) op = RowOp.Up;
+            GUI.enabled = enabled && index < count - 1;
+            if (GUILayout.Button(new GUIContent("\u25BC", "Move down"), EditorStyles.MiniButton, GUILayout.Width(22))) op = RowOp.Down;
+            GUI.enabled = enabled;
+            if (allowDup && GUILayout.Button(new GUIContent("Dup", "Duplicate this entry"), EditorStyles.MiniButton, GUILayout.Width(32))) op = RowOp.Duplicate;
+            if (GUILayout.Button(new GUIContent("X", "Remove this entry"), EditorStyles.DangerButton, GUILayout.Width(22))) op = RowOp.Remove;
+            GUILayout.EndHorizontal();
+            return op;
+        }
+
+        /// <summary>Performs a row operation on the list. Returns true when the list changed (and sets GUI.changed); the caller should break out of its draw loop.</summary>
+        public static bool ApplyRowOp<T>(List<T> list, int index, RowOp op)
+        {
+            if (op == RowOp.None || list == null || index < 0 || index >= list.Count) return false;
+            switch (op)
+            {
+                case RowOp.Up:
+                    if (index == 0) return false;
+                    (list[index - 1], list[index]) = (list[index], list[index - 1]);
+                    break;
+                case RowOp.Down:
+                    if (index >= list.Count - 1) return false;
+                    (list[index + 1], list[index]) = (list[index], list[index + 1]);
+                    break;
+                case RowOp.Duplicate:
+                    var clone = Newtonsoft.Json.JsonConvert.DeserializeObject<T>(Newtonsoft.Json.JsonConvert.SerializeObject(list[index]));
+                    list.Insert(index + 1, clone);
+                    break;
+                case RowOp.Remove:
+                    list.RemoveAt(index);
+                    break;
+            }
+            GUI.changed = true;
+            return true;
+        }
+
+        /// <summary>Array flavour of <see cref="ApplyRowOp{T}(List{T}, int, RowOp)"/> (assigns the new array back).</summary>
+        public static bool ApplyRowOp<T>(ref T[] array, int index, RowOp op)
+        {
+            if (array == null) return false;
+            var list = new List<T>(array);
+            if (!ApplyRowOp(list, index, op)) return false;
+            array = list.ToArray();
+            return true;
+        }
+
+        /// <summary>Compact "▲ ▼ X" buttons for use inside an existing horizontal row (e.g. beside a dropdown). Apply with <see cref="ApplyRowOp{T}"/>.</summary>
+        public static RowOp InlineRowOps(int index, int count)
+        {
+            var op = RowOp.None;
+            bool enabled = GUI.enabled;
+            GUI.enabled = enabled && index > 0;
+            if (GUILayout.Button(new GUIContent("\u25B2", "Move up"), EditorStyles.MiniButton, GUILayout.Width(22))) op = RowOp.Up;
+            GUI.enabled = enabled && index < count - 1;
+            if (GUILayout.Button(new GUIContent("\u25BC", "Move down"), EditorStyles.MiniButton, GUILayout.Width(22))) op = RowOp.Down;
+            GUI.enabled = enabled;
+            if (GUILayout.Button(new GUIContent("X", "Remove this entry"), EditorStyles.DangerButton, GUILayout.Width(22))) op = RowOp.Remove;
+            return op;
+        }
+
+        public static int IntField(string label, int value) => IntRow(label, value, int.MinValue, int.MaxValue, false);
+
+        /// <summary>Integer field clamped to [min..max]. Small ranges also get a slider.</summary>
+        public static int IntField(string label, int value, int min, int max) => IntRow(label, value, min, max, true);
 
         /// <summary>Integer field with only a minimum bound.</summary>
-        public static int IntFieldMin(string label, int value, int min)
-        {
-            GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
-            string text = GUILayout.TextField(value.ToString(), GUILayout.Width(60));
-            if (int.TryParse(text, out int parsed))
-            {
-                if (parsed < min) parsed = min;
-                value = parsed;
-            }
-            GUILayout.Label($"<color=#555>[{min}+]</color>", EditorStyles.RichLabel, GUILayout.Width(40));
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            return value;
-        }
+        public static int IntFieldMin(string label, int value, int min) => IntRow(label, value, min, int.MaxValue, true);
 
-        public static float FloatField(string label, float value)
-        {
-            GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
-            string text = GUILayout.TextField(value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), GUILayout.Width(70));
-            if (float.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float parsed)) value = parsed;
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            return value;
-        }
+        public static float FloatField(string label, float value) => FloatRow(label, value, float.MinValue, float.MaxValue, false);
 
-        /// <summary>Float field clamped to [min..max].</summary>
-        public static float FloatField(string label, float value, float min, float max)
-        {
-            GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
-            string text = GUILayout.TextField(value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), GUILayout.Width(70));
-            if (float.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float parsed))
-            {
-                if (parsed < min) parsed = min;
-                else if (parsed > max) parsed = max;
-                value = parsed;
-            }
-            GUILayout.Label($"<color=#555>[{min:F0}..{max:F0}]</color>", EditorStyles.RichLabel, GUILayout.Width(60));
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
-            return value;
-        }
+        /// <summary>Float field clamped to [min..max]. Small ranges also get a slider.</summary>
+        public static float FloatField(string label, float value, float min, float max) => FloatRow(label, value, min, max, true);
 
         public static bool Toggle(string label, bool value)
         {
             GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
+            LabelWithTip(label);
             value = GUILayout.Toggle(value, "");
             GUILayout.EndHorizontal();
             return value;
+        }
+
+        /// <summary>Tri-state toggle for optional bools: click cycles inherit, yes, no.</summary>
+        public static bool? NullableBool(string label, bool? value, string inheritText = "inherit")
+        {
+            GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
+            LabelWithTip(label);
+            string text = value.HasValue ? (value.Value ? "yes" : "no") : inheritText;
+            if (GUILayout.Button(text, EditorStyles.DropdownButton))
+            {
+                value = !value.HasValue ? true : (value.Value ? false : (bool?)null);
+                GUI.changed = true;
+            }
+            GUILayout.EndHorizontal();
+            return value;
+        }
+
+        /// <summary>Optional enum: unchecked means inherit (null), checked shows the dropdown.</summary>
+        public static T? NullableEnum<T>(string label, T? value, T seed, string popupId, string inheritText = "inherit") where T : struct, Enum
+        {
+            bool has = value.HasValue;
+            GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
+            LabelWithTip(label);
+            bool now = GUILayout.Toggle(has, has ? "" : inheritText);
+            GUILayout.EndHorizontal();
+            if (now != has) { GUI.changed = true; return now ? seed : (T?)null; }
+            if (!has) return null;
+            return EnumField("    \u21B3 value", value.Value, popupId);
         }
 
         //  Enum dropdown 
@@ -476,7 +697,7 @@ namespace UnknownMod.Editor
             if (popupId == null) popupId = $"enum_{label}_{typeof(T).Name}";
 
             GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
+            LabelWithTip(label);
 
             if (GUILayout.Button($"{value}  \u25BE", EditorStyles.DropdownButton))
                 PopupState.Toggle(popupId);
@@ -511,6 +732,44 @@ namespace UnknownMod.Editor
             }
 
             return value;
+        }
+
+        //  Virtualized popup rows
+        // Popups over thousands of ids (cards, auras) used to emit one GUILayout.Button per id on every IMGUI
+        // event, which is what made the editor chug. Only the rows inside the scroll viewport are drawn now.
+
+        private const float PopupRowH = 22f;
+        private static IList<string> _vfSrc;
+        private static int _vfCount = -1;
+        private static string _vfFilt;
+        private static readonly List<string> _vfOut = new List<string>();
+
+        private static IList<string> FilterIdsCached(IList<string> ids, string filt)
+        {
+            if (string.IsNullOrEmpty(filt)) return ids;
+            if (ReferenceEquals(ids, _vfSrc) && ids.Count == _vfCount && filt == _vfFilt) return _vfOut;
+            _vfSrc = ids; _vfCount = ids.Count; _vfFilt = filt;
+            _vfOut.Clear();
+            for (int i = 0; i < ids.Count; i++)
+                if (ids[i].IndexOf(filt, StringComparison.OrdinalIgnoreCase) >= 0) _vfOut.Add(ids[i]);
+            return _vfOut;
+        }
+
+        /// <summary>Draw only the visible rows of a long list inside the current scroll view. Returns the clicked id or null.</summary>
+        private static string DrawVirtualRows(IList<string> rows, Func<string, string> label, string currentId, float viewH)
+        {
+            var area = GUILayoutUtility.GetRect(0f, rows.Count * PopupRowH, GUILayout.ExpandWidth(true));
+            int first = Mathf.Clamp(Mathf.FloorToInt(PopupState.Scroll.y / PopupRowH) - 1, 0, rows.Count);
+            int last = Mathf.Min(rows.Count, first + Mathf.CeilToInt(viewH / PopupRowH) + 3);
+            string picked = null;
+            for (int i = first; i < last; i++)
+            {
+                string id = rows[i];
+                var style = id == currentId ? EditorStyles.DropdownItemSel : EditorStyles.DropdownItem;
+                var r = new Rect(area.x, area.y + i * PopupRowH, area.width, PopupRowH);
+                if (GUI.Button(r, label != null ? label(id) : id, style)) picked = id;
+            }
+            return picked;
         }
 
         //  ID reference dropdown 
@@ -571,19 +830,13 @@ namespace UnknownMod.Editor
                     GUI.changed = true;
                 }
 
-                string filt = PopupState.Filter?.ToLower() ?? "";
-                foreach (var id in ids)
+                string filt = PopupState.Filter ?? "";
+                string picked = DrawVirtualRows(FilterIdsCached(ids, filt), null, currentId, popupH - 28);
+                if (picked != null)
                 {
-                    if (filt.Length > 0 && !id.ToLower().Contains(filt)) continue;
-
-                    bool cur = id == currentId;
-                    var style = cur ? EditorStyles.DropdownItemSel : EditorStyles.DropdownItem;
-                    if (GUILayout.Button(id, style, GUILayout.Height(22)))
-                    {
-                        currentId = id;
-                        PopupState.Close();
-                        GUI.changed = true;
-                    }
+                    currentId = picked;
+                    PopupState.Close();
+                    GUI.changed = true;
                 }
 
                 GUILayout.EndScrollView();
@@ -666,21 +919,21 @@ namespace UnknownMod.Editor
                 PopupState.Scroll = GUILayout.BeginScrollView(PopupState.Scroll,
                     GUILayout.Height(Mathf.Min(popupH, 280)));
 
-                string filt = PopupState.Filter?.ToLower() ?? "";
+                string filt = PopupState.Filter ?? "";
+                var shown = new List<string>(sortedIds.Count);
                 foreach (var id in sortedIds)
                 {
-                    string disp = displayFunc(id);
-                    if (filt.Length > 0 && !id.ToLower().Contains(filt) && !disp.ToLower().Contains(filt))
+                    if (filt.Length > 0 && id.IndexOf(filt, StringComparison.OrdinalIgnoreCase) < 0
+                        && displayFunc(id).IndexOf(filt, StringComparison.OrdinalIgnoreCase) < 0)
                         continue;
-
-                    bool cur = id == currentId;
-                    var style = cur ? EditorStyles.DropdownItemSel : EditorStyles.DropdownItem;
-                    if (GUILayout.Button(disp, style, GUILayout.Height(22)))
-                    {
-                        currentId = id;
-                        PopupState.Close();
-                        GUI.changed = true;
-                    }
+                    shown.Add(id);
+                }
+                string picked = DrawVirtualRows(shown, displayFunc, currentId, Mathf.Min(popupH, 280));
+                if (picked != null)
+                {
+                    currentId = picked;
+                    PopupState.Close();
+                    GUI.changed = true;
                 }
 
                 GUILayout.EndScrollView();
@@ -696,8 +949,28 @@ namespace UnknownMod.Editor
         /// Collapsible section header. Returns true when expanded.
         /// Usage: if (EditorFields.Section("Stats", ref expanded)) { ... }
         /// </summary>
+        // Expand all / Collapse all: queued by a button, applied by every Section drawn during the next Layout pass.
+        private static int _sectionCommand;
+        private static int _sectionPending;
+
+        /// <summary>Queue +1 (expand every section) or -1 (collapse every section) for the next frame.</summary>
+        public static void QueueSectionCommand(int command) => _sectionPending = command;
+
+        /// <summary>Called by the shell at the start of each frame's Layout pass and again at its end.</summary>
+        public static void BeginSectionPass()
+        {
+            _sectionCommand = _sectionPending;
+        }
+
+        public static void EndSectionPass()
+        {
+            _sectionCommand = 0;
+            _sectionPending = 0;
+        }
+
         public static bool Section(string title, ref bool expanded)
         {
+            if (_sectionCommand != 0 && Event.current.type == EventType.Layout) expanded = _sectionCommand > 0;
             GUILayout.Space(2);
             string icon = expanded ? "\u25BE" : "\u25B8";
             if (GUILayout.Button($"{icon}  {title}", EditorStyles.SectionHeader))
@@ -742,6 +1015,45 @@ namespace UnknownMod.Editor
         /// Build a combined card ID list from the active mod project + base game.
         /// Used by editors that need a card-reference dropdown.
         /// </summary>
+        /// <summary>Editable list of ids, each row an IdDropdown (with optional entity picker) plus add/remove buttons.</summary>
+        public static void IdListField(string label, List<string> list, IList<string> allIds,
+            string keyPrefix, EntityPicker.Mode? mode = null)
+        {
+            if (list.Count == 0)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(label, GUILayout.Width(100f));
+                if (GUILayout.Button("+", EditorStyles.MiniButton, GUILayout.Width(22)))
+                {
+                    list.Add("");
+                    GUI.changed = true;
+                }
+                GUILayout.Label("<color=#666>(none)</color>", EditorStyles.RichLabel);
+                GUILayout.EndHorizontal();
+                return;
+            }
+
+            for (int j = 0; j < list.Count; j++)
+            {
+                list[j] = IdDropdown(j == 0 ? label : "", list[j], allIds, $"{keyPrefix}_{j}", pickerMode: mode);
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(100f);
+                if (GUILayout.Button("X", EditorStyles.MiniButton, GUILayout.Width(22)))
+                {
+                    list.RemoveAt(j);
+                    GUI.changed = true;
+                    GUILayout.EndHorizontal();
+                    break;
+                }
+                if (j == list.Count - 1 && GUILayout.Button("+", EditorStyles.MiniButton, GUILayout.Width(22)))
+                {
+                    list.Add("");
+                    GUI.changed = true;
+                }
+                GUILayout.EndHorizontal();
+            }
+        }
+
         public static List<string> BuildCardIdList(ModProject proj)
         {
             var cardIds = new List<string>();
@@ -792,7 +1104,7 @@ namespace UnknownMod.Editor
                     GUI.contentColor = colors[idx];
                     GUILayout.Label(labels[idx], GUILayout.Width(lblW));
                     GUI.contentColor = prevColor;
-                    string text = GUILayout.TextField(vals[idx].ToString(), GUILayout.Width(cellW));
+                    string text = EditorFields.NumText(vals[idx].ToString(), GUILayout.Width(cellW));
                     if (int.TryParse(text, out int p)) vals[idx] = p;
                     GUILayout.Space(4);
                 }
@@ -895,7 +1207,7 @@ namespace UnknownMod.Editor
             IList<string> acIds, string popupId)
         {
             GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
+            LabelWithTip(label);
 
             // Mini AC dropdown button
             string btnText = string.IsNullOrEmpty(acId) ? "(none) \u25BE" : $"{acId} \u25BE";
@@ -908,7 +1220,7 @@ namespace UnknownMod.Editor
 
             // Charges
             GUILayout.Label("Ã—", GUILayout.Width(12));
-            string chgText = GUILayout.TextField(charges.ToString(), GUILayout.Width(36));
+            string chgText = EditorFields.NumText(charges.ToString(), GUILayout.Width(36));
             if (int.TryParse(chgText, out int chgParsed)) charges = chgParsed;
 
             GUILayout.EndHorizontal();
@@ -933,14 +1245,10 @@ namespace UnknownMod.Editor
                 PopupState.Scroll = GUILayout.BeginScrollView(PopupState.Scroll, GUILayout.Height(popupH - 28));
                 if (GUILayout.Button("(none)", EditorStyles.DropdownItem, GUILayout.Height(22)))
                 { acId = ""; PopupState.Close(); GUI.changed = true; }
-                string filt = PopupState.Filter?.ToLower() ?? "";
-                foreach (var id in acIds)
-                {
-                    if (filt.Length > 0 && !id.ToLower().Contains(filt)) continue;
-                    var style = id == acId ? EditorStyles.DropdownItemSel : EditorStyles.DropdownItem;
-                    if (GUILayout.Button(id, style, GUILayout.Height(22)))
-                    { acId = id; PopupState.Close(); GUI.changed = true; }
-                }
+                string filt = PopupState.Filter ?? "";
+                string pickedAc = DrawVirtualRows(FilterIdsCached(acIds, filt), null, acId, popupH - 28);
+                if (pickedAc != null)
+                { acId = pickedAc; PopupState.Close(); GUI.changed = true; }
                 GUILayout.EndScrollView();
                 GUILayout.EndVertical();
             }
@@ -956,9 +1264,9 @@ namespace UnknownMod.Editor
         public static void DamageField(string label, ref int damage, ref Enums.DamageType damageType, string popupId)
         {
             GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
+            LabelWithTip(label);
 
-            string text = GUILayout.TextField(damage.ToString(), GUILayout.Width(46));
+            string text = EditorFields.NumText(damage.ToString(), GUILayout.Width(46));
             if (int.TryParse(text, out int dmgParsed)) damage = dmgParsed;
 
             if (GUILayout.Button($"{damageType} \u25BE", EditorStyles.DropdownButton, GUILayout.MinWidth(70)))
@@ -999,7 +1307,7 @@ namespace UnknownMod.Editor
             GUILayout.Label(label, GUILayout.Width(70));
 
             // Amount
-            string text = GUILayout.TextField(damage.ToString(), GUILayout.Width(40));
+            string text = EditorFields.NumText(damage.ToString(), GUILayout.Width(40));
             if (int.TryParse(text, out int dp)) damage = dp;
 
             // Type dropdown button (color-coded)
@@ -1012,7 +1320,7 @@ namespace UnknownMod.Editor
 
             // Splash
             GUILayout.Label("Splash", GUILayout.Width(38));
-            string sText = GUILayout.TextField(splash.ToString(), GUILayout.Width(30));
+            string sText = EditorFields.NumText(splash.ToString(), GUILayout.Width(30));
             if (int.TryParse(sText, out int sp)) splash = sp;
 
             // Ignore block
@@ -1149,7 +1457,7 @@ namespace UnknownMod.Editor
         public static int MaxChargesField(string label, int value)
         {
             GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
+            LabelWithTip(label);
 
             bool unlimited = value < 0;
             bool newUnlimited = GUILayout.Toggle(unlimited, "Unlimited", GUILayout.Width(80));
@@ -1161,7 +1469,7 @@ namespace UnknownMod.Editor
 
             if (!newUnlimited)
             {
-                string text = GUILayout.TextField(value.ToString(), GUILayout.Width(50));
+                string text = EditorFields.NumText(value.ToString(), GUILayout.Width(50));
                 if (int.TryParse(text, out int parsed) && parsed >= 0) value = parsed;
             }
 
@@ -1220,7 +1528,7 @@ namespace UnknownMod.Editor
         public static float PercentSlider(string label, float value)
         {
             GUILayout.BeginHorizontal(GUILayout.Height(FieldHeight));
-            GUILayout.Label(label, GUILayout.Width(LabelWidth));
+            LabelWithTip(label);
             value = GUILayout.HorizontalSlider(value, 0f, 100f, GUILayout.Width(120));
             GUILayout.Label($"{value:0}%", GUILayout.Width(36));
             GUILayout.FlexibleSpace();

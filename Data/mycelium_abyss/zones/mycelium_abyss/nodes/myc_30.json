@@ -1,0 +1,34 @@
+{
+  "NodeId": "myc_30",
+  "NodeName": "Cairn Ridge",
+  "Description": "",
+  "PosX": 1.779336,
+  "PosY": 3.47248054,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": false,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "PoisonousAir",
+  "NodeRequirementId": "",
+  "CombatTier": "T0",
+  "CombatPercent": 0,
+  "EventIds": [
+    "e_myc_30",
+    "e_myc_35"
+  ],
+  "EventPercent": 100,
+  "NodeEventTier": "T0",
+  "NodeEventPriority": [
+    0,
+    0
+  ],
+  "NodeEventPercent": [
+    100,
+    100
+  ],
+  "Connections": [
+    "myc_12"
+  ]
+}

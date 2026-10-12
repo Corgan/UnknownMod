@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CardPlayerPackDef",
+  "type": "object",
+  "properties": {
+    "PackId": {
+      "type": "string"
+    },
+    "Slots": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CardPlayerSlot"
+      }
+    },
+    "ModSpeed": {
+      "type": "integer"
+    },
+    "ModIterations": {
+      "type": "integer"
+    }
+  },
+  "definitions": {
+    "CardPlayerSlot": {
+      "type": "object",
+      "properties": {
+        "CardId": {
+          "type": "string"
+        },
+        "RandomBoon": {
+          "type": "boolean"
+        },
+        "RandomInjury": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

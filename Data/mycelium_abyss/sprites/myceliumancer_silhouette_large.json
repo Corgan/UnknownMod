@@ -1,0 +1,19 @@
+{
+  "Ppu": 200.0,
+  "PivotX": 0.5,
+  "PivotY": 0.0,
+  "Columns": 1,
+  "Rows": 1,
+  "Capture": {
+    "Scale": 2,
+    "Zoom": 1.5,
+    "OffsetX": -0.15,
+    "OffsetY": -0.56,
+    "Mirror": false,
+    "Border": true,
+    "Bg": 0.03,
+    "Flat": false,
+    "Fill": 1.0,
+    "Grow": 0
+  }
+}

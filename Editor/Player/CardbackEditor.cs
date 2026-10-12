@@ -64,7 +64,7 @@ namespace UnknownMod.Editor
                 d.CardbackName = EditorFields.TextField("Name", d.CardbackName);
                 d.CardbackTextId = EditorFields.TextField("Text ID", d.CardbackTextId);
 
-                var subclassIds = DataHelper.GetAllSubClassIds();
+                var subclassIds = RefIds.SubClasses();
                 d.CardbackSubclass = EditorFields.IdDropdown("Subclass", d.CardbackSubclass, subclassIds, "cb_subclass");
             }
 
@@ -87,6 +87,7 @@ namespace UnknownMod.Editor
                 d.ObeliskLevel = EditorFields.IntField("Obelisk Level", d.ObeliskLevel);
                 d.SingularityLevel = EditorFields.IntField("Singularity Level", d.SingularityLevel);
                 d.PdxAccountRequired = EditorFields.Toggle("PDX Account Required", d.PdxAccountRequired);
+                d.HideInGame = EditorFields.Toggle("Hide In Game", d.HideInGame);
             }
 
             // ── Visual ───────────────────────────────────────────
@@ -94,6 +95,7 @@ namespace UnknownMod.Editor
             {
                 var cbIds = DataHelper.GetAllCardbackIds();
                 d.SpriteSource = EditorFields.IdDropdown("Sprite Source", d.SpriteSource, cbIds, "cb_sprite");
+                d.SpriteOverride = EditorFields.TextField("Sprite Override", d.SpriteOverride);
             }
         }
 

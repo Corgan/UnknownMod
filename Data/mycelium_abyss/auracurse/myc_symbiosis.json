@@ -1,0 +1,22 @@
+{
+  "Id": "myc_symbiosis",
+  "ACName": "Symbiosis",
+  "IsAura": true,
+  "Description": "Heal<g> <ChargesMultiplier> HP</g> at the <w>start of the turn</w>, then <w>jump</w> to a <w>random ally</w>, losing <w>half</w> its charges (it halves in place if there is no ally).",
+  "MaxCharges": -1,
+  "MaxMadnessCharges": 50,
+  "AuraConsumed": 1,
+  "ChargesMultiplierDescription": 1,
+  "EffectTick": "regeneration",
+  "Sound": "heal",
+  "Sprite": "myc_aura_symbiosis",
+  "GainCharges": true,
+  "Removable": true,
+  "Preventable": true,
+  "IconShow": true,
+  "CombatlogShow": true,
+  "ConsumedAtTurnBegin": true,
+  "ProduceHealWhenConsumed": true,
+  "HealWhenConsumedPerCharge": 1,
+  "PriorityOnConsumption": 30
+}

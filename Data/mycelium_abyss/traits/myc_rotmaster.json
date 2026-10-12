@@ -1,0 +1,15 @@
+{
+  "Id": "myc_rotmaster",
+  "TraitName": "Rotmaster",
+  "TraitCard": "mycputrefy",
+  "Description": "Shadow damage +3. Spore Rot +1. Applying Spore Rot to an enemy with 6+ Spore Rot also applies Vulnerable 2.",
+  "Activations": [
+    "PreBeginCombat",
+    "AuraCurseSet"
+  ],
+  "AuracurseBonusValue1": 1,
+  "DamageBonusFlat": "Shadow",
+  "DamageBonusFlatValue": 3,
+  "AuracurseBonus1": "myc_sporerot",
+  "TimesPerTurn": 2
+}

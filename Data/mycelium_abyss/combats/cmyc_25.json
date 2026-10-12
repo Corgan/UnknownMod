@@ -1,0 +1,25 @@
+{
+  "CombatId": "cmyc_25",
+  "Description": "The Mycelarch - heart of the hivemind - awaits at the network's core.",
+  "NpcIds": [
+    "",
+    "",
+    "myc_blightcaller",
+    "myc_mycelarch"
+  ],
+  "CombatTier": "T5",
+  "Background": "Spider_Lair",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "EventRequirementId": "",
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "e_myc_boss",
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 2,
+      "Target": "Monsters"
+    }
+  ]
+}

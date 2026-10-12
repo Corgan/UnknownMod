@@ -1,17 +1,24 @@
 {
   "CombatId": "cmyc_14",
-  "Description": "The Mycelarch - heart of the hivemind - awaits at the network's core.",
+  "Description": "Every strain of the mycelia converges on your position.",
   "NpcIds": [
-    "myc_mycelarch",
-    "myc_shambler",
-    "myc_shambler"
+    "myc_golem",
+    "myc_thrall",
+    "myc_lurker",
+    "myc_spitter"
   ],
-  "CombatTier": "T5",
+  "CombatTier": "T4",
   "Background": "Spider_Lair",
   "NpcRemoveInMadness0Index": -1,
   "HealHeroes": false,
   "IsRift": false,
   "NpcToSummonOnKilledId": "",
   "EventDataId": "",
-  "CombatEffects": []
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 1,
+      "Target": "Monsters"
+    }
+  ]
 }

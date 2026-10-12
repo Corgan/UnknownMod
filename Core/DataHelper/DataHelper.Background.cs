@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using BattleMatch;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnknownMod.Definitions;
@@ -14,7 +16,7 @@ namespace UnknownMod.Core
 
         /// <summary>
         /// Registry of custom background prefabs built from BackgroundDefs.
-        /// Keyed by BackgroundId, injected into MatchManager.backgroundPrefabs at runtime.
+        /// Keyed by normalized BackgroundId; MatchBackground.DoBackground is intercepted (Patches.Background) to instantiate them, since the game now resolves vanilla backgrounds by name through Globals.GetBackgroundPrefab.
         /// </summary>
         internal static readonly Dictionary<string, GameObject> CustomBackgroundPrefabs = new(StringComparer.OrdinalIgnoreCase);
 
@@ -24,6 +26,20 @@ namespace UnknownMod.Core
         /// String-keyed so lookups survive SO recreation during hot-reload.
         /// </summary>
         internal static readonly Dictionary<string, string> CombatCustomBackgrounds = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly HashSet<Material> OwnedBackgroundMaterials = new();
+        private sealed class GameObjectIdentityComparer : IEqualityComparer<GameObject>
+        {
+            public bool Equals(GameObject left, GameObject right) => ReferenceEquals(left, right);
+            public int GetHashCode(GameObject value) => RuntimeHelpers.GetHashCode(value);
+        }
+
+        private static readonly HashSet<GameObject> LiveCustomBackgrounds =
+            new(new GameObjectIdentityComparer());
+
+        internal static string NormalizeBackgroundId(string id)
+        {
+            return id?.Trim() ?? string.Empty;
+        }
 
         /// <summary>
         /// Build a background prefab GameObject from a BackgroundDef.
@@ -32,9 +48,10 @@ namespace UnknownMod.Core
         /// </summary>
         public static GameObject BuildBackgroundPrefab(BackgroundDef def)
         {
-            if (def == null || string.IsNullOrEmpty(def.BackgroundId)) return null;
+            string backgroundId = NormalizeBackgroundId(def?.BackgroundId);
+            if (string.IsNullOrEmpty(backgroundId)) return null;
 
-            var root = new GameObject(def.BackgroundId);
+            var root = new GameObject(backgroundId);
             root.SetActive(false);
             UnityEngine.Object.DontDestroyOnLoad(root);
             root.hideFlags = HideFlags.HideAndDontSave;
@@ -117,6 +134,7 @@ namespace UnknownMod.Core
                                 var defaultMat = new Material(Shader.Find("Particles/Standard Unlit"));
                                 defaultMat.SetFloat("_Mode", 1);
                                 psr.sharedMaterial = defaultMat;
+                                OwnedBackgroundMaterials.Add(defaultMat);
                             }
                         }
                         break;
@@ -155,7 +173,10 @@ namespace UnknownMod.Core
                         {
                             var shader = Shader.Find(layer.ShaderName) ?? Resources.Load<Shader>(layer.ShaderName);
                             if (shader != null)
+                            {
                                 sr.material = new Material(shader);
+                                OwnedBackgroundMaterials.Add(sr.material);
+                            }
                         }
                         ShaderEffectRegistry.ApplyToMaterial(sr.material, layer.ShaderKeywords, layer.ShaderFloats);
                         break;
@@ -165,7 +186,7 @@ namespace UnknownMod.Core
                     {
                         if (!string.IsNullOrEmpty(layer.EffectName))
                         {
-                            var prefab = Globals.Instance?.GetResourceEffect(layer.EffectName);
+                            var prefab = GameResources.GetEffectPrefab(layer.EffectName);
                             if (prefab != null)
                             {
                                 var clone = UnityEngine.Object.Instantiate(prefab, go.transform);
@@ -198,39 +219,66 @@ namespace UnknownMod.Core
         /// <summary>Register a custom background prefab (built from BackgroundDef).</summary>
         public static void RegisterCustomBackground(BackgroundDef def)
         {
+            string backgroundId = NormalizeBackgroundId(def?.BackgroundId);
+            if (string.IsNullOrEmpty(backgroundId)) return;
+
             // Destroy previous if re-registering (hot-reload)
-            if (CustomBackgroundPrefabs.TryGetValue(def.BackgroundId, out var old) && old != null)
-                UnityEngine.Object.Destroy(old);
+            if (CustomBackgroundPrefabs.TryGetValue(backgroundId, out var old))
+            {
+                if (old != null) UnityEngine.Object.Destroy(old);
+            }
 
             var prefab = BuildBackgroundPrefab(def);
             if (prefab != null)
             {
-                CustomBackgroundPrefabs[def.BackgroundId] = prefab;
-                InjectIntoMatchManager(def.BackgroundId, prefab);
+                CustomBackgroundPrefabs[backgroundId] = prefab;
             }
         }
 
-        /// <summary>Inject a custom background prefab into MatchManager.backgroundPrefabs if available.</summary>
-        private static void InjectIntoMatchManager(string bgId, GameObject prefab)
+        internal static void RegisterLiveCustomBackground(GameObject instance)
         {
-            var mm = MatchManager.Instance;
-            if (mm == null || mm.backgroundPrefabs == null) return;
+            if (instance != null) LiveCustomBackgrounds.Add(instance);
+        }
 
-            // Remove any existing prefab with same name
-            for (int i = mm.backgroundPrefabs.Count - 1; i >= 0; i--)
+        internal static void DestroyLiveCustomBackground(GameObject instance)
+        {
+            LiveCustomBackgrounds.Remove(instance);
+            if (instance == null) return;
+            instance.SetActive(false);
+            instance.transform.SetParent(null, false);
+            UnityEngine.Object.DestroyImmediate(instance);
+        }
+
+        public static void ClearCustomBackgrounds()
+        {
+            foreach (var instance in new List<GameObject>(LiveCustomBackgrounds))
+                DestroyLiveCustomBackground(instance);
+            LiveCustomBackgrounds.Clear();
+
+            foreach (var prefab in new List<GameObject>(CustomBackgroundPrefabs.Values))
             {
-                if (mm.backgroundPrefabs[i] != null &&
-                    string.Equals(mm.backgroundPrefabs[i].name, bgId, StringComparison.OrdinalIgnoreCase))
-                {
-                    mm.backgroundPrefabs.RemoveAt(i);
-                }
+                if (prefab == null) continue;
+                prefab.SetActive(false);
+                prefab.transform.SetParent(null, false);
+                UnityEngine.Object.DestroyImmediate(prefab);
             }
-
-            mm.backgroundPrefabs.Add(prefab);
+            ShaderPresetGenerator.ClearCache();
+            foreach (var material in OwnedBackgroundMaterials)
+                if (material != null) UnityEngine.Object.DestroyImmediate(material);
+            if (_shaderQuadSprite != null)
+            {
+                var texture = _shaderQuadSprite.texture;
+                UnityEngine.Object.DestroyImmediate(_shaderQuadSprite);
+                if (texture != null) UnityEngine.Object.DestroyImmediate(texture);
+                _shaderQuadSprite = null;
+            }
+            OwnedBackgroundMaterials.Clear();
+            CustomBackgroundPrefabs.Clear();
+            CombatCustomBackgrounds.Clear();
         }
 
         /// <summary>Find a game sprite by name — checks mod image sprites first, then loaded assets.</summary>
-        private static Sprite FindGameSprite(string name)
+        internal static Sprite FindGameSprite(string name)
         {
             if (string.IsNullOrEmpty(name)) return null;
 

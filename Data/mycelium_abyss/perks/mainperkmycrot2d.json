@@ -1,0 +1,8 @@
+{
+  "Id": "mainperkmycrot2d",
+  "CardClass": "None",
+  "MainPerk": true,
+  "IconTextValue": "+1",
+  "SpriteSource": "aura:myc_sporerot",
+  "CustomDescription": "When Spore Rot hops to another enemy, the enemy it leaves keeps the charges that would be lost."
+}

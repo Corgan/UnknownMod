@@ -2,6 +2,7 @@ using System.Linq;
 using HarmonyLib;
 using UnknownMod.Definitions;
 using UnityEngine;
+using UnknownMod.Runtime;
 
 namespace UnknownMod.Core
 {
@@ -47,6 +48,17 @@ namespace UnknownMod.Core
                 if (summonNpc != null) combat.NpcToSummonOnNpcKilled = summonNpc;
             }
 
+            if (!string.IsNullOrEmpty(d.CinematicId))
+                combat.CinematicData = GetCinematic(d.CinematicId);
+            if (!string.IsNullOrEmpty(d.CombatBasedCorruptionCardId))
+                combat.CombatBasedCorruption = GetCardSource(d.CombatBasedCorruptionCardId);
+            if (!string.IsNullOrEmpty(d.ThermometerTierId))
+            {
+                combat.ThermometerTierData = GetThermometerTier(d.ThermometerTierId);
+                if (combat.ThermometerTierData == null)
+                    Plugin.Log.LogWarning($"[DataHelper] Combat '{d.CombatId}': thermometer tier '{d.ThermometerTierId}' not found");
+            }
+
             // Combat effects
             if (d.CombatEffects != null && d.CombatEffects.Count > 0)
             {
@@ -65,11 +77,18 @@ namespace UnknownMod.Core
                 combat.CombatEffect = new CombatEffect[0];
             }
 
+            if (!string.IsNullOrEmpty(d.CombatMusic))
+            {
+                var clip = AudioUtils.Find(d.CombatMusic);
+                if (clip != null) Traverse.Create(combat).Field("combatMusic").SetValue(clip);
+                else Plugin.Log.LogWarning($"[DataHelper] Combat '{d.CombatId}': music '{d.CombatMusic}' not found.");
+            }
+
             // Preserve fields from existing combat that aren't modeled in CombatDef (for patches)
             var existing = GetExistingCombat(d.CombatId);
             if (existing != null)
             {
-                if (existing.ThermometerTierData != null)
+                if (existing.ThermometerTierData != null && combat.ThermometerTierData == null)
                     combat.ThermometerTierData = existing.ThermometerTierData;
 
                 var src = Traverse.Create(existing);
@@ -77,11 +96,13 @@ namespace UnknownMod.Core
 
                 // CombatMusic — AudioClip, zone-overrideable per-combat music
                 var music = src.Field("combatMusic").GetValue();
-                if (music != null) dst.Field("combatMusic").SetValue(music);
+                if (music != null && string.IsNullOrEmpty(d.CombatMusic)) dst.Field("combatMusic").SetValue(music);
 
-                // CinematicData — boss intro cinematics
-                var cine = src.Field("cinematicData").GetValue();
-                if (cine != null) dst.Field("cinematicData").SetValue(cine);
+                // Patches without these fields keep the base-game values
+                if (combat.CinematicData == null && string.IsNullOrEmpty(d.CinematicId))
+                    combat.CinematicData = existing.CinematicData;
+                if (combat.CombatBasedCorruption == null && string.IsNullOrEmpty(d.CombatBasedCorruptionCardId))
+                    combat.CombatBasedCorruption = existing.CombatBasedCorruption;
             }
 
             return combat;

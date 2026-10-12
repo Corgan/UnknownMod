@@ -1,0 +1,18 @@
+{
+  "CombatId": "cmyc_w2",
+  "Description": "A bloated devourer lumbers out of the dark, a sprout trailing in its wake.",
+  "NpcIds": [
+    "myc_devourer",
+    "myc_sproutling",
+    "myc_spitter",
+    ""
+  ],
+  "CombatTier": "T3",
+  "Background": "Senenthia_Deepforest",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

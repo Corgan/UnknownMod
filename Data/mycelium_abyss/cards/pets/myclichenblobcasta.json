@@ -1,0 +1,21 @@
+{
+  "Id": "myclichenblobcasta",
+  "Name": "Lichen Blob",
+  "Description": "<Grant><br2><Aura_AuraCharges> <Aura2_AuraCharges>",
+  "CardClass": "Special",
+  "CardType": "None",
+  "CardRarity": "Epic",
+  "Playable": false,
+  "Visible": false,
+  "ShowInTome": true,
+  "SpriteSource": "myc_art_lichenblob",
+  "IsPetCast": true,
+  "EnergyCost": 0,
+  "Aura": "myc_symbiosis",
+  "AuraCharges": 3,
+  "TargetSide": "Self",
+  "TargetType": "Single",
+  "TargetPos": "Anywhere",
+  "CardUpgraded": "A",
+  "BaseCardId": "myclichenblobcast"
+}

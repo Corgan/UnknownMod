@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PerkDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "CustomDescription": {
+      "type": "string"
+    },
+    "CardClass": {
+      "type": "string",
+      "enum": [
+        "Warrior",
+        "Mage",
+        "Healer",
+        "Scout",
+        "MagicKnight",
+        "Monster",
+        "Injury",
+        "Boon",
+        "Item",
+        "Special",
+        "Enchantment",
+        "None"
+      ]
+    },
+    "MainPerk": {
+      "type": "boolean"
+    },
+    "ObeliskPerk": {
+      "type": "boolean"
+    },
+    "Level": {
+      "type": "integer"
+    },
+    "Row": {
+      "type": "integer"
+    },
+    "IconTextValue": {
+      "type": "string"
+    },
+    "AdditionalCurrency": {
+      "type": "integer"
+    },
+    "AdditionalShards": {
+      "type": "integer"
+    },
+    "MaxHealth": {
+      "type": "integer"
+    },
+    "EnergyBegin": {
+      "type": "integer"
+    },
+    "SpeedQuantity": {
+      "type": "integer"
+    },
+    "HealQuantity": {
+      "type": "integer"
+    },
+    "DamageFlatBonus": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageFlatBonusValue": {
+      "type": "integer"
+    },
+    "AuracurseBonus": {
+      "type": "string"
+    },
+    "AuracurseBonusValue": {
+      "type": "integer"
+    },
+    "ResistModified": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "ResistModifiedValue": {
+      "type": "integer"
+    },
+    "SpriteSource": {
+      "type": "string"
+    }
+  }
+}

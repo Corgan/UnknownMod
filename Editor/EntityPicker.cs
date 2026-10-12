@@ -26,7 +26,7 @@ namespace UnknownMod.Editor
         {
             Card, AuraCurse, Item, NPC, Hero, Skin, Perk, PerkNode,
             Cardback, Event, Loot, TierReward, Trait, Requirement,
-            Node, Combat, Pack, Background, SpriteSkin, Sprite
+            Node, Combat, Pack, Background, Sprite
         }
 
         // ── State ────────────────────────────────────────────────
@@ -496,39 +496,18 @@ namespace UnknownMod.Editor
                     return bgThumb;
                 }
                 case Mode.Card:
-                {
-                    var cardThumb = CardThumbnailCache.GetThumbnail(id);
-                    _thumbCache[cacheKey] = cardThumb;
-                    return cardThumb;
-                }
                 case Mode.Item:
                 {
-                    // Items display as cards in-game; render via CardThumbnailCache
-                    var itemThumb = CardThumbnailCache.GetThumbnail(id);
-                    _thumbCache[cacheKey] = itemThumb;
-                    return itemThumb;
+                    // Items display as cards in-game; both render via CardThumbnailCache (budgeted per frame)
+                    var cardThumb = CardThumbnailCache.GetThumbnailBudgeted(id, out bool pending);
+                    if (!pending) _thumbCache[cacheKey] = cardThumb;
+                    return cardThumb;
                 }
                 case Mode.NPC:
                 {
                     var npcThumb = NpcThumbnailCache.GetThumbnail(id);
                     _thumbCache[cacheKey] = npcThumb;
                     return npcThumb;
-                }
-                case Mode.SpriteSkin:
-                {
-                    // Resolve CharacterOverrideDef from the active project
-                    var proj = Tabs.ModManagerPanel.ActiveProject;
-                    CharacterOverrideDef skinDef = null;
-                    if (proj != null)
-                    {
-                        if (!proj.SpriteSkins.TryGetValue(id, out skinDef))
-                            proj.SpriteSkinPatches.TryGetValue(id, out skinDef);
-                    }
-                    var skinThumb = skinDef != null
-                        ? SpriteSkinThumbnailCache.GetThumbnail(id, skinDef)
-                        : null;
-                    _thumbCache[cacheKey] = skinThumb;
-                    return skinThumb;
                 }
             }
 

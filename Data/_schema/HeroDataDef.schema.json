@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HeroDataDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "HeroName": {
+      "type": "string"
+    },
+    "HeroClass": {
+      "type": "string",
+      "enum": [
+        "Warrior",
+        "Mage",
+        "Healer",
+        "Scout",
+        "MagicKnight",
+        "Monster",
+        "None"
+      ]
+    },
+    "HeroSubClassId": {
+      "type": "string"
+    }
+  }
+}

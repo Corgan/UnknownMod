@@ -5,7 +5,7 @@ namespace UnknownMod.Editor
     /// <summary>
     /// Reusable Camera + RenderTexture viewport with zoom/pan interaction.
     /// Renders a scene at a given origin into its own RenderTexture which
-    /// is drawn into an IMGUI Rect. Shared by SpriteSkinEditor and MapEditor.
+    /// is drawn into an IMGUI Rect. Shared by VisualGraphEditor and MapEditor.
     ///
     /// Usage:
     ///   1. Call Render() each frame (with optional pre-render callback).
@@ -273,7 +273,7 @@ namespace UnknownMod.Editor
 
         /// <summary>
         /// Lazy-init GL line material (Hidden/Internal-Colored) for drawing
-        /// overlay lines in IMGUI. Used by SpriteSkinEditor bone lines and
+        /// overlay lines in IMGUI. Used by bone lines and
         /// MapEditor connection-mode indicator.
         /// </summary>
         public static Material LineMaterial

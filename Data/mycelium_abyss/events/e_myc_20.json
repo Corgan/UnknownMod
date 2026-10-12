@@ -1,0 +1,38 @@
+{
+  "EventId": "e_myc_20",
+  "EventName": "The Last Hollow",
+  "Description": "A small hollow hidden behind a curtain of hanging roots. Past it, the walls thin and a pale, steady light seeps through - the glow of the obelisk. This is the last place to stop and prepare before the way out.",
+  "DescriptionAction": "How do you prepare?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Rest and tend your wounds.",
+      "Action": 20,
+      "SsText": "You bind your wounds and share what rations remain. The hum fades to a whisper as you rest.",
+      "SsHealPercent": 50
+    },
+    {
+      "ReplyText": "Pay a scavenger to reforge your gear.",
+      "Action": 27,
+      "SsText": "The scavenger's tools ring against your gear. When she is done, something is better than before.",
+      "GoldCost": 120,
+      "SsUpgradeUI": true
+    },
+    {
+      "ReplyText": "Study the hive's walls for a way to survive the return.",
+      "Action": 57,
+      "FlText": "The hum grows overwhelming and you flee with a pounding headache.",
+      "HasRoll": true,
+      "SsText": "You study the walls and learn where the hive is thinnest. The knowledge will serve you well.",
+      "FlHealFlat": -10,
+      "SsXP": 60,
+      "RollDC": 1,
+      "RepeatForAllMages": true,
+      "RollTarget": 3,
+      "RollMode": 1
+    }
+  ]
+}

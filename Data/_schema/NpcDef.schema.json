@@ -1,0 +1,298 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NpcDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "Name": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "SpriteSource": {
+      "type": "string"
+    },
+    "HitSound": {
+      "type": "string"
+    },
+    "HitSounds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "AnimTriggers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "AnimNoFallback": {
+      "type": "boolean"
+    },
+    "VisualGraphId": {
+      "type": "string"
+    },
+    "Portrait": {
+      "type": "string"
+    },
+    "FlipPortrait": {
+      "type": "boolean"
+    },
+    "PortraitScale": {
+      "type": "number"
+    },
+    "PortraitOffsetX": {
+      "type": "number"
+    },
+    "PortraitOffsetY": {
+      "type": "number"
+    },
+    "Hp": {
+      "type": "integer"
+    },
+    "Speed": {
+      "type": "integer"
+    },
+    "Energy": {
+      "type": "integer"
+    },
+    "EnergyTurn": {
+      "type": "integer"
+    },
+    "CardsInHand": {
+      "type": "integer"
+    },
+    "ResSlash": {
+      "type": "integer"
+    },
+    "ResBlunt": {
+      "type": "integer"
+    },
+    "ResPierce": {
+      "type": "integer"
+    },
+    "ResFire": {
+      "type": "integer"
+    },
+    "ResCold": {
+      "type": "integer"
+    },
+    "ResLight": {
+      "type": "integer"
+    },
+    "ResMind": {
+      "type": "integer"
+    },
+    "ResHoly": {
+      "type": "integer"
+    },
+    "ResShadow": {
+      "type": "integer"
+    },
+    "AiCards": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AiCardDef"
+      }
+    },
+    "XpReward": {
+      "type": "integer"
+    },
+    "GoldReward": {
+      "type": "integer"
+    },
+    "TierReward": {
+      "type": "integer"
+    },
+    "IsBoss": {
+      "type": "boolean"
+    },
+    "IsNamed": {
+      "type": "boolean"
+    },
+    "FinishCombatOnDead": {
+      "type": "boolean"
+    },
+    "BigModel": {
+      "type": "boolean"
+    },
+    "Female": {
+      "type": "boolean"
+    },
+    "OnlyKillBossWhenHpZero": {
+      "type": "boolean"
+    },
+    "Difficulty": {
+      "type": "integer"
+    },
+    "PreferredPos": {
+      "type": "string",
+      "enum": [
+        "Anywhere",
+        "Front",
+        "Random",
+        "Back",
+        "Middle",
+        "Slowest",
+        "Fastest",
+        "LeastHP",
+        "MostHP"
+      ]
+    },
+    "FluffOffsetX": {
+      "type": "number"
+    },
+    "FluffOffsetY": {
+      "type": "number"
+    },
+    "PosBottom": {
+      "type": "number"
+    },
+    "Immunities": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "UpgradedMobId": {
+      "type": "string"
+    },
+    "NgPlusMobId": {
+      "type": "string"
+    },
+    "HellModeMobId": {
+      "type": "string"
+    },
+    "BaseNpcId": {
+      "type": "string"
+    },
+    "HpMult": {
+      "type": "number"
+    },
+    "SpeedBonus": {
+      "type": "integer"
+    },
+    "ResistBonus": {
+      "type": "integer"
+    },
+    "TierMob": {
+      "type": "string",
+      "enum": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "T8",
+        "T9",
+        "T10",
+        "T11",
+        "T12",
+        "T13"
+      ]
+    }
+  },
+  "definitions": {
+    "AiCardDef": {
+      "type": "object",
+      "properties": {
+        "CardId": {
+          "type": "string"
+        },
+        "Priority": {
+          "type": "integer"
+        },
+        "AddCardRound": {
+          "type": "integer"
+        },
+        "OnlyCastIf": {
+          "type": "string",
+          "enum": [
+            "Always",
+            "TargetLifeLessThanPercent",
+            "TargetHasNotAuraCurse",
+            "TargetLifeHigherThanPercent",
+            "TargetHasAuraCurse",
+            "TargetHasAnyAura",
+            "TargetHasAnyCurse",
+            "TeamNpcAllAlive",
+            "LifeInMainTargetHigherThanInSpecialTarget",
+            "LifeInMainTargetLessThanInSpecialTarget",
+            "TargetNotIllusion",
+            "CasterHasMoreAuras",
+            "AllCasterTeamNoSleepsOrParalyzed"
+          ]
+        },
+        "ValueCastIf": {
+          "type": "number"
+        },
+        "TargetCast": {
+          "type": "string",
+          "enum": [
+            "Random",
+            "Front",
+            "Middle",
+            "Back",
+            "AnyButFront",
+            "AnyButBack",
+            "LessHealthPercent",
+            "LessHealthFlat",
+            "MoreHealthPercent",
+            "MoreHealthFlat",
+            "LessHealthAbsolute",
+            "MoreHealthAbsolute",
+            "LessInitiative",
+            "MoreInitiative",
+            "MoreAuraStacks"
+          ]
+        },
+        "UnitsInDeck": {
+          "type": "integer"
+        },
+        "PercentToCast": {
+          "type": "number"
+        },
+        "StartsAtObeliskMadnessLevel": {
+          "type": "integer"
+        },
+        "StartsAtSingularityMadnessLevel": {
+          "type": "integer"
+        },
+        "AuracurseCastIf": {
+          "type": "string"
+        },
+        "SecondOnlyCastIf": {
+          "type": "string",
+          "enum": [
+            "Always",
+            "TargetLifeLessThanPercent",
+            "TargetHasNotAuraCurse",
+            "TargetLifeHigherThanPercent",
+            "TargetHasAuraCurse",
+            "TargetHasAnyAura",
+            "TargetHasAnyCurse",
+            "TeamNpcAllAlive",
+            "LifeInMainTargetHigherThanInSpecialTarget",
+            "LifeInMainTargetLessThanInSpecialTarget",
+            "TargetNotIllusion",
+            "CasterHasMoreAuras",
+            "AllCasterTeamNoSleepsOrParalyzed"
+          ]
+        },
+        "SecondValueCastIf": {
+          "type": "number"
+        },
+        "SpecialSecondTargetId": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

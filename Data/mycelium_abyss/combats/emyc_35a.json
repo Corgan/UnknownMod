@@ -1,0 +1,18 @@
+{
+  "CombatId": "emyc_35a",
+  "Description": "The choir turns on you, and the thrall stirs.",
+  "NpcIds": [
+    "myc_sproutling",
+    "myc_sproutling",
+    "myc_sproutling",
+    "myc_thrall"
+  ],
+  "CombatTier": "T3",
+  "Background": "Senenthia_Deepforest",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

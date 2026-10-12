@@ -163,6 +163,8 @@ namespace UnknownMod.Core
                 "/hierarchy" => HandleHierarchy(Q("name"), Q("scene"), IntParam(Q("depth"), 8)),
                 "/zone-prefab" => HandleZonePrefab(Q("name"), IntParam(Q("depth"), 6)),
                 "/run" => HandleRun(qs),
+                "/export" => GameExporter.Start(qs),
+                "/export-status" => GameExporter.Status(),
                 _ => Json(new
                 {
                     error = "Unknown endpoint",
@@ -173,13 +175,15 @@ namespace UnknownMod.Core
                         "/hierarchy?name=X&depth=8",
                         "/hierarchy?scene=S&depth=2",
                         "/zone-prefab?name=CastleSpire&depth=6",
+                        "/export  { dir, what: data,enums,schema,texts,scenes,sprites,textures,audio,prefabs,animations | all, folders, filter, spritePngs, maxAudioSeconds }",
+                        "/export-status",
                     }
                 }),
             };
         }
 
         private static int IntParam(string val, int fallback)
-            => int.TryParse(val, out var n) ? n : fallback;
+            => int.TryParse(val, out var n) ? Mathf.Clamp(n, 0, 20) : fallback;
 
         private static string Json(object obj)
             => JsonConvert.SerializeObject(obj, Formatting.Indented,
@@ -237,16 +241,10 @@ namespace UnknownMod.Core
             if (mm == null)
                 return Json(new { error = "MapManager.Instance is null" });
 
-            // Search mapList
-            if (mm.mapList != null)
-            {
-                foreach (var prefab in mm.mapList)
-                {
-                    if (prefab == null) continue;
-                    if (prefab.name.Equals(name, StringComparison.OrdinalIgnoreCase))
-                        return Json(new { zone = prefab.name, tree = DumpTransform(prefab.transform, depth) });
-                }
-            }
+            // Search the lazily loaded map prefabs
+            var mapPrefab = GameResources.GetMapPrefab(name);
+            if (mapPrefab != null)
+                return Json(new { zone = mapPrefab.name, tree = DumpTransform(mapPrefab.transform, depth) });
 
             // Search worldTransform
             if (mm.worldTransform != null)

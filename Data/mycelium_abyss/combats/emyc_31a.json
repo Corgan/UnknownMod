@@ -1,0 +1,24 @@
+{
+  "CombatId": "emyc_31a",
+  "Description": "The brood swarms to defend its clutch.",
+  "NpcIds": [
+    "myc_golem",
+    "myc_thrall",
+    "myc_lurker",
+    "myc_spitter"
+  ],
+  "CombatTier": "T4",
+  "Background": "Velkarath_Cave",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 1,
+      "Target": "Monsters"
+    }
+  ]
+}

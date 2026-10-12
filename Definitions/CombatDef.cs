@@ -53,6 +53,22 @@ namespace UnknownMod.Definitions
         /// <summary>Event triggered after combat ends (post-combat event).</summary>
         public string EventDataId = "";
 
+        /// <summary>CinematicData ID played for this combat (boss intros).</summary>
+        public string CinematicId = "";
+        public bool ShouldSerializeCinematicId() => !string.IsNullOrEmpty(CinematicId);
+
+        /// <summary>Card ID applied as the combat-based corruption.</summary>
+        public string CombatBasedCorruptionCardId = "";
+        public bool ShouldSerializeCombatBasedCorruptionCardId() => !string.IsNullOrEmpty(CombatBasedCorruptionCardId);
+
+        /// <summary>Thermometer tier (per-round gold/xp/card bonus curve). Empty keeps the base-game value, or none for new combats.</summary>
+        public string ThermometerTierId = "";
+        public bool ShouldSerializeThermometerTierId() => !string.IsNullOrEmpty(ThermometerTierId);
+
+        /// <summary>Audio clip name (game clip or file in the mod's audio/ folder) played as the combat music. Blank keeps the base value.</summary>
+        public string CombatMusic = "";
+        public bool ShouldSerializeCombatMusic() => !string.IsNullOrEmpty(CombatMusic);
+
         /// <summary>Aura/curse effects applied at combat start.</summary>
         public List<CombatEffectDef> CombatEffects = new();
     }

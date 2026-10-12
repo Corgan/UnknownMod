@@ -1,0 +1,27 @@
+{
+  "PackId": "myc_pack_capguard",
+  "PackName": "Capguard",
+  "RequiredClassId": "",
+  "PackClass": "Scout",
+  "CardIds": [
+    "myccapshield",
+    "defend",
+    "guard",
+    "barricade",
+    "steelskin",
+    "entrench",
+    "mycburrow",
+    "mycbracket",
+    "mycrootbound"
+  ],
+  "SpecialCardIds": [
+    "provoke",
+    "mychivemind"
+  ],
+  "PerkIds": [
+    "mainperkblock5",
+    "mainperkfortify0",
+    "mainperkfortify1c",
+    "mainperkthorns0"
+  ]
+}

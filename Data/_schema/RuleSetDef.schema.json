@@ -1,0 +1,244 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RuleSetDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "Enabled": {
+      "type": "boolean"
+    },
+    "ChallengeTraitId": {
+      "type": "string"
+    },
+    "NpcId": {
+      "type": "string"
+    },
+    "CombatId": {
+      "type": "string"
+    },
+    "AlwaysActive": {
+      "type": "boolean"
+    },
+    "Rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/RuleDef"
+      }
+    },
+    "AiRules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AiRuleDef"
+      }
+    }
+  },
+  "definitions": {
+    "RuleDef": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "Enabled": {
+          "type": "boolean"
+        },
+        "Trigger": {
+          "type": "string",
+          "enum": [
+            "CombatStart",
+            "RoundStart",
+            "RoundEnd",
+            "TurnStart",
+            "TurnEnd",
+            "Damaged",
+            "CharacterKilled",
+            "CardPlayed",
+            "HpBelow"
+          ]
+        },
+        "Subject": {
+          "type": "string",
+          "enum": [
+            "Any",
+            "Owner",
+            "Hero",
+            "Enemy"
+          ]
+        },
+        "SubjectNpcId": {
+          "type": "string"
+        },
+        "CardId": {
+          "type": "string"
+        },
+        "HpPercent": {
+          "type": "integer"
+        },
+        "FromRound": {
+          "type": "integer"
+        },
+        "ToRound": {
+          "type": "integer"
+        },
+        "EveryNRounds": {
+          "type": "integer"
+        },
+        "Once": {
+          "type": "boolean"
+        },
+        "Chance": {
+          "type": "integer"
+        },
+        "Conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RuleConditionDef"
+          }
+        },
+        "Actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RuleActionDef"
+          }
+        }
+      }
+    },
+    "RuleConditionDef": {
+      "type": "object",
+      "properties": {
+        "Kind": {
+          "type": "string",
+          "enum": [
+            "RoundAtLeast",
+            "RoundAtMost",
+            "RoundEvery",
+            "HeroesAliveAtLeast",
+            "HeroesAliveAtMost",
+            "EnemiesAliveAtLeast",
+            "EnemiesAliveAtMost",
+            "HpBelowPercent",
+            "HpAbovePercent",
+            "HasAura",
+            "LacksAura",
+            "NpcAlive",
+            "NpcDead",
+            "FlagSet",
+            "FlagNotSet"
+          ]
+        },
+        "Of": {
+          "type": "string",
+          "enum": [
+            "Owner",
+            "Subject",
+            "AnyHero",
+            "AnyEnemy"
+          ]
+        },
+        "Value": {
+          "type": "integer"
+        },
+        "Id": {
+          "type": "string"
+        }
+      }
+    },
+    "RuleActionDef": {
+      "type": "object",
+      "properties": {
+        "Kind": {
+          "type": "string",
+          "enum": [
+            "AddAura",
+            "Damage",
+            "Heal",
+            "Summon",
+            "Kill",
+            "Win",
+            "Lose",
+            "Message",
+            "GainEnergy",
+            "SetFlag",
+            "ClearFlag"
+          ]
+        },
+        "Target": {
+          "type": "string",
+          "enum": [
+            "Owner",
+            "Subject",
+            "AllHeroes",
+            "AllEnemies",
+            "RandomHero",
+            "RandomEnemy",
+            "LowestHpHero",
+            "HighestHpHero",
+            "LowestHpEnemy",
+            "Summoned"
+          ]
+        },
+        "Id": {
+          "type": "string"
+        },
+        "Amount": {
+          "type": "integer"
+        },
+        "Percent": {
+          "type": "boolean"
+        },
+        "DamageType": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "Count": {
+          "type": "integer"
+        },
+        "MaxAlive": {
+          "type": "integer"
+        },
+        "Text": {
+          "type": "string"
+        }
+      }
+    },
+    "AiRuleDef": {
+      "type": "object",
+      "properties": {
+        "CardId": {
+          "type": "string"
+        },
+        "Mode": {
+          "type": "string",
+          "enum": [
+            "OnlyIf",
+            "Never"
+          ]
+        },
+        "Conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RuleConditionDef"
+          }
+        }
+      }
+    }
+  }
+}

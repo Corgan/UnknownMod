@@ -15,7 +15,7 @@ namespace UnknownMod.Definitions
         public string Id = "";
         [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
         public string ACName = "";
-        public bool IsAura = true;
+        public bool IsAura = false;
         public string Description = "";
         public int MaxCharges = -1;
         public int MaxMadnessCharges = -1;

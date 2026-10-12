@@ -1,28 +1,26 @@
 {
   "NodeId": "myc_25",
-  "NodeName": "The Breathing Passage",
+  "NodeName": "The Mycelarch's Throne",
   "Description": "",
-  "PosX": 1.29999888,
-  "PosY": -2.39500022,
+  "PosX": 1.10761714,
+  "PosY": -2.11923838,
   "TravelDestination": false,
   "GoToTown": false,
   "ExistsPercent": 100,
-  "DisableCorruption": false,
+  "DisableCorruption": true,
   "DisableRandom": false,
   "VisibleIfNotRequirement": false,
   "NodeGround": "PoisonousAir",
   "NodeRequirementId": "",
   "CombatIds": [
-    "cmyc_7"
+    "cmyc_25"
   ],
-  "CombatTier": "T4",
-  "CombatPercent": 50,
-  "EventIds": [
-    "e_myc_25"
-  ],
-  "EventPercent": 50,
+  "CombatTier": "T5",
+  "CombatPercent": 100,
+  "EventPercent": 0,
   "NodeEventTier": "T0",
   "Connections": [
-    "myc_28"
+    "myc_28",
+    "myc_34"
   ]
 }

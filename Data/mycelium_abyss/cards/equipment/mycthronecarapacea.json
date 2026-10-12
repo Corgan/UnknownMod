@@ -1,0 +1,22 @@
+{
+  "Id": "mycthronecarapacea",
+  "Name": "Throne-Root Carapace",
+  "Description": "Shadow and Mind resistance <acb>+20%</acb>. Max HP <acb>+30</acb>.<br2>Symbiosis charges <acb>+1</acb>.",
+  "CardClass": "Item",
+  "CardType": "Armor",
+  "CardRarity": "Mythic",
+  "SpriteSource": "myc_art_carapace",
+  "Item": {
+    "Activation": "PreBeginCombat",
+    "ResistModified1": "Shadow",
+    "ResistModifiedValue1": 20,
+    "ResistModified2": "Mind",
+    "ResistModifiedValue2": 20,
+    "MaxHealth": 30,
+    "AuracurseBonus1": "myc_symbiosis",
+    "AuracurseBonusValue1": 1,
+    "DropOnly": true
+  },
+  "CardUpgraded": "A",
+  "BaseCardId": "mycthronecarapace"
+}

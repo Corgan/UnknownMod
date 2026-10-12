@@ -1,0 +1,14 @@
+{
+  "Id": "myc_sporelord",
+  "TraitName": "Sporelord",
+  "Description": "Spore Rot +2. Shadow damage +20%. Each round, every enemy with 5+ Spore Rot gives 3 Spore Rot to all other enemies.",
+  "Activations": [
+    "PreBeginCombat",
+    "BeginRound"
+  ],
+  "AuracurseBonusValue1": 2,
+  "DamageBonusPercent": "Shadow",
+  "DamageBonusPercentValue": 20,
+  "AuracurseBonus1": "myc_sporerot",
+  "TimesPerRound": 1
+}

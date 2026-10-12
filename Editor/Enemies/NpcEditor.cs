@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -12,7 +12,7 @@ namespace UnknownMod.Editor
     /// IMGUI panel for editing NPC definitions at the mod-project level.
     /// Supports creating new NPCs and overriding base-game ones.
     /// </summary>
-    public class NpcEditor : ModProjectEditorBase<NpcDef>
+    public partial class NpcEditor : ModProjectEditorBase<NpcDef>
     {
         protected override string TypeLabel => "NPC";
         protected override string FolderName => "npcs";
@@ -26,7 +26,6 @@ namespace UnknownMod.Editor
         private int _tierTab = 0;
         /// <summary>0=Standard, 1=Upgraded (_b)</summary>
         private int _upgradedTab = 0;
-        private string _prevVariantId;
 
         private static readonly string[] _tierLabels = { "Normal", "NG+", "Hell Mode" };
         private static readonly string[] _upgradedLabels = { "Standard", "Upgraded" };
@@ -100,6 +99,8 @@ namespace UnknownMod.Editor
 
         //  Collapsible section state 
         private bool _secIdentity = true;
+        private bool _secBuilder = false;
+        private bool _secAnim = false;
         private bool _secStats = true;
         private bool _secResist = false;
         private bool _secRewards = false;
@@ -108,9 +109,6 @@ namespace UnknownMod.Editor
         private bool _secVariants = false;
         private bool _secImmunities = false;
         private bool _secAiCards = true;
-
-        // ── SpriteSkin picker state ─────────────────────────────
-        // (uses IdDropdown + EntityPicker now)
 
         // 
         //  ALL SECTIONS
@@ -132,32 +130,45 @@ namespace UnknownMod.Editor
                     DrawCreateVariantUI(d, variantId, suffix, proj);
                     return;
                 }
-                _prevVariantId = vDef.Id;
                 d = vDef;
             }
 
             //  Identity 
             if (EditorFields.Section("Identity", ref _secIdentity))
             {
-                d.Id = EditorFields.TextField("ID", d.Id);
+                // A variant's id is derived from its base NPC and tier, so only the base NPC's id can be edited
+                if (IsEditingVariant) EditorFields.ReadOnlyField("ID", d.Id);
+                else d.Id = EditorFields.TextField("ID", d.Id);
                 d.Name = EditorFields.TextField("Name", d.Name);
                 d.Description = EditorFields.TextField("Description", d.Description);
 
                 // SpriteSource: base-game NPC whose model/skeleton to clone
-                var spriteChoices = EditorFields.CachedIds("npc", DataHelper.GetAllNpcIds);
-                d.SpriteSource = EditorFields.IdDropdown("Sprite Src", d.SpriteSource, spriteChoices, "npc_spritesrc", pickerMode: EntityPicker.Mode.NPC);
-
-                // SpriteSkinId: optional SpriteSkin override (NPC skins only)
-                var skinIds = proj.SpriteSkins
-                    .Where(kvp => kvp.Value.SkinTarget == SkinTargetType.NPC)
-                    .Select(kvp => kvp.Key)
-                    .Concat(proj.SpriteSkinPatches
-                        .Where(kvp => kvp.Value.SkinTarget == SkinTargetType.NPC)
-                        .Select(kvp => kvp.Key))
-                    .Distinct().OrderBy(k => k).ToList();
-                d.SpriteSkinId = EditorFields.IdDropdown("SpriteSkin", d.SpriteSkinId, skinIds, "npc_spriteskin",
-                    pickerMode: EntityPicker.Mode.SpriteSkin);
+                var spriteChoices = EditorFields.CachedIds("npc_or_skin", () => DataHelper.GetAllNpcIds().Concat(DataHelper.GetAllSkinIds()).Distinct().OrderBy(x => x).ToList());
+                GraftSpriteFields.DrawSource(proj, "Sprite Source", ref d.SpriteSource, ref d.VisualGraphId,
+                    spriteChoices, "npc", EntityPicker.Mode.NPC);
+                d.HitSound = AssetFields.AudioField("Hit Sound", d.HitSound, "npc_hitsnd");
+                AssetFields.AudioListField("More hit sounds (cycled)", d.HitSounds, "npc_hitsnds");
+                d.FlipPortrait = EditorFields.Toggle("Flip Portrait", d.FlipPortrait);
+                d.PortraitScale = EditorFields.FloatField("Portrait Scale", d.PortraitScale);
+                d.PortraitOffsetX = EditorFields.FloatField("Portrait Offset X", d.PortraitOffsetX);
+                d.PortraitOffsetY = EditorFields.FloatField("Portrait Offset Y", d.PortraitOffsetY);
+                GUILayout.Label("<color=#888>Scale zooms the art inside its frame (1 = unchanged, 0.1-4). Offsets shift it as a fraction of the frame; Y is up.</color>", EditorStyles.RichLabel);
+                d.Portrait = EditorFields.IdDropdown("Portrait (custom)", d.Portrait, EditorFields.CachedIds("spriteName", () => MapEditor.GetAllSpriteNames()), "npc_port", pickerMode: EntityPicker.Mode.Sprite);
+                GUILayout.Space(4);
+                PortraitCaptureFields.Draw(proj, "npccap_" + d.Id, d.Id, d.VisualGraphId, d.SpriteSource, ref d.Portrait);
             }
+
+            //  Model builder
+            if (EditorFields.Section("Model Builder", ref _secBuilder))
+            {
+                var rigChoices = EditorFields.CachedIds("npc_or_skin", () => DataHelper.GetAllNpcIds().Concat(DataHelper.GetAllSkinIds()).Distinct().OrderBy(x => x).ToList());
+                RigBuilderFields.Draw(proj, d.Id, "npcrb_" + d.Id, false, rigChoices, EntityPicker.Mode.NPC,
+                    ref d.SpriteSource, ref d.VisualGraphId, ref d.FlipPortrait, d.AnimTriggers, ref d.AnimNoFallback);
+            }
+
+            //  Animation
+            if (EditorFields.Section("Animation", ref _secAnim))
+                AnimFields.Draw(d.AnimTriggers, ref d.AnimNoFallback, "npcanim_" + d.Id);
 
             //  Stats 
             if (EditorFields.Section("Stats", ref _secStats))
@@ -208,6 +219,10 @@ namespace UnknownMod.Editor
                 d.PosBottom = EditorFields.FloatField("Pos Bottom", d.PosBottom);
             }
 
+            //  Variant generator (base NPC only)
+            if (!IsEditingVariant)
+                DrawGeneratorSection(d, proj);
+
             //  Variant Chain 
             if (EditorFields.Section("Variant Chain", ref _secVariants))
             {
@@ -238,14 +253,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     d.Immunities[i] = EditorFields.IdDropdown("", d.Immunities[i], acIds, $"npc_immune_{i}", pickerMode: EntityPicker.Mode.AuraCurse);
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.Immunities.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, d.Immunities.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.Immunities, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Immunity", EditorStyles.MiniButton, GUILayout.Width(90)))
                 {
@@ -255,6 +265,8 @@ namespace UnknownMod.Editor
             }
 
             //  AI Cards 
+            DrawPhaseSection(d, proj);
+
             if (EditorFields.Section($"AI Cards ({d.AiCards.Count})", ref _secAiCards))
             {
                 var cardIds = EditorFields.BuildCardIdList(proj);
@@ -331,6 +343,11 @@ namespace UnknownMod.Editor
                         GUILayout.EndHorizontal(); GUILayout.EndVertical(); break;
                     }
                     GUILayout.FlexibleSpace();
+                    if (GUILayout.Button(new GUIContent("Dup", "Duplicate this AI card"), EditorStyles.MiniButton, GUILayout.Width(40)))
+                    {
+                        if (EditorFields.ApplyRowOp(d.AiCards, i, EditorFields.RowOp.Duplicate)) _expandedAiCard = i + 1;
+                        GUILayout.EndHorizontal(); GUILayout.EndVertical(); break;
+                    }
                     if (GUILayout.Button("Delete", EditorStyles.DangerButton, GUILayout.Width(60)))
                     {
                         d.AiCards.RemoveAt(i);
@@ -359,14 +376,6 @@ namespace UnknownMod.Editor
             // ── Variant auto-save ─────────────────────────────────────
             if (IsEditingVariant && GUI.changed)
             {
-                if (d.Id != _prevVariantId && !string.IsNullOrEmpty(d.Id))
-                {
-                    bool wasPatch = proj.NpcPatches.ContainsKey(_prevVariantId);
-                    var dict = wasPatch ? proj.NpcPatches : proj.Npcs;
-                    dict.Remove(_prevVariantId);
-                    dict[d.Id] = d;
-                    ModProjectLoader.DeleteEntity(proj, "npcs", _prevVariantId, wasPatch);
-                }
                 bool isPatch = proj.NpcPatches.ContainsKey(d.Id);
                 ModProjectLoader.SaveEntity(proj, "npcs", d.Id, d, isPatch);
                 proj.IsDirty = true;

@@ -1,0 +1,14 @@
+{
+  "Id": "mycfruitingcrown",
+  "Name": "Fruiting Crown",
+  "Description": "Healing done <acb>+2</acb>. Max HP <acb>+10</acb>.",
+  "CardClass": "Item",
+  "CardType": "Armor",
+  "CardRarity": "Epic",
+  "SpriteSource": "myc_art_fruitingcrown",
+  "Item": {
+    "Activation": "PreBeginCombat",
+    "HealFlatBonus": 2,
+    "MaxHealth": 10
+  }
+}

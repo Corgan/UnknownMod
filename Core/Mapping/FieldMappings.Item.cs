@@ -98,6 +98,11 @@ namespace UnknownMod.Core
             // AuracurseGain3SpecialValue: SpecialValue struct — edge case
             new FieldMapping("Acg3MultiplyByEnergyUsed","Acg3MultiplyByEnergyUsed"),
             new FieldMapping("ChooseOneACToGain",       "ChooseOneACToGain"),
+            new FieldMapping("ActivationSelf",          "ActivationSelf"),
+            new FieldMapping("HealPercentQuantitySelfBase", "HealPercentQuantitySelfBase"),
+            new FieldMapping("ResurgeChoose",           "ResurgeChoose"),
+            new FieldMapping("CombatCorruption",        "CombatCorruption"),
+            new FieldMapping("ShiftElementalResistance","ShiftElementalResistance"),
 
             // ── AC Gain (self) ───────────────────────────────────
             new FieldMapping("AuracurseGainSelf1",      "AuracurseGainSelf1", RefType.AuraCurse),

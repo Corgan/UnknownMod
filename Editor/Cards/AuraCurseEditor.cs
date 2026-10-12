@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnknownMod.Core;
@@ -11,7 +11,7 @@ namespace UnknownMod.Editor
     /// IMGUI panel for editing AuraCurse definitions at the mod-project level.
     /// Supports creating new AuraCurses and overriding base-game ones.
     /// </summary>
-    public class AuraCurseEditor : ModProjectEditorBase<AuraCurseDef>
+    public partial class AuraCurseEditor : ModProjectEditorBase<AuraCurseDef>
     {
         protected override string TypeLabel => "AuraCurse";
         protected override string FolderName => "auracurse";
@@ -26,7 +26,7 @@ namespace UnknownMod.Editor
         protected override Dictionary<string, AuraCurseDef> GetPatchDict(ModProject proj) => proj.AuraCursePatches;
 
         protected override AuraCurseDef CreateDefault(string id, ModProject proj)
-            => new AuraCurseDef { Id = id, ACName = "New AuraCurse" };
+            => new AuraCurseDef { Id = id, ACName = "New AuraCurse", IsAura = true };
 
         protected override string GetDisplayName(AuraCurseDef def)
         {
@@ -74,6 +74,7 @@ namespace UnknownMod.Editor
 
         protected override void DrawAllSections(AuraCurseDef d, ModProject proj)
         {
+            DrawPresets(d);
             DrawGeneralSection(d);
             DrawConfigSection(d);
             DrawExpirationSection(d);
@@ -123,10 +124,10 @@ namespace UnknownMod.Editor
             d.ChargesAuxNeedForOne1 = EditorFields.FloatField("ChgAuxNeed1", d.ChargesAuxNeedForOne1);
             d.ChargesAuxNeedForOne2 = EditorFields.IntField("ChgAuxNeed2", d.ChargesAuxNeedForOne2);
             d.Sprite = EditorFields.TextField("Sprite", d.Sprite);
-            d.EffectTick = EditorFields.TextField("EffectTick", d.EffectTick);
-            d.EffectTickSides = EditorFields.TextField("EffectTickSides", d.EffectTickSides);
-            d.Sound = EditorFields.TextField("Sound", d.Sound);
-            d.SoundRework = EditorFields.TextField("SoundRework", d.SoundRework);
+            d.EffectTick = AssetFields.VfxField("EffectTick", d.EffectTick, "ac_fxtick");
+            d.EffectTickSides = AssetFields.VfxField("EffectTickSides", d.EffectTickSides, "ac_fxticksides");
+            d.Sound = AssetFields.AudioField("Sound", d.Sound, "ac_sound");
+            d.SoundRework = AssetFields.AudioField("SoundRework", d.SoundRework, "ac_soundrework");
         }
 
         private void DrawConfigSection(AuraCurseDef d)
@@ -438,16 +439,9 @@ namespace UnknownMod.Editor
             {
                 GUILayout.BeginHorizontal();
                 d.DisabledCardTypes[i] = EditorFields.EnumField($"Type {i + 1}", d.DisabledCardTypes[i], $"ac_dct_{i}");
-                if (GUILayout.Button("X", EditorStyles.DangerButton, GUILayout.Width(22)))
-                {
-                    var list = new List<Enums.CardType>(d.DisabledCardTypes);
-                    list.RemoveAt(i);
-                    d.DisabledCardTypes = list.ToArray();
-                    GUI.changed = true;
-                    GUILayout.EndHorizontal();
-                    break;
-                }
+                var rowOp = EditorFields.InlineRowOps(i, d.DisabledCardTypes.Length);
                 GUILayout.EndHorizontal();
+                if (EditorFields.ApplyRowOp(ref d.DisabledCardTypes, i, rowOp)) break;
             }
 
             if (GUILayout.Button("+ Add Type", EditorStyles.MiniButton, GUILayout.Width(80)))
@@ -484,19 +478,10 @@ namespace UnknownMod.Editor
             for (int i = 0; i < d.ACBonusData.Count; i++)
             {
                 var b = d.ACBonusData[i];
-                GUILayout.BeginHorizontal();
-                b.AuraCurseId = EditorFields.IdDropdown($"AC {i + 1}", b.AuraCurseId, acIds, $"ac_acb_{i}", pickerMode: EntityPicker.Mode.AuraCurse);
-                GUILayout.EndHorizontal();
-                GUILayout.BeginHorizontal();
+                var bonusOp = EditorFields.RowHeader($"<b>#{i + 1}</b>  {b.AuraCurseId}", i, d.ACBonusData.Count);
+                b.AuraCurseId = EditorFields.IdDropdown("Aura/Curse", b.AuraCurseId, acIds, $"ac_acb_{i}", pickerMode: EntityPicker.Mode.AuraCurse);
                 b.ChargesBonus = EditorFields.IntField("Charges", b.ChargesBonus);
-                if (GUILayout.Button("X", EditorStyles.DangerButton, GUILayout.Width(22)))
-                {
-                    d.ACBonusData.RemoveAt(i);
-                    GUI.changed = true;
-                    GUILayout.EndHorizontal();
-                    break;
-                }
-                GUILayout.EndHorizontal();
+                if (EditorFields.ApplyRowOp(d.ACBonusData, i, bonusOp)) break;
                 b.RequiredChargesForBonus = EditorFields.IntField("Required Chg", b.RequiredChargesForBonus);
                 b.BonusType = EditorFields.EnumField("Bonus Type", b.BonusType, $"ac_acb_bt_{i}");
                 GUILayout.Space(2);

@@ -1,0 +1,19 @@
+{
+  "Id": "mycheartstaffb",
+  "Name": "Mycelarch's Heartstaff",
+  "Description": "Shadow damage <acb>+4</acb>.<br2>Spore Rot charges <acb>+4</acb>.",
+  "CardClass": "Item",
+  "CardType": "Weapon",
+  "CardRarity": "Mythic",
+  "SpriteSource": "myc_art_heartstaff",
+  "Item": {
+    "Activation": "PreBeginCombat",
+    "DamageFlatBonus": "Shadow",
+    "DamageFlatBonusValue": 4,
+    "AuracurseBonus1": "myc_sporerot",
+    "AuracurseBonusValue1": 4,
+    "DropOnly": true
+  },
+  "CardUpgraded": "B",
+  "BaseCardId": "mycheartstaff"
+}

@@ -1,0 +1,28 @@
+{
+  "PackId": "myc_pack_hivelord",
+  "PackName": "Hivelord",
+  "PackClass": "Scout",
+  "RequiredClassId": "",
+  "CardIds": [
+    "mycsporecloud",
+    "mychivemind",
+    "mycsporeburst",
+    "mycmycelialweb",
+    "mycregrow",
+    "mycrotharvest",
+    "mycmold",
+    "mycparasiticbite"
+  ],
+  "SpecialCardIds": [
+    "shieldwall",
+    "mortalstrike",
+    "mycrebirth",
+    "mycoutbreak"
+  ],
+  "PerkIds": [
+    "mainperkregeneration1b",
+    "mainperkpowerful0",
+    "mainperkpowerful1b",
+    "mainperkenergy2c"
+  ]
+}

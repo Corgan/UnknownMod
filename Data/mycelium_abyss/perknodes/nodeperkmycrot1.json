@@ -1,0 +1,12 @@
+{
+  "Id": "nodeperkmycrot1",
+  "Type": 3,
+  "Column": -1,
+  "Row": 3,
+  "NotStack": false,
+  "Cost": "PerkCostAdvanced",
+  "Perk": "mainperkmycrot1",
+  "PerkRequired": "nodeperkmycrot0",
+  "PerksConnected": [],
+  "SpriteSource": "aura:myc_sporerot"
+}

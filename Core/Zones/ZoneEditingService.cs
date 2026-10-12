@@ -34,8 +34,12 @@ namespace UnknownMod.Core
         private static float _lastDirtyTime;
         private const float AutoSaveDelay = 2.0f;
 
+        /// <summary>Bumped on every zone mutation so the undo history knows when to take a snapshot.</summary>
+        public static int ChangeVersion { get; private set; }
+
         public static void MarkDirty()
         {
+            ChangeVersion++;
             _dirty = true;
             _lastDirtyTime = Time.unscaledTime;
         }
@@ -85,7 +89,10 @@ namespace UnknownMod.Core
         /// Only patch-owned nodes (those in the patch's Nodes dict or newly added ones
         /// with the patch prefix) are persisted.
         /// </summary>
-        private static void SyncSynthesizedToPatch()
+        /// <summary>Copies the synthesized zone's edits into the patch without logging (called by the undo history every few frames).</summary>
+        public static void SyncForSnapshot() => SyncSynthesizedToPatch(false);
+
+        private static void SyncSynthesizedToPatch(bool log = true)
         {
             if (CurrentPatch == null || CurrentZone == null) return;
 
@@ -110,13 +117,21 @@ namespace UnknownMod.Core
                 }
                 else if (basePositions != null && basePositions.TryGetValue(kvp.Key, out var basePos))
                 {
-                    // Base-game node — check if position was modified
-                    if (Mathf.Abs(kvp.Value.PosX - basePos.x) > 0.01f ||
-                        Mathf.Abs(kvp.Value.PosY - basePos.y) > 0.01f)
-                    {
+                    // Base-game node — any property change (not just position) makes it a patch node
+                    bool moved = Mathf.Abs(kvp.Value.PosX - basePos.x) > 0.01f ||
+                                 Mathf.Abs(kvp.Value.PosY - basePos.y) > 0.01f;
+                    if (moved || BaseNodeChanged(zoneId, kvp.Key, kvp.Value))
                         CurrentPatch.Nodes[kvp.Key] = kvp.Value;
-                    }
                 }
+            }
+
+            // A patch node renamed in the editor leaves its old key behind; deletions are removed directly elsewhere
+            if (CurrentZone.Nodes.Count > 0)
+            {
+                foreach (var stale in CurrentPatch.Nodes.Keys.Where(k => !CurrentZone.Nodes.ContainsKey(k)).ToList())
+                    CurrentPatch.Nodes.Remove(stale);
+                foreach (var stale in CurrentPatch.Roads.Keys.Where(k => !CurrentZone.Roads.ContainsKey(k)).ToList())
+                    CurrentPatch.Roads.Remove(stale);
             }
 
             // Roads: sync roads that involve at least one patch node
@@ -125,7 +140,8 @@ namespace UnknownMod.Core
                 if (CurrentPatch.Roads.ContainsKey(kvp.Key))
                     CurrentPatch.Roads[kvp.Key] = kvp.Value;
                 else if (CurrentPatch.Nodes.ContainsKey(kvp.Value.FromNodeId) ||
-                         CurrentPatch.Nodes.ContainsKey(kvp.Value.ToNodeId))
+                         CurrentPatch.Nodes.ContainsKey(kvp.Value.ToNodeId) ||
+                         BaseRoadChanged(zoneId, kvp.Key, kvp.Value))
                     CurrentPatch.Roads[kvp.Key] = kvp.Value;
             }
 
@@ -141,7 +157,28 @@ namespace UnknownMod.Core
             }
             CurrentPatch.NextNodeNumber = maxNum;
 
-            Plugin.Log.LogInfo($"[ZoneEditing] Synced patch '{CurrentPatch.TargetZoneId}': {CurrentPatch.Nodes.Count} nodes, {CurrentPatch.Roads.Count} roads");
+            if (log) Plugin.Log.LogInfo($"[ZoneEditing] Synced patch '{CurrentPatch.TargetZoneId}': {CurrentPatch.Nodes.Count} nodes, {CurrentPatch.Roads.Count} roads");
+        }
+
+        /// <summary>True for a vanilla node while editing a zone patch. A patch can only change such a node, not rename or remove it.</summary>
+        public static bool IsBaseNodeInPatch(string nodeId) =>
+            CurrentPatch != null && !string.IsNullOrEmpty(nodeId)
+            && _positionCache.TryGetValue(CurrentPatch.TargetZoneId, out var positions) && positions.ContainsKey(nodeId);
+
+        /// <summary>True for a vanilla road while editing a zone patch (a patch can reshape it, not delete it).</summary>
+        public static bool IsBaseRoadInPatch(string roadKey) =>
+            CurrentPatch != null && !string.IsNullOrEmpty(roadKey)
+            && _baseRoadJson.TryGetValue(CurrentPatch.TargetZoneId, out var roads) && roads.ContainsKey(roadKey);
+
+        private static bool BaseNodeChanged(string zoneId, string nodeId, NodeDef node) =>
+            _baseNodeJson.TryGetValue(zoneId, out var map) && map.TryGetValue(nodeId, out var json)
+            && json != JsonConvert.SerializeObject(node);
+
+        // A road absent from the baseline is new (base-to-base road added in the editor)
+        private static bool BaseRoadChanged(string zoneId, string roadKey, RoadDef road)
+        {
+            if (!_baseRoadJson.TryGetValue(zoneId, out var map)) return false;
+            return !map.TryGetValue(roadKey, out var json) || json != JsonConvert.SerializeObject(road);
         }
 
         private static void SaveToFolder(ZoneDef def, string folder)
@@ -156,6 +193,8 @@ namespace UnknownMod.Core
                 def.DisableExperience, def.DisableMadness,
                 def.NodesOffsetX, def.NodesOffsetY,
                 def.RoadsOffsetX, def.RoadsOffsetY,
+                def.CameraBoundsMinX, def.CameraBoundsMinY,
+                def.CameraBoundsMaxX, def.CameraBoundsMaxY,
                 def.Sku, def.ChangeTeamOnEntrance, def.NewTeam,
                 def.RestoreTeamOnExit, def.CombatBackgroundSprite,
                 def.VisualLayers
@@ -163,7 +202,7 @@ namespace UnknownMod.Core
             WriteJson(Path.Combine(folder, "zone.json"), meta);
 
             SaveEntities(Path.Combine(folder, "nodes"), def.Nodes, kvp => kvp.Value.NodeId);
-            // Cards, NPCs, Items, Loot, SpriteSkins, Events, Combats are all saved at mod-level
+            // Cards, NPCs, Items, Loot, Events, Combats are all saved at mod-level
 
             WriteJson(Path.Combine(folder, "roads.json"), def.Roads);
         }
@@ -191,6 +230,7 @@ namespace UnknownMod.Core
         private static void WriteJson(string path, object obj)
         {
             string json = JsonConvert.SerializeObject(obj, _jsonSettings);
+            HotReload.NoteWrite(path, json);
             File.WriteAllText(path, json);
         }
 

@@ -1,0 +1,23 @@
+{
+  "EventId": "e_myc_39",
+  "EventName": "Morel's Last Camp",
+  "Description": "The waymarkers converge on a cramped hollow: a cold fire pit, a bedroll, and a wall scratched with Morel's final route. Beneath it, a last line in shaky script: \"Alive. Held in the roots. Do not let it end the song too soon.\"",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "SpriteMap": "quest-loremaster",
+  "EventIconShader": "Orange",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "myc_morel_p2",
+  "Replies": [
+    {
+      "ReplyText": "Copy Morel's final route.",
+      "Action": 53,
+      "SsText": "You finish the map. The route ends in a hollow behind the Mycelarch's throne, a place only reachable once the Mycelarch itself has fallen.",
+      "SsXP": 60,
+      "RequirementId": "myc_morel_p2",
+      "SsRequirementUnlockId": "myc_morel_p3",
+      "SsRequirementLockId": "myc_morel_p2"
+    }
+  ]
+}

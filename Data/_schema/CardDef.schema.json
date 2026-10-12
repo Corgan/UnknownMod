@@ -1,0 +1,2528 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CardDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "Name": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "Fluff": {
+      "type": "string"
+    },
+    "FluffPercent": {
+      "type": "number"
+    },
+    "IsUpgraded": {
+      "type": "boolean"
+    },
+    "BaseCardId": {
+      "type": "string"
+    },
+    "SpriteSource": {
+      "type": "string"
+    },
+    "SoundSource": {
+      "type": "string"
+    },
+    "PetModelSource": {
+      "type": "string"
+    },
+    "PetVisualGraphId": {
+      "type": "string"
+    },
+    "CardUpgraded": {
+      "type": "string",
+      "enum": [
+        "No",
+        "A",
+        "B",
+        "Rare"
+      ]
+    },
+    "CardRarity": {
+      "type": "string",
+      "enum": [
+        "Common",
+        "Uncommon",
+        "Rare",
+        "Epic",
+        "Mythic"
+      ]
+    },
+    "CardType": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Melee_Attack",
+        "Ranged_Attack",
+        "Magic_Attack",
+        "Defense",
+        "Fire_Spell",
+        "Cold_Spell",
+        "Lightning_Spell",
+        "Mind_Spell",
+        "Shadow_Spell",
+        "Holy_Spell",
+        "Curse_Spell",
+        "Healing_Spell",
+        "Book",
+        "Small_Weapon",
+        "Song",
+        "Skill",
+        "Power",
+        "Injury",
+        "Attack",
+        "Spell",
+        "Boon",
+        "Weapon",
+        "Armor",
+        "Jewelry",
+        "Accesory",
+        "Pet",
+        "Corruption",
+        "Enchantment",
+        "Food",
+        "Flask",
+        "Petrare",
+        "EchoEconomy",
+        "EchoOverpowered",
+        "Echo_Spell"
+      ]
+    },
+    "CardTypeAux": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "None",
+          "Melee_Attack",
+          "Ranged_Attack",
+          "Magic_Attack",
+          "Defense",
+          "Fire_Spell",
+          "Cold_Spell",
+          "Lightning_Spell",
+          "Mind_Spell",
+          "Shadow_Spell",
+          "Holy_Spell",
+          "Curse_Spell",
+          "Healing_Spell",
+          "Book",
+          "Small_Weapon",
+          "Song",
+          "Skill",
+          "Power",
+          "Injury",
+          "Attack",
+          "Spell",
+          "Boon",
+          "Weapon",
+          "Armor",
+          "Jewelry",
+          "Accesory",
+          "Pet",
+          "Corruption",
+          "Enchantment",
+          "Food",
+          "Flask",
+          "Petrare",
+          "EchoEconomy",
+          "EchoOverpowered",
+          "Echo_Spell"
+        ]
+      }
+    },
+    "CardClass": {
+      "type": "string",
+      "enum": [
+        "Warrior",
+        "Mage",
+        "Healer",
+        "Scout",
+        "MagicKnight",
+        "Monster",
+        "Injury",
+        "Boon",
+        "Item",
+        "Special",
+        "Enchantment",
+        "None"
+      ]
+    },
+    "CardNumber": {
+      "type": "integer"
+    },
+    "MaxInDeck": {
+      "type": "integer"
+    },
+    "SpecialCardEnum": {
+      "type": "string",
+      "enum": [
+        "None",
+        "TransferPain",
+        "NightmareImage",
+        "MindSpike",
+        "NightmareEcho",
+        "NightmareEchoTemplate"
+      ]
+    },
+    "EnergyCost": {
+      "type": "integer"
+    },
+    "EnergyCostOriginal": {
+      "type": "integer"
+    },
+    "EnergyCostForShow": {
+      "type": "integer"
+    },
+    "EnergyReductionPermanent": {
+      "type": "integer"
+    },
+    "EnergyReductionTemporal": {
+      "type": "integer"
+    },
+    "EnergyReductionToZeroPermanent": {
+      "type": "boolean"
+    },
+    "EnergyReductionToZeroTemporal": {
+      "type": "boolean"
+    },
+    "Playable": {
+      "type": "boolean"
+    },
+    "Visible": {
+      "type": "boolean"
+    },
+    "ShowInTome": {
+      "type": "boolean"
+    },
+    "AutoplayDraw": {
+      "type": "boolean"
+    },
+    "AutoplayEndTurn": {
+      "type": "boolean"
+    },
+    "Vanish": {
+      "type": "boolean"
+    },
+    "Innate": {
+      "type": "boolean"
+    },
+    "Lazy": {
+      "type": "boolean"
+    },
+    "Corrupted": {
+      "type": "boolean"
+    },
+    "EndTurn": {
+      "type": "boolean"
+    },
+    "Starter": {
+      "type": "boolean"
+    },
+    "CombatBased": {
+      "type": "boolean"
+    },
+    "FlipSprite": {
+      "type": "boolean"
+    },
+    "ModifiedByTrait": {
+      "type": "boolean"
+    },
+    "OnlyInWeekly": {
+      "type": "boolean"
+    },
+    "Sku": {
+      "type": "string"
+    },
+    "RelatedCard": {
+      "type": "string"
+    },
+    "RelatedCard2": {
+      "type": "string"
+    },
+    "RelatedCard3": {
+      "type": "string"
+    },
+    "Damage": {
+      "type": "integer"
+    },
+    "DamageType": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageSides": {
+      "type": "integer"
+    },
+    "DamageEnergyBonus": {
+      "type": "integer"
+    },
+    "Damage2": {
+      "type": "integer"
+    },
+    "DamageType2": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageSides2": {
+      "type": "integer"
+    },
+    "IgnoreBlock": {
+      "type": "boolean"
+    },
+    "IgnoreBlock2": {
+      "type": "boolean"
+    },
+    "IgnoreBlockSelf": {
+      "type": "boolean"
+    },
+    "IgnoreBlockSelf2": {
+      "type": "boolean"
+    },
+    "DamageSelf": {
+      "type": "integer"
+    },
+    "DamageSelf2": {
+      "type": "integer"
+    },
+    "DamageSelfType": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageSelfType2": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "Curse": {
+      "type": "string"
+    },
+    "CurseCharges": {
+      "type": "integer"
+    },
+    "CurseChargesSides": {
+      "type": "integer"
+    },
+    "Curse2": {
+      "type": "string"
+    },
+    "Curse2Charges": {
+      "type": "integer"
+    },
+    "Curse3": {
+      "type": "string"
+    },
+    "Curse3Charges": {
+      "type": "integer"
+    },
+    "Aura": {
+      "type": "string"
+    },
+    "AuraCharges": {
+      "type": "integer"
+    },
+    "Aura2": {
+      "type": "string"
+    },
+    "Aura2Charges": {
+      "type": "integer"
+    },
+    "Aura3": {
+      "type": "string"
+    },
+    "Aura3Charges": {
+      "type": "integer"
+    },
+    "AuraSelf": {
+      "type": "string"
+    },
+    "AuraSelfCharges": {
+      "type": "integer"
+    },
+    "AuraSelf2": {
+      "type": "string"
+    },
+    "AuraSelf2Charges": {
+      "type": "integer"
+    },
+    "AuraSelf3": {
+      "type": "string"
+    },
+    "AuraSelf3Charges": {
+      "type": "integer"
+    },
+    "CurseSelf": {
+      "type": "string"
+    },
+    "CurseSelfCharges": {
+      "type": "integer"
+    },
+    "CurseSelf2": {
+      "type": "string"
+    },
+    "CurseSelf2Charges": {
+      "type": "integer"
+    },
+    "CurseSelf3": {
+      "type": "string"
+    },
+    "CurseSelf3Charges": {
+      "type": "integer"
+    },
+    "ConvertAllDebuffsIntoCurse": {
+      "type": "boolean"
+    },
+    "Heal": {
+      "type": "integer"
+    },
+    "HealSides": {
+      "type": "integer"
+    },
+    "HealSelf": {
+      "type": "integer"
+    },
+    "HealEnergyBonus": {
+      "type": "integer"
+    },
+    "HealCurses": {
+      "type": "integer"
+    },
+    "DispelAuras": {
+      "type": "integer"
+    },
+    "HealSelfPerDamageDonePercent": {
+      "type": "number"
+    },
+    "HealAuraCurseSelf": {
+      "type": "string"
+    },
+    "HealAuraCurseName": {
+      "type": "string"
+    },
+    "HealAuraCurseName2": {
+      "type": "string"
+    },
+    "HealAuraCurseName3": {
+      "type": "string"
+    },
+    "HealAuraCurseName4": {
+      "type": "string"
+    },
+    "TransferCurses": {
+      "type": "integer"
+    },
+    "StealAuras": {
+      "type": "integer"
+    },
+    "ReduceCurses": {
+      "type": "integer"
+    },
+    "ReduceAuras": {
+      "type": "integer"
+    },
+    "IncreaseCurses": {
+      "type": "integer"
+    },
+    "IncreaseAuras": {
+      "type": "integer"
+    },
+    "TargetSide": {
+      "type": "string",
+      "enum": [
+        "Enemy",
+        "Friend",
+        "Anyone",
+        "Self",
+        "FriendNotSelf"
+      ]
+    },
+    "TargetType": {
+      "type": "string",
+      "enum": [
+        "Single",
+        "Global",
+        "SingleSided"
+      ]
+    },
+    "TargetPos": {
+      "type": "string",
+      "enum": [
+        "Anywhere",
+        "Front",
+        "Random",
+        "Back",
+        "Middle",
+        "Slowest",
+        "Fastest",
+        "LeastHP",
+        "MostHP"
+      ]
+    },
+    "EffectRepeat": {
+      "type": "integer"
+    },
+    "EffectRepeatDelay": {
+      "type": "number"
+    },
+    "EffectRepeatEnergyBonus": {
+      "type": "integer"
+    },
+    "EffectRepeatMaxBonus": {
+      "type": "integer"
+    },
+    "EffectRepeatModificator": {
+      "type": "integer"
+    },
+    "EffectRepeatTarget": {
+      "type": "string",
+      "enum": [
+        "Same",
+        "Random",
+        "Chain",
+        "NoRepeat",
+        "NeverRepeat"
+      ]
+    },
+    "MoveToCenter": {
+      "type": "boolean"
+    },
+    "SelfHealthLoss": {
+      "type": "integer"
+    },
+    "PushTarget": {
+      "type": "integer"
+    },
+    "PullTarget": {
+      "type": "integer"
+    },
+    "DrawCard": {
+      "type": "integer"
+    },
+    "DiscardCard": {
+      "type": "integer"
+    },
+    "GoldGainQuantity": {
+      "type": "integer"
+    },
+    "ShardsGainQuantity": {
+      "type": "integer"
+    },
+    "ExhaustCounter": {
+      "type": "integer"
+    },
+    "EffectRequired": {
+      "type": "string"
+    },
+    "SelfKillHiddenSeconds": {
+      "type": "number"
+    },
+    "DiscardCardType": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Melee_Attack",
+        "Ranged_Attack",
+        "Magic_Attack",
+        "Defense",
+        "Fire_Spell",
+        "Cold_Spell",
+        "Lightning_Spell",
+        "Mind_Spell",
+        "Shadow_Spell",
+        "Holy_Spell",
+        "Curse_Spell",
+        "Healing_Spell",
+        "Book",
+        "Small_Weapon",
+        "Song",
+        "Skill",
+        "Power",
+        "Injury",
+        "Attack",
+        "Spell",
+        "Boon",
+        "Weapon",
+        "Armor",
+        "Jewelry",
+        "Accesory",
+        "Pet",
+        "Corruption",
+        "Enchantment",
+        "Food",
+        "Flask",
+        "Petrare",
+        "EchoEconomy",
+        "EchoOverpowered",
+        "Echo_Spell"
+      ]
+    },
+    "DiscardCardTypeAux": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "None",
+          "Melee_Attack",
+          "Ranged_Attack",
+          "Magic_Attack",
+          "Defense",
+          "Fire_Spell",
+          "Cold_Spell",
+          "Lightning_Spell",
+          "Mind_Spell",
+          "Shadow_Spell",
+          "Holy_Spell",
+          "Curse_Spell",
+          "Healing_Spell",
+          "Book",
+          "Small_Weapon",
+          "Song",
+          "Skill",
+          "Power",
+          "Injury",
+          "Attack",
+          "Spell",
+          "Boon",
+          "Weapon",
+          "Armor",
+          "Jewelry",
+          "Accesory",
+          "Pet",
+          "Corruption",
+          "Enchantment",
+          "Food",
+          "Flask",
+          "Petrare",
+          "EchoEconomy",
+          "EchoOverpowered",
+          "Echo_Spell"
+        ]
+      }
+    },
+    "DiscardCardAutomatic": {
+      "type": "boolean"
+    },
+    "DiscardCardPlace": {
+      "type": "string",
+      "enum": [
+        "Discard",
+        "TopDeck",
+        "BottomDeck",
+        "RandomDeck",
+        "Vanish",
+        "Hand",
+        "Cast"
+      ]
+    },
+    "AddCard": {
+      "type": "integer"
+    },
+    "AddCardId": {
+      "type": "string"
+    },
+    "AddCardType": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Melee_Attack",
+        "Ranged_Attack",
+        "Magic_Attack",
+        "Defense",
+        "Fire_Spell",
+        "Cold_Spell",
+        "Lightning_Spell",
+        "Mind_Spell",
+        "Shadow_Spell",
+        "Holy_Spell",
+        "Curse_Spell",
+        "Healing_Spell",
+        "Book",
+        "Small_Weapon",
+        "Song",
+        "Skill",
+        "Power",
+        "Injury",
+        "Attack",
+        "Spell",
+        "Boon",
+        "Weapon",
+        "Armor",
+        "Jewelry",
+        "Accesory",
+        "Pet",
+        "Corruption",
+        "Enchantment",
+        "Food",
+        "Flask",
+        "Petrare",
+        "EchoEconomy",
+        "EchoOverpowered",
+        "Echo_Spell"
+      ]
+    },
+    "AddCardTypeAux": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "None",
+          "Melee_Attack",
+          "Ranged_Attack",
+          "Magic_Attack",
+          "Defense",
+          "Fire_Spell",
+          "Cold_Spell",
+          "Lightning_Spell",
+          "Mind_Spell",
+          "Shadow_Spell",
+          "Holy_Spell",
+          "Curse_Spell",
+          "Healing_Spell",
+          "Book",
+          "Small_Weapon",
+          "Song",
+          "Skill",
+          "Power",
+          "Injury",
+          "Attack",
+          "Spell",
+          "Boon",
+          "Weapon",
+          "Armor",
+          "Jewelry",
+          "Accesory",
+          "Pet",
+          "Corruption",
+          "Enchantment",
+          "Food",
+          "Flask",
+          "Petrare",
+          "EchoEconomy",
+          "EchoOverpowered",
+          "Echo_Spell"
+        ]
+      }
+    },
+    "AddCardChoose": {
+      "type": "integer"
+    },
+    "AddCardFrom": {
+      "type": "string",
+      "enum": [
+        "Deck",
+        "Discard",
+        "Game",
+        "Hand",
+        "Vanish"
+      ]
+    },
+    "AddCardPlace": {
+      "type": "string",
+      "enum": [
+        "Discard",
+        "TopDeck",
+        "BottomDeck",
+        "RandomDeck",
+        "Vanish",
+        "Hand",
+        "Cast"
+      ]
+    },
+    "AddCardReducedCost": {
+      "type": "integer"
+    },
+    "AddCardCostTurn": {
+      "type": "boolean"
+    },
+    "AddCardVanish": {
+      "type": "boolean"
+    },
+    "AddCardOnlyCheckAuxTypes": {
+      "type": "boolean"
+    },
+    "AddCardFromVanishPile": {
+      "type": "boolean"
+    },
+    "AddVanishToDeck": {
+      "type": "boolean"
+    },
+    "AddCardList": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "LookCards": {
+      "type": "integer"
+    },
+    "LookCardsDiscardUpTo": {
+      "type": "integer"
+    },
+    "LookCardsVanishUpTo": {
+      "type": "integer"
+    },
+    "SummonUnitId": {
+      "type": "string"
+    },
+    "SummonNum": {
+      "type": "integer"
+    },
+    "SummonAura": {
+      "type": "string"
+    },
+    "SummonAuraCharges": {
+      "type": "integer"
+    },
+    "SummonAura2": {
+      "type": "string"
+    },
+    "SummonAuraCharges2": {
+      "type": "integer"
+    },
+    "SummonAura3": {
+      "type": "string"
+    },
+    "SummonAuraCharges3": {
+      "type": "integer"
+    },
+    "Evolve": {
+      "type": "boolean"
+    },
+    "Metamorph": {
+      "type": "boolean"
+    },
+    "AcEnergyBonus": {
+      "type": "string"
+    },
+    "AcEnergyBonusQuantity": {
+      "type": "integer"
+    },
+    "AcEnergyBonus2": {
+      "type": "string"
+    },
+    "AcEnergyBonus2Quantity": {
+      "type": "integer"
+    },
+    "EffectExtras": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/CardEffectExtrasDef"
+      }
+    },
+    "SelfHealthLossSpecialValue": {
+      "$ref": "#/definitions/CardSpecialValueDef"
+    },
+    "DrawCardSpecialValue": {
+      "$ref": "#/definitions/CardSpecialValueDef"
+    },
+    "CardSpecialValue": {
+      "$ref": "#/definitions/CardSpecialValueDef"
+    },
+    "EnergyRecharges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CardEnergyRechargeDef"
+      }
+    },
+    "ExtraEffects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CardExtraEffectDef"
+      }
+    },
+    "GrantStanza": {
+      "type": "integer"
+    },
+    "IgnoreStealth": {
+      "type": "boolean"
+    },
+    "EchoCard": {
+      "type": "boolean"
+    },
+    "EchoCardResult": {
+      "type": "boolean"
+    },
+    "EchoCardResurge": {
+      "type": "boolean"
+    },
+    "CopyAurasAmount": {
+      "type": "integer"
+    },
+    "UseRandomAura": {
+      "type": "boolean"
+    },
+    "ParodyActivation": {
+      "type": "boolean"
+    },
+    "ParodyCopyAuraCurse": {
+      "type": "boolean"
+    },
+    "ParodyPurgeDispelAuraCurseSelf": {
+      "type": "boolean"
+    },
+    "ParodyCopyingTargetCardsAmount": {
+      "type": "integer"
+    },
+    "ParodySkipModel": {
+      "type": "boolean"
+    },
+    "ParodyCopyAurasOnly": {
+      "type": "boolean"
+    },
+    "SkipCardTypes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "None",
+          "Melee_Attack",
+          "Ranged_Attack",
+          "Magic_Attack",
+          "Defense",
+          "Fire_Spell",
+          "Cold_Spell",
+          "Lightning_Spell",
+          "Mind_Spell",
+          "Shadow_Spell",
+          "Holy_Spell",
+          "Curse_Spell",
+          "Healing_Spell",
+          "Book",
+          "Small_Weapon",
+          "Song",
+          "Skill",
+          "Power",
+          "Injury",
+          "Attack",
+          "Spell",
+          "Boon",
+          "Weapon",
+          "Armor",
+          "Jewelry",
+          "Accesory",
+          "Pet",
+          "Corruption",
+          "Enchantment",
+          "Food",
+          "Flask",
+          "Petrare",
+          "EchoEconomy",
+          "EchoOverpowered",
+          "Echo_Spell"
+        ]
+      }
+    },
+    "CopyNameFromOriginal": {
+      "type": "boolean"
+    },
+    "CopyImageFromOriginal": {
+      "type": "boolean"
+    },
+    "CopyCardUpgradedFromOriginal": {
+      "type": "boolean"
+    },
+    "CopyCardTypeFromOriginal": {
+      "type": "boolean"
+    },
+    "AddCardTypeByHeroClass": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CardHeroClassTypesDef"
+      }
+    },
+    "AddCardListByHeroClass": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CardHeroClassCardsDef"
+      }
+    },
+    "ExtraSummons": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/CardSummonDef"
+      }
+    },
+    "PreDescriptionId": {
+      "type": "string"
+    },
+    "DescriptionId": {
+      "type": "string"
+    },
+    "PostDescriptionId": {
+      "type": "string"
+    },
+    "UseDescriptionFromCard": {
+      "type": "boolean"
+    },
+    "PreDescriptionArgs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "DescriptionArgs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "PostDescriptionArgs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "DescriptionText": {
+      "type": "string"
+    },
+    "PreDescriptionText": {
+      "type": "string"
+    },
+    "PostDescriptionText": {
+      "type": "string"
+    },
+    "KeyNoteIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "EffectCaster": {
+      "type": "string"
+    },
+    "EffectTarget": {
+      "type": "string"
+    },
+    "EffectPreAction": {
+      "type": "string"
+    },
+    "EffectPostCastDelay": {
+      "type": "number"
+    },
+    "EffectCasterRepeat": {
+      "type": "boolean"
+    },
+    "EffectCastCenter": {
+      "type": "boolean"
+    },
+    "EffectTrail": {
+      "type": "string"
+    },
+    "EffectTrailRepeat": {
+      "type": "boolean"
+    },
+    "EffectTrailSpeed": {
+      "type": "number"
+    },
+    "EffectTrailAngle": {
+      "type": "string",
+      "enum": [
+        "Horizontal",
+        "Parabolic",
+        "Diagonal",
+        "Vertical"
+      ]
+    },
+    "EffectPostTargetDelay": {
+      "type": "number"
+    },
+    "PetActivation": {
+      "type": "string",
+      "enum": [
+        "None",
+        "AllTeam",
+        "Self",
+        "CurrentTarget"
+      ]
+    },
+    "PetBonusDamageType": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "PetBonusDamageAmount": {
+      "type": "integer"
+    },
+    "IsPetAttack": {
+      "type": "boolean"
+    },
+    "IsPetCast": {
+      "type": "boolean"
+    },
+    "KillPet": {
+      "type": "boolean"
+    },
+    "PetTemporal": {
+      "type": "boolean"
+    },
+    "PetTemporalAttack": {
+      "type": "boolean"
+    },
+    "PetTemporalCast": {
+      "type": "boolean"
+    },
+    "PetTemporalMoveToCenter": {
+      "type": "boolean"
+    },
+    "PetTemporalMoveToBack": {
+      "type": "boolean"
+    },
+    "PetTemporalFadeOutDelay": {
+      "type": "number"
+    },
+    "PetFront": {
+      "type": "boolean"
+    },
+    "PetInvert": {
+      "type": "boolean"
+    },
+    "PetOffsetX": {
+      "type": "number"
+    },
+    "PetOffsetY": {
+      "type": "number"
+    },
+    "PetSizeX": {
+      "type": "number"
+    },
+    "PetSizeY": {
+      "type": "number"
+    },
+    "UpgDamageMult": {
+      "type": "number"
+    },
+    "UpgBonusCurseCharges": {
+      "type": "integer"
+    },
+    "UpgBonusAuraCharges": {
+      "type": "integer"
+    },
+    "UpgBonusHeal": {
+      "type": "integer"
+    },
+    "Item": {
+      "$ref": "#/definitions/ItemFields"
+    }
+  },
+  "definitions": {
+    "CardEffectExtrasDef": {
+      "type": "object",
+      "properties": {
+        "SpecialValue": {
+          "$ref": "#/definitions/CardSpecialValueDef"
+        },
+        "Condition": {
+          "type": "string",
+          "enum": [
+            "None",
+            "DiscardedCards",
+            "VanishedCards"
+          ]
+        },
+        "RequireStanza": {
+          "type": "integer"
+        },
+        "RequireStanzaLead": {
+          "type": "integer"
+        },
+        "HealType": {
+          "type": "string",
+          "enum": [
+            "Normal",
+            "PerDamageDonePercent",
+            "Percent"
+          ]
+        },
+        "CurseApplyMode": {
+          "type": "string",
+          "enum": [
+            "Add",
+            "ConvertAllDebuffsIntoSelectedCurse"
+          ]
+        }
+      }
+    },
+    "CardSpecialValueDef": {
+      "type": "object",
+      "properties": {
+        "Type": {
+          "type": "string",
+          "enum": [
+            "None",
+            "AuraCurseYours",
+            "AuraCurseTarget",
+            "CardsHand",
+            "CardsDeck",
+            "CardsDiscard",
+            "HealthYours",
+            "HealthTarget",
+            "CardsVanish",
+            "CardsDeckTarget",
+            "CardsDiscardTarget",
+            "CardsVanishTarget",
+            "SpeedYours",
+            "SpeedTarget",
+            "SpeedDifference",
+            "MissingHealthYours",
+            "MissingHealthTarget",
+            "DiscardedCards",
+            "VanishedCards",
+            "StacksOfStolenAuras",
+            "StolenAuras",
+            "TransferredCurses",
+            "PurgedAuras",
+            "SacrifiedHealth",
+            "TotalCursesTarget",
+            "CardsPlayedLastTurn"
+          ]
+        },
+        "AuraCurse": {
+          "type": "string"
+        },
+        "Modifier": {
+          "type": "number"
+        },
+        "Operation": {
+          "type": "string",
+          "enum": [
+            "REPLACE",
+            "ADD",
+            "MULTIPLY"
+          ]
+        },
+        "IsGlobal": {
+          "type": "boolean"
+        }
+      }
+    },
+    "CardEnergyRechargeDef": {
+      "type": "object",
+      "properties": {
+        "Amount": {
+          "type": "integer"
+        },
+        "SpecialValue": {
+          "$ref": "#/definitions/CardSpecialValueDef"
+        },
+        "Target": {
+          "type": "string",
+          "enum": [
+            "TARGET",
+            "SELF"
+          ]
+        },
+        "TargetTeam": {
+          "type": "string",
+          "enum": [
+            "HEROES",
+            "NPC",
+            "ANY"
+          ]
+        }
+      }
+    },
+    "CardExtraEffectDef": {
+      "type": "object",
+      "properties": {
+        "Kind": {
+          "type": "string"
+        },
+        "Amount": {
+          "type": "integer"
+        },
+        "AuraCurse": {
+          "type": "string"
+        },
+        "DamageType": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "IgnoreBlock": {
+          "type": "boolean"
+        },
+        "DamageTarget": {
+          "type": "string",
+          "enum": [
+            "Target",
+            "SideLeft",
+            "SideRight",
+            "Self"
+          ]
+        },
+        "HealTarget": {
+          "type": "string",
+          "enum": [
+            "Target",
+            "Self",
+            "Sides",
+            "SelfTeam",
+            "SelfTeamLeastHP"
+          ]
+        },
+        "AuraTarget": {
+          "type": "string",
+          "enum": [
+            "Target",
+            "Self",
+            "SelfTeam"
+          ]
+        },
+        "CurseTarget": {
+          "type": "string",
+          "enum": [
+            "Target",
+            "Sides",
+            "Self",
+            "SelfTeam"
+          ]
+        },
+        "SpecialValue": {
+          "$ref": "#/definitions/CardSpecialValueDef"
+        },
+        "Condition": {
+          "type": "string",
+          "enum": [
+            "None",
+            "DiscardedCards",
+            "VanishedCards"
+          ]
+        },
+        "RequireStanza": {
+          "type": "integer"
+        },
+        "RequireStanzaLead": {
+          "type": "integer"
+        },
+        "HealType": {
+          "type": "string",
+          "enum": [
+            "Normal",
+            "PerDamageDonePercent",
+            "Percent"
+          ]
+        },
+        "CurseApplyMode": {
+          "type": "string",
+          "enum": [
+            "Add",
+            "ConvertAllDebuffsIntoSelectedCurse"
+          ]
+        }
+      }
+    },
+    "CardHeroClassTypesDef": {
+      "type": "object",
+      "properties": {
+        "HeroClass": {
+          "type": "string",
+          "enum": [
+            "Warrior",
+            "Mage",
+            "Healer",
+            "Scout",
+            "MagicKnight",
+            "Monster",
+            "None"
+          ]
+        },
+        "CardTypes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "None",
+              "Melee_Attack",
+              "Ranged_Attack",
+              "Magic_Attack",
+              "Defense",
+              "Fire_Spell",
+              "Cold_Spell",
+              "Lightning_Spell",
+              "Mind_Spell",
+              "Shadow_Spell",
+              "Holy_Spell",
+              "Curse_Spell",
+              "Healing_Spell",
+              "Book",
+              "Small_Weapon",
+              "Song",
+              "Skill",
+              "Power",
+              "Injury",
+              "Attack",
+              "Spell",
+              "Boon",
+              "Weapon",
+              "Armor",
+              "Jewelry",
+              "Accesory",
+              "Pet",
+              "Corruption",
+              "Enchantment",
+              "Food",
+              "Flask",
+              "Petrare",
+              "EchoEconomy",
+              "EchoOverpowered",
+              "Echo_Spell"
+            ]
+          }
+        }
+      }
+    },
+    "CardHeroClassCardsDef": {
+      "type": "object",
+      "properties": {
+        "HeroClass": {
+          "type": "string",
+          "enum": [
+            "Warrior",
+            "Mage",
+            "Healer",
+            "Scout",
+            "MagicKnight",
+            "Monster",
+            "None"
+          ]
+        },
+        "CardIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "CardSummonDef": {
+      "type": "object",
+      "properties": {
+        "NpcId": {
+          "type": "string"
+        },
+        "Count": {
+          "type": "integer"
+        },
+        "Metamorph": {
+          "type": "boolean"
+        },
+        "Evolve": {
+          "type": "boolean"
+        },
+        "Auras": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CardSummonAuraDef"
+          }
+        }
+      }
+    },
+    "CardSummonAuraDef": {
+      "type": "object",
+      "properties": {
+        "AuraCurse": {
+          "type": "string"
+        },
+        "Charges": {
+          "type": "integer"
+        }
+      }
+    },
+    "ItemFields": {
+      "type": "object",
+      "properties": {
+        "Activation": {
+          "type": "string",
+          "enum": [
+            "None",
+            "BeginCombat",
+            "BeginRound",
+            "BeginTurn",
+            "EndTurn",
+            "EndRound",
+            "DrawCard",
+            "CastCard",
+            "Hit",
+            "Hitted",
+            "Block",
+            "Blocked",
+            "Evade",
+            "Evaded",
+            "Heal",
+            "Healed",
+            "FinishCast",
+            "BeginCombatEnd",
+            "CharacterAssign",
+            "Damage",
+            "Damaged",
+            "PreBeginCombat",
+            "BeginTurnCardsDealt",
+            "AuraCurseSet",
+            "BeginTurnAboutToDealCards",
+            "Killed",
+            "DestroyItem",
+            "CorruptionCombatStart",
+            "CorruptionBeginRound",
+            "DamagedSecondary",
+            "FinishFinishCast",
+            "PreFinishCast",
+            "Resurrect",
+            "ItemActivation",
+            "TraitActivation",
+            "CharacterKilled",
+            "FinishFinishCastCorruption",
+            "DamagedDueToACConsumption",
+            "BlockReachedZero",
+            "AfterDealCards",
+            "CastFightCard",
+            "OnLeechExplosion",
+            "AuraCurseRemoved",
+            "EnemyBeginTurnDelay",
+            "ResetDeck",
+            "PetActivatedByCard",
+            "PetActivatedAuto",
+            "CardMoved",
+            "DarkExploded",
+            "Manual",
+            "CurseRemoved",
+            "Overhealed",
+            "CurseSet",
+            "EchoSpellCastFinish",
+            "ResurgeCastFinish",
+            "CombatCorruptionCombatStart",
+            "CombatCorruptionBeginRound",
+            "CombatFinishFinishCastCorruption",
+            "PhysicalDamaged",
+            "ElementalDamaged",
+            "MysticalDamaged",
+            "OnKill"
+          ]
+        },
+        "ActivationManual": {
+          "type": "string",
+          "enum": [
+            "None",
+            "DarkSpike",
+            "PurifyingResonance"
+          ]
+        },
+        "ActivationOnlyOnHeroes": {
+          "type": "boolean"
+        },
+        "ActivateOnReceive": {
+          "type": "boolean"
+        },
+        "PreventApplyForHeroTarget": {
+          "type": "boolean"
+        },
+        "ItemTarget": {
+          "type": "string",
+          "enum": [
+            "Self",
+            "RandomHero",
+            "RandomEnemy",
+            "AllHero",
+            "AllEnemy",
+            "CurrentTarget",
+            "SelfEnemy",
+            "HighestFlatHpHero",
+            "LowestFlatHpHero",
+            "HighestFlatHpEnemy",
+            "LowestFlatHpEnemy",
+            "Random",
+            "FrontEnemy",
+            "LowestBlockHero",
+            "LowestBlockEnemy",
+            "None"
+          ]
+        },
+        "OverrideTargetText": {
+          "type": "string",
+          "enum": [
+            "Self",
+            "RandomHero",
+            "RandomEnemy",
+            "AllHero",
+            "AllEnemy",
+            "CurrentTarget",
+            "SelfEnemy",
+            "HighestFlatHpHero",
+            "LowestFlatHpHero",
+            "HighestFlatHpEnemy",
+            "LowestFlatHpEnemy",
+            "Random",
+            "FrontEnemy",
+            "LowestBlockHero",
+            "LowestBlockEnemy",
+            "None"
+          ]
+        },
+        "DontTargetBoss": {
+          "type": "boolean"
+        },
+        "TimesPerTurn": {
+          "type": "integer"
+        },
+        "TimesPerCombat": {
+          "type": "integer"
+        },
+        "ExactRound": {
+          "type": "integer"
+        },
+        "RoundCycle": {
+          "type": "integer"
+        },
+        "AuraCurseSetted": {
+          "type": "string"
+        },
+        "AuraCurseSetted2": {
+          "type": "string"
+        },
+        "AuraCurseSetted3": {
+          "type": "string"
+        },
+        "AuraCurseNumForOneEvent": {
+          "type": "integer"
+        },
+        "CastedCardType": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Melee_Attack",
+            "Ranged_Attack",
+            "Magic_Attack",
+            "Defense",
+            "Fire_Spell",
+            "Cold_Spell",
+            "Lightning_Spell",
+            "Mind_Spell",
+            "Shadow_Spell",
+            "Holy_Spell",
+            "Curse_Spell",
+            "Healing_Spell",
+            "Book",
+            "Small_Weapon",
+            "Song",
+            "Skill",
+            "Power",
+            "Injury",
+            "Attack",
+            "Spell",
+            "Boon",
+            "Weapon",
+            "Armor",
+            "Jewelry",
+            "Accesory",
+            "Pet",
+            "Corruption",
+            "Enchantment",
+            "Food",
+            "Flask",
+            "Petrare",
+            "EchoEconomy",
+            "EchoOverpowered",
+            "Echo_Spell"
+          ]
+        },
+        "UsedEnergy": {
+          "type": "boolean"
+        },
+        "LowerOrEqualPercentHP": {
+          "type": "number"
+        },
+        "EmptyHand": {
+          "type": "boolean"
+        },
+        "NotShowCharacterBonus": {
+          "type": "boolean"
+        },
+        "PetActivation": {
+          "type": "string",
+          "enum": [
+            "None",
+            "AllTeam",
+            "Self",
+            "CurrentTarget"
+          ]
+        },
+        "DamageFlatBonus": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "DamageFlatBonusValue": {
+          "type": "integer"
+        },
+        "DamageFlatBonus2": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "DamageFlatBonusValue2": {
+          "type": "integer"
+        },
+        "DamageFlatBonus3": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "DamageFlatBonusValue3": {
+          "type": "integer"
+        },
+        "DamagePercentBonus": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "DamagePercentBonusValue": {
+          "type": "number"
+        },
+        "DamagePercentBonus2": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "DamagePercentBonusValue2": {
+          "type": "number"
+        },
+        "DamagePercentBonus3": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "DamagePercentBonusValue3": {
+          "type": "number"
+        },
+        "ResistModified1": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "ResistModifiedValue1": {
+          "type": "integer"
+        },
+        "ResistModified2": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "ResistModifiedValue2": {
+          "type": "integer"
+        },
+        "ResistModified3": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "ResistModifiedValue3": {
+          "type": "integer"
+        },
+        "CharacterStatModified": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Hp",
+            "Speed",
+            "Energy",
+            "EnergyTurn"
+          ]
+        },
+        "CharacterStatModifiedValue": {
+          "type": "integer"
+        },
+        "CharacterStatModified2": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Hp",
+            "Speed",
+            "Energy",
+            "EnergyTurn"
+          ]
+        },
+        "CharacterStatModifiedValue2": {
+          "type": "integer"
+        },
+        "CharacterStatModified3": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Hp",
+            "Speed",
+            "Energy",
+            "EnergyTurn"
+          ]
+        },
+        "CharacterStatModifiedValue3": {
+          "type": "integer"
+        },
+        "MaxHealth": {
+          "type": "integer"
+        },
+        "HealFlatBonus": {
+          "type": "integer"
+        },
+        "HealPercentBonus": {
+          "type": "number"
+        },
+        "HealReceivedFlatBonus": {
+          "type": "integer"
+        },
+        "HealReceivedPercentBonus": {
+          "type": "number"
+        },
+        "HealQuantity": {
+          "type": "integer"
+        },
+        "HealQuantitySpecialValue": {
+          "$ref": "#/definitions/SpecialValueDef"
+        },
+        "HealPercentQuantity": {
+          "type": "integer"
+        },
+        "HealPercentQuantitySelf": {
+          "type": "integer"
+        },
+        "HealSelfPerDamageDonePercent": {
+          "type": "number"
+        },
+        "HealSelfTeamPerDamageDonePercent": {
+          "type": "boolean"
+        },
+        "HealBasedOnAuraCurse": {
+          "type": "integer"
+        },
+        "EnergyQuantity": {
+          "type": "integer"
+        },
+        "DrawCards": {
+          "type": "integer"
+        },
+        "DrawMultiplyByEnergyUsed": {
+          "type": "boolean"
+        },
+        "AuracurseGain1": {
+          "type": "string"
+        },
+        "AuracurseGainValue1": {
+          "type": "integer"
+        },
+        "AuracurseGain1SpecialValue": {
+          "$ref": "#/definitions/SpecialValueDef"
+        },
+        "Acg1MultiplyByEnergyUsed": {
+          "type": "boolean"
+        },
+        "AuracurseGain2": {
+          "type": "string"
+        },
+        "AuracurseGainValue2": {
+          "type": "integer"
+        },
+        "AuracurseGain2SpecialValue": {
+          "$ref": "#/definitions/SpecialValueDef"
+        },
+        "Acg2MultiplyByEnergyUsed": {
+          "type": "boolean"
+        },
+        "AuracurseGain3": {
+          "type": "string"
+        },
+        "AuracurseGainValue3": {
+          "type": "integer"
+        },
+        "AuracurseGain3SpecialValue": {
+          "$ref": "#/definitions/SpecialValueDef"
+        },
+        "Acg3MultiplyByEnergyUsed": {
+          "type": "boolean"
+        },
+        "ChooseOneACToGain": {
+          "type": "boolean"
+        },
+        "ActivationSelf": {
+          "type": "string",
+          "enum": [
+            "None",
+            "BeginCombat",
+            "BeginRound",
+            "BeginTurn",
+            "EndTurn",
+            "EndRound",
+            "DrawCard",
+            "CastCard",
+            "Hit",
+            "Hitted",
+            "Block",
+            "Blocked",
+            "Evade",
+            "Evaded",
+            "Heal",
+            "Healed",
+            "FinishCast",
+            "BeginCombatEnd",
+            "CharacterAssign",
+            "Damage",
+            "Damaged",
+            "PreBeginCombat",
+            "BeginTurnCardsDealt",
+            "AuraCurseSet",
+            "BeginTurnAboutToDealCards",
+            "Killed",
+            "DestroyItem",
+            "CorruptionCombatStart",
+            "CorruptionBeginRound",
+            "DamagedSecondary",
+            "FinishFinishCast",
+            "PreFinishCast",
+            "Resurrect",
+            "ItemActivation",
+            "TraitActivation",
+            "CharacterKilled",
+            "FinishFinishCastCorruption",
+            "DamagedDueToACConsumption",
+            "BlockReachedZero",
+            "AfterDealCards",
+            "CastFightCard",
+            "OnLeechExplosion",
+            "AuraCurseRemoved",
+            "EnemyBeginTurnDelay",
+            "ResetDeck",
+            "PetActivatedByCard",
+            "PetActivatedAuto",
+            "CardMoved",
+            "DarkExploded",
+            "Manual",
+            "CurseRemoved",
+            "Overhealed",
+            "CurseSet",
+            "EchoSpellCastFinish",
+            "ResurgeCastFinish",
+            "CombatCorruptionCombatStart",
+            "CombatCorruptionBeginRound",
+            "CombatFinishFinishCastCorruption",
+            "PhysicalDamaged",
+            "ElementalDamaged",
+            "MysticalDamaged",
+            "OnKill"
+          ]
+        },
+        "HealPercentQuantitySelfBase": {
+          "type": "string",
+          "enum": [
+            "MaxHp",
+            "CurrentHp"
+          ]
+        },
+        "ResurgeChoose": {
+          "type": "boolean"
+        },
+        "CombatCorruption": {
+          "type": "boolean"
+        },
+        "ShiftElementalResistance": {
+          "type": "boolean"
+        },
+        "SpriteBossDrop": {
+          "type": "string"
+        },
+        "EchoAdaptationValues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/EchoAdaptationDef"
+          }
+        },
+        "AuracurseGainSelf1": {
+          "type": "string"
+        },
+        "AuracurseGainSelfValue1": {
+          "type": "integer"
+        },
+        "AuracurseGainSelf2": {
+          "type": "string"
+        },
+        "AuracurseGainSelfValue2": {
+          "type": "integer"
+        },
+        "AuracurseGainSelf3": {
+          "type": "string"
+        },
+        "AuracurseGainSelfValue3": {
+          "type": "integer"
+        },
+        "AuracurseHeal1": {
+          "type": "string"
+        },
+        "AuracurseHeal2": {
+          "type": "string"
+        },
+        "AuracurseHeal3": {
+          "type": "string"
+        },
+        "AcHealFromTarget": {
+          "type": "boolean"
+        },
+        "StealAuras": {
+          "type": "integer"
+        },
+        "ChanceToDispel": {
+          "type": "integer"
+        },
+        "ChanceToDispelNum": {
+          "type": "integer"
+        },
+        "ChanceToPurge": {
+          "type": "integer"
+        },
+        "ChanceToPurgeNum": {
+          "type": "integer"
+        },
+        "ChanceToDispelSelf": {
+          "type": "integer"
+        },
+        "ChanceToDispelNumSelf": {
+          "type": "integer"
+        },
+        "AuracurseBonus1": {
+          "type": "string"
+        },
+        "AuracurseBonusValue1": {
+          "type": "integer"
+        },
+        "AuracurseBonus2": {
+          "type": "string"
+        },
+        "AuracurseBonusValue2": {
+          "type": "integer"
+        },
+        "IncreaseAurasSelf": {
+          "type": "integer"
+        },
+        "AuracurseImmune1": {
+          "type": "string"
+        },
+        "AuracurseImmune2": {
+          "type": "string"
+        },
+        "CardNum": {
+          "type": "integer"
+        },
+        "CardToGain": {
+          "type": "string"
+        },
+        "CardToGainType": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Melee_Attack",
+            "Ranged_Attack",
+            "Magic_Attack",
+            "Defense",
+            "Fire_Spell",
+            "Cold_Spell",
+            "Lightning_Spell",
+            "Mind_Spell",
+            "Shadow_Spell",
+            "Holy_Spell",
+            "Curse_Spell",
+            "Healing_Spell",
+            "Book",
+            "Small_Weapon",
+            "Song",
+            "Skill",
+            "Power",
+            "Injury",
+            "Attack",
+            "Spell",
+            "Boon",
+            "Weapon",
+            "Armor",
+            "Jewelry",
+            "Accesory",
+            "Pet",
+            "Corruption",
+            "Enchantment",
+            "Food",
+            "Flask",
+            "Petrare",
+            "EchoEconomy",
+            "EchoOverpowered",
+            "Echo_Spell"
+          ]
+        },
+        "CardPlace": {
+          "type": "string",
+          "enum": [
+            "Discard",
+            "TopDeck",
+            "BottomDeck",
+            "RandomDeck",
+            "Vanish",
+            "Hand",
+            "Cast"
+          ]
+        },
+        "CardToGainList": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "CostZero": {
+          "type": "boolean"
+        },
+        "CostReduction": {
+          "type": "integer"
+        },
+        "CardsReduced": {
+          "type": "integer"
+        },
+        "CardToReduceType": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Melee_Attack",
+            "Ranged_Attack",
+            "Magic_Attack",
+            "Defense",
+            "Fire_Spell",
+            "Cold_Spell",
+            "Lightning_Spell",
+            "Mind_Spell",
+            "Shadow_Spell",
+            "Holy_Spell",
+            "Curse_Spell",
+            "Healing_Spell",
+            "Book",
+            "Small_Weapon",
+            "Song",
+            "Skill",
+            "Power",
+            "Injury",
+            "Attack",
+            "Spell",
+            "Boon",
+            "Weapon",
+            "Armor",
+            "Jewelry",
+            "Accesory",
+            "Pet",
+            "Corruption",
+            "Enchantment",
+            "Food",
+            "Flask",
+            "Petrare",
+            "EchoEconomy",
+            "EchoOverpowered",
+            "Echo_Spell"
+          ]
+        },
+        "CostReduceReduction": {
+          "type": "integer"
+        },
+        "CostReduceEnergyRequirement": {
+          "type": "integer"
+        },
+        "CostReducePermanent": {
+          "type": "boolean"
+        },
+        "ReduceHighestCost": {
+          "type": "boolean"
+        },
+        "PercentRetentionEndGame": {
+          "type": "integer"
+        },
+        "PercentDiscountShop": {
+          "type": "integer"
+        },
+        "DamageToTargetType": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "DamageToTarget": {
+          "type": "integer"
+        },
+        "DttMultiplyByEnergyUsed": {
+          "type": "boolean"
+        },
+        "DttSpecialValues1": {
+          "$ref": "#/definitions/SpecialValueDef"
+        },
+        "DamageToTargetType2": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "DamageToTarget2": {
+          "type": "integer"
+        },
+        "DttSpecialValues2": {
+          "$ref": "#/definitions/SpecialValueDef"
+        },
+        "ModifiedDamageType": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "CursedItem": {
+          "type": "boolean"
+        },
+        "DropOnly": {
+          "type": "boolean"
+        },
+        "QuestItem": {
+          "type": "boolean"
+        },
+        "DestroyAfterUse": {
+          "type": "boolean"
+        },
+        "Vanish": {
+          "type": "boolean"
+        },
+        "Permanent": {
+          "type": "boolean"
+        },
+        "DuplicateActive": {
+          "type": "boolean"
+        },
+        "PassSingleAndCharacterRolls": {
+          "type": "boolean"
+        },
+        "OnlyAddItemToNPCs": {
+          "type": "boolean"
+        },
+        "AddVanishToDeck": {
+          "type": "boolean"
+        },
+        "IsEnchantment": {
+          "type": "boolean"
+        },
+        "UseTheNextInsteadWhenYouPlay": {
+          "type": "boolean"
+        },
+        "DestroyAfterUses": {
+          "type": "integer"
+        },
+        "DestroyStartOfTurn": {
+          "type": "integer"
+        },
+        "DestroyEndOfTurn": {
+          "type": "integer"
+        },
+        "CastEnchantmentOnFinishSelfCast": {
+          "type": "boolean"
+        },
+        "AuracurseCustomString": {
+          "type": "string"
+        },
+        "AuracurseCustomAC": {
+          "type": "string"
+        },
+        "AuracurseCustomModValue1": {
+          "type": "integer"
+        },
+        "AuracurseCustomModValue2": {
+          "type": "integer"
+        },
+        "ConvertReceivedDebuffsIntoDamage": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "ConvertReceivedDebuffsIntoCurse": {
+          "type": "boolean"
+        },
+        "EffectItemOwner": {
+          "type": "string"
+        },
+        "EffectCaster": {
+          "type": "string"
+        },
+        "EffectCasterDelay": {
+          "type": "number"
+        },
+        "EffectTarget": {
+          "type": "string"
+        },
+        "EffectTargetDelay": {
+          "type": "number"
+        }
+      }
+    },
+    "SpecialValueDef": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string",
+          "enum": [
+            "RuneCharges",
+            "DamageDealt",
+            "AuracurseSetCharges",
+            "AuraCurseYours"
+          ]
+        },
+        "Use": {
+          "type": "boolean"
+        },
+        "Multiplier": {
+          "type": "number"
+        }
+      }
+    },
+    "EchoAdaptationDef": {
+      "type": "object",
+      "properties": {
+        "ResistanceFromPlayerDamagePercentBonuses": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        },
+        "CursesPurgeFromPlayerCastsPercent": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          }
+        }
+      }
+    }
+  }
+}

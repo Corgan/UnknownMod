@@ -14,10 +14,16 @@ namespace UnknownMod.Editor.Tabs
     public class HeroesTabEditor
     {
         private readonly ModEditor _editor;
-        public enum SubTab { Heroes, HeroData, Traits, Skins, Packs }
+        public enum SubTab { Heroes, HeroData, Traits, Skins, Packs, Wizard }
         public SubTab ActiveSubTab { get; set; } = SubTab.Heroes;
 
-        public HeroesTabEditor(ModEditor editor) => _editor = editor;
+        public HeroKitWizard Wizard { get; }
+
+        public HeroesTabEditor(ModEditor editor)
+        {
+            _editor = editor;
+            Wizard = new HeroKitWizard(editor);
+        }
 
         /// <summary>Per-frame tick (no-op — saves immediately on change).</summary>
         public void Tick() { }
@@ -37,8 +43,19 @@ namespace UnknownMod.Editor.Tabs
                     DrawSkinPreview(rect);
                     break;
                 case SubTab.HeroData:
+                {
+                    var proj = ModManagerPanel.ActiveProject;
+                    EntitySummaryView.DrawFrom(rect, "a hero data entry", _editor.HeroDataEdit?.SelectedId, proj?.HeroDataEntries, proj?.HeroDataPatches);
+                    break;
+                }
                 case SubTab.Packs:
-                    EditorStyles.ViewportBackground(rect);
+                {
+                    var proj = ModManagerPanel.ActiveProject;
+                    EntitySummaryView.DrawFrom(rect, "a pack", _editor.PackEdit?.SelectedId, proj?.Packs, proj?.PackPatches);
+                    break;
+                }
+                case SubTab.Wizard:
+                    Wizard.DrawViewport(rect);
                     break;
             }
         }
@@ -105,6 +122,9 @@ namespace UnknownMod.Editor.Tabs
                     break;
                 case SubTab.Packs:
                     _editor.PackEdit?.DrawPanel();
+                    break;
+                case SubTab.Wizard:
+                    Wizard.DrawPanel();
                     break;
             }
         }
@@ -196,7 +216,8 @@ namespace UnknownMod.Editor.Tabs
                             {
                                 var s = DataHelper.MakeSkin(skinDef);
                                 DataHelper.RegisterSkin(s);
-                                ModProjectBuilder.ApplySkinOverridePublic(skinDef, s, proj);
+                                var oneSkin = new System.Collections.Generic.Dictionary<string, SkinDef> { [skinDef.Id] = skinDef };
+                                ModRegistry.RegisterVisualGraphReferences(null, null, oneSkin, null, null, null);
                             }
                             catch (System.Exception ex) { Plugin.Log.LogWarning($"[HeroesTab] Skin hot-reload failed: {ex.Message}"); }
                         }
@@ -226,6 +247,7 @@ namespace UnknownMod.Editor.Tabs
             SubTabButton("Traits", SubTab.Traits);
             SubTabButton("Skins", SubTab.Skins);
             SubTabButton("Packs", SubTab.Packs);
+            SubTabButton("Kit Wizard", SubTab.Wizard);
             GUILayout.EndHorizontal();
         }
 

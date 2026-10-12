@@ -1,0 +1,20 @@
+{
+  "Id": "myceliumancerProCardback",
+  "CardbackName": "Sporebloom",
+  "CardbackTextId": "",
+  "CardbackOrder": 3,
+  "BaseCardback": false,
+  "Locked": false,
+  "ShowIfLocked": false,
+  "RankLevel": 40,
+  "Sku": "",
+  "SteamStat": "",
+  "AdventureLevel": 0,
+  "ObeliskLevel": 0,
+  "SingularityLevel": 0,
+  "PdxAccountRequired": false,
+  "HideInGame": false,
+  "CardbackSubclass": "myceliumancer",
+  "SpriteSource": "",
+  "SpriteOverride": "myc_cardback_pro"
+}

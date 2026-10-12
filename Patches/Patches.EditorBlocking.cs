@@ -28,12 +28,5 @@ namespace UnknownMod
         {
             return !ModEditor.IsEditing;
         }
-
-        [HarmonyPatch(typeof(Node), "OnMouseOver")]
-        [HarmonyPrefix]
-        public static bool OnMouseOver_BlockPrefix()
-        {
-            return !ModEditor.IsEditing;
-        }
     }
 }

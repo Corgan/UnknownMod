@@ -1,31 +1,31 @@
 {
   "EventId": "e_myc_9",
-  "EventName": "The Fungal Laboratory",
-  "Description": "You stumble upon a pre-collapse druid's alchemy station, somehow still functioning after centuries. Glass vessels bubble with strange green and amber concoctions, and vine-wrapped shelves hold crumbling journals. Notes scattered across the bench describe experiments merging plant and animal life.",
-  "DescriptionAction": "What catches your interest?",
+  "EventName": "The Sealed Alcove",
+  "Description": "A pocket of clean air hangs inside a sealed alcove, the walls scraped smooth of fungus. An explorer is slumped against the far wall, his pack still strapped to his back and a journal clutched in his hand. Pale threads pulse faintly beneath his collar. Whatever took him did not finish the job.",
+  "DescriptionAction": "What do you do?",
   "SpriteSource": "",
   "EventTier": "T0",
   "ReplyRandom": 0,
   "RequirementId": "",
   "Replies": [
     {
-      "ReplyText": "Drink the green potion.",
-      "Action": 30,
-      "HasRoll": true,
-      "RollDC": 4,
-      "SsText": "The potion tastes of pine and honey. A fortifying warmth spreads through your limbs, hardening your skin against further corruption. You feel resilient and protected.",
-      "FlText": "The concoction burns like acid going down. Your vision swims and your muscles weaken as the failed formula attacks your body. Poison courses through your veins."
+      "ReplyText": "Search the explorer's pack.",
+      "Action": 12,
+      "SsLootId": "myc_forage",
+      "SsText": "The pack holds a few well-preserved supplies and a handful of coins.",
+      "SsGold": 30
     },
     {
-      "ReplyText": "Take the research notes.",
-      "Action": 29,
-      "SsText": "You carefully gather the druid's journals and loose pages. The research within is invaluable — detailed observations of the Mycelium's behavior and weaknesses. A loose card falls from between the pages.",
-      "SsXP": 60
+      "ReplyText": "Rest in the clean air.",
+      "Action": 20,
+      "SsText": "For the first time since the descent you breathe freely. The party rests and recovers.",
+      "SsHealPercent": 25
     },
     {
-      "ReplyText": "Reverse-engineer the formula. [Mage]",
-      "Action": 29,
-      "SsText": "Your arcane training allows you to decipher the druid's formulas. You synthesize a potent antifungal compound from the remaining ingredients — it could prove invaluable deeper in the Mycelium."
+      "ReplyText": "Read the journal.",
+      "Action": 53,
+      "SsText": "The journal records the explorer's descent and a warning: the Mycelarch sits at the hive's core, and beyond its throne an old obelisk still hums - the only way out.",
+      "SsXP": 45
     }
   ]
 }

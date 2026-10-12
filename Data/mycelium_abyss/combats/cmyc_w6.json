@@ -1,0 +1,24 @@
+{
+  "CombatId": "cmyc_w6",
+  "Description": "Two devourers circle you, flanked by a tending sprout.",
+  "NpcIds": [
+    "myc_devourer",
+    "myc_devourer",
+    "myc_sproutling",
+    ""
+  ],
+  "CombatTier": "T4",
+  "Background": "Sewers",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 1,
+      "Target": "Monsters"
+    }
+  ]
+}

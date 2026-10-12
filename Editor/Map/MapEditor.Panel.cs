@@ -45,7 +45,10 @@ namespace UnknownMod.Editor
             if (!EditorFields.Section("Zone Properties", ref _secZoneProps)) return;
 
             zone.ZoneName = EditorFields.TextField("Zone Name", zone.ZoneName);
-            zone.IdPrefix = EditorFields.TextField("ID Prefix", zone.IdPrefix);
+            // Road keys are "from-to", so node ids (built from the prefix) cannot contain '-'.
+            // Only edits are cleaned, so an existing legacy prefix keeps matching its node ids.
+            string typedPrefix = EditorFields.TextField("ID Prefix", zone.IdPrefix);
+            if (typedPrefix != zone.IdPrefix) zone.IdPrefix = typedPrefix.Replace("-", "");
             zone.CombatBackgroundSprite = EditorFields.TextField("Combat BG Sprite", zone.CombatBackgroundSprite);
             zone.Sku = EditorFields.TextField("SKU", zone.Sku);
 
@@ -66,16 +69,14 @@ namespace UnknownMod.Editor
                 {
                     var scIds = EditorFields.CachedIds("subclass", DataHelper.GetAllSubClassIds);
                     GUILayout.Label($"<color=#aaa>New Team ({zone.NewTeam.Count}/4):</color>", EditorStyles.RichLabel);
-                    int removeTeamIdx = -1;
                     for (int i = 0; i < zone.NewTeam.Count; i++)
                     {
                         GUILayout.BeginHorizontal();
                         zone.NewTeam[i] = EditorFields.IdDropdown($"#{i + 1}", zone.NewTeam[i], scIds, $"zone_team_{i}", pickerMode: EntityPicker.Mode.Hero);
-                        if (GUILayout.Button("X", UnknownMod.Editor.EditorStyles.MiniButton, GUILayout.Width(22)))
-                            removeTeamIdx = i;
+                        var teamOp = EditorFields.InlineRowOps(i, zone.NewTeam.Count);
                         GUILayout.EndHorizontal();
+                        if (EditorFields.ApplyRowOp(zone.NewTeam, i, teamOp)) break;
                     }
-                    if (removeTeamIdx >= 0) zone.NewTeam.RemoveAt(removeTeamIdx);
                     if (zone.NewTeam.Count < 4 && GUILayout.Button("+ Add Hero", GUILayout.Height(22)))
                         zone.NewTeam.Add("");
                 }
@@ -271,7 +272,7 @@ namespace UnknownMod.Editor
                 // Remove (mod layers only, not built-in)
                 if (layer.IsOverride && !isBuiltinContainer)
                 {
-                    if (GUILayout.Button("\u2716", EditorStyles.MiniButton, GUILayout.Width(20)))
+                    if (GUILayout.Button(new GUIContent("\u2716", "Remove this layer"), EditorStyles.MiniButton, GUILayout.Width(20)))
                         removeIdx = i;
                 }
 
@@ -337,7 +338,7 @@ namespace UnknownMod.Editor
                 var src = _activeLayers[duplicateIdx];
                 var dup = new VisualLayerDef
                 {
-                    Name = src.Name + "_copy",
+                    Name = UniqueLayerName(src.Name + "_copy"),
                     Type = src.Type,
                     SpriteName = src.SpriteName,
                     SortingOrder = src.SortingOrder + 1,
@@ -406,6 +407,13 @@ namespace UnknownMod.Editor
             GUILayout.EndHorizontal();
         }
 
+        private string UniqueLayerName(string wanted)
+        {
+            string name = wanted;
+            for (int i = 2; _activeLayers.Any(l => l.Name == name); i++) name = wanted + i;
+            return name;
+        }
+
         /// <summary>Draw editable properties for a single layer.</summary>
         private void DrawLayerProperties(VisualLayerDef layer, ZoneDef zone, GameObject go)
         {
@@ -422,8 +430,17 @@ namespace UnknownMod.Editor
                     _layerRenameBuffer = newName;
                 if (_layerRenameBuffer != layer.Name && GUILayout.Button("Apply", EditorStyles.MiniButton, GUILayout.Width(50)))
                 {
+                    string wanted = (_layerRenameBuffer ?? "").Trim();
+                    // Layers are looked up by name, so a blank or already-used name would hide or retarget another layer
+                    if (wanted.Length == 0 || wanted == "[Nodes]" || wanted == "[Roads]" || _activeLayers.Any(l => l != layer && l.Name == wanted))
+                    {
+                        EditorStatus.Toast("That layer name is empty or already used.");
+                        _layerRenameBuffer = layer.Name;
+                        GUILayout.EndHorizontal();
+                        return;
+                    }
                     string oldName = layer.Name;
-                    layer.Name = _layerRenameBuffer;
+                    layer.Name = wanted;
                     if (_layerGOs.TryGetValue(oldName, out var layerGO))
                     {
                         _layerGOs.Remove(oldName);
@@ -641,11 +658,11 @@ namespace UnknownMod.Editor
             // Light Order + Blend Style
             GUILayout.BeginHorizontal();
             GUILayout.Label("Order:", GUILayout.Width(60));
-            string loStr = GUILayout.TextField(layer.LightOrder.ToString(), GUILayout.Width(40));
+            string loStr = EditorFields.NumText(layer.LightOrder.ToString(), GUILayout.Width(40));
             if (int.TryParse(loStr, out int newLO) && newLO != layer.LightOrder)
             { layer.LightOrder = newLO; changed = true; }
             GUILayout.Label("Blend:", GUILayout.Width(40));
-            string bsStr = GUILayout.TextField(layer.BlendStyleIndex.ToString(), GUILayout.Width(30));
+            string bsStr = EditorFields.NumText(layer.BlendStyleIndex.ToString(), GUILayout.Width(30));
             if (int.TryParse(bsStr, out int newBS) && newBS != layer.BlendStyleIndex)
             { layer.BlendStyleIndex = newBS; changed = true; }
             GUILayout.EndHorizontal();
@@ -738,7 +755,7 @@ namespace UnknownMod.Editor
             // Max Particles
             GUILayout.BeginHorizontal();
             GUILayout.Label("MaxPart:", GUILayout.Width(60));
-            string mpStr = GUILayout.TextField(layer.MaxParticles.ToString(), GUILayout.Width(60));
+            string mpStr = EditorFields.NumText(layer.MaxParticles.ToString(), GUILayout.Width(60));
             if (int.TryParse(mpStr, out int newMP) && newMP != layer.MaxParticles)
             { layer.MaxParticles = newMP; changed = true; }
             GUILayout.EndHorizontal();
@@ -845,11 +862,11 @@ namespace UnknownMod.Editor
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Front:", GUILayout.Width(60));
-                string fsStr = GUILayout.TextField(layer.FrontSortingOrder.ToString(), GUILayout.Width(50));
+                string fsStr = EditorFields.NumText(layer.FrontSortingOrder.ToString(), GUILayout.Width(50));
                 if (int.TryParse(fsStr, out int newFS) && newFS != layer.FrontSortingOrder)
                 { layer.FrontSortingOrder = newFS; changed = true; }
                 GUILayout.Label("Back:", GUILayout.Width(40));
-                string bsStr = GUILayout.TextField(layer.BackSortingOrder.ToString(), GUILayout.Width(50));
+                string bsStr = EditorFields.NumText(layer.BackSortingOrder.ToString(), GUILayout.Width(50));
                 if (int.TryParse(bsStr, out int newBSO) && newBSO != layer.BackSortingOrder)
                 { layer.BackSortingOrder = newBSO; changed = true; }
                 GUILayout.EndHorizontal();
@@ -904,6 +921,11 @@ namespace UnknownMod.Editor
                     zone.NodesOffsetX = layer.PosX;
                     zone.NodesOffsetY = layer.PosY;
                     _loadedZoneId = null; // rebuild roads
+                }
+                else if (layer.Name == "[Roads]")
+                {
+                    zone.RoadsOffsetX = layer.PosX;
+                    zone.RoadsOffsetY = layer.PosY;
                 }
             }
 
@@ -1104,8 +1126,8 @@ namespace UnknownMod.Editor
                         GUILayout.Label(p.Label, GUILayout.Width(45));
                         if (layer.ShaderFloats == null) layer.ShaderFloats = new System.Collections.Generic.Dictionary<string, float>();
                         if (!layer.ShaderFloats.TryGetValue(p.Name, out float val)) val = p.Default;
-                        string valStr = GUILayout.TextField(val.ToString("F2"), GUILayout.Width(45));
-                        if (float.TryParse(valStr, out float nv) && System.Math.Abs(nv - val) > 0.0001f)
+                        string valStr = EditorFields.NumText(val.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), GUILayout.Width(45));
+                        if (EditorFields.TryParseFloat(valStr, out float nv) && System.Math.Abs(nv - val) > 0.0001f)
                         {
                             layer.ShaderFloats[p.Name] = Mathf.Clamp(nv, p.Min, p.Max);
                             changed = true;
@@ -1301,8 +1323,8 @@ namespace UnknownMod.Editor
         private static bool FloatField(string label, ref float value, float width)
         {
             GUILayout.Label(label, GUILayout.Width(12));
-            string s = GUILayout.TextField(value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), GUILayout.Width(width));
-            if (float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float newVal) && Mathf.Abs(newVal - value) > 0.001f)
+            string s = EditorFields.NumText(value.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), GUILayout.Width(width));
+            if (EditorFields.TryParseFloat(s, out float newVal) && Mathf.Abs(newVal - value) > 0.001f)
             {
                 value = newVal;
                 return true;
@@ -1319,7 +1341,7 @@ namespace UnknownMod.Editor
 
             var newLayer = new VisualLayerDef
             {
-                Name = $"custom_{type.ToString().ToLower()}_{_activeLayers.Count}",
+                Name = UniqueLayerName($"custom_{type.ToString().ToLower()}_{_activeLayers.Count}"),
                 Type = type,
                 SortingOrder = maxOrder + 1,
                 IsOverride = true,

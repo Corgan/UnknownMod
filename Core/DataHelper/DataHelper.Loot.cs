@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using UnknownMod.Definitions;
+using HarmonyLib;
 using UnityEngine;
 
 namespace UnknownMod.Core
@@ -24,22 +26,26 @@ namespace UnknownMod.Core
 
             if (d.Items != null && d.Items.Count > 0)
             {
-                var items = new LootItem[d.Items.Count];
+                var items = new List<LootItem>(d.Items.Count);
                 for (int i = 0; i < d.Items.Count; i++)
                 {
-                    items[i] = new LootItem();
+                    if (d.Items[i] == null)
+                        continue;
+
+                    var item = new LootItem();
                     if (!string.IsNullOrEmpty(d.Items[i].CardId))
-                        items[i].LootCard = GetCard(d.Items[i].CardId);
-                    items[i].LootPercent = d.Items[i].Percent;
-                    items[i].LootType = d.Items[i].LootType;
-                    items[i].LootRarity = d.Items[i].LootRarity;
-                    items[i].LootMisc = d.Items[i].LootMisc ?? "";
+                        item.LootCard = GetCardSource(d.Items[i].CardId);
+                    item.LootPercent = d.Items[i].Percent;
+                    item.LootType = d.Items[i].LootType;
+                    item.LootRarity = d.Items[i].LootRarity;
+                    item.LootMisc = d.Items[i].LootMisc ?? "";
+                    items.Add(item);
                 }
-                loot.LootItemTable = items;
+                Traverse.Create(loot).Field("lootItemTable").SetValue(items.ToArray());
             }
             else
             {
-                loot.LootItemTable = new LootItem[0];
+                Traverse.Create(loot).Field("lootItemTable").SetValue(new LootItem[0]);
             }
 
             // Copy shady model from source loot
@@ -71,6 +77,9 @@ namespace UnknownMod.Core
             {
                 foreach (var li in loot.LootItemTable)
                 {
+                    if (li == null)
+                        continue;
+
                     d.Items.Add(new LootItemDef
                     {
                         CardId = li.LootCard != null ? li.LootCard.Id ?? "" : "",

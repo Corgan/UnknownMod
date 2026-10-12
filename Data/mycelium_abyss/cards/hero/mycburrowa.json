@@ -1,0 +1,22 @@
+{
+  "Id": "mycburrowa",
+  "Name": "Burrow",
+  "CardType": "Defense",
+  "EffectTarget": "defend",
+  "TargetSide": "Self",
+  "TargetType": "Single",
+  "Description": "<Gain><br2><Aura_AuraCharges><br2><Draw> <DrawCard>",
+  "Aura": "block",
+  "AuraCharges": 12,
+  "DrawCard": 1,
+  "CardClass": "Scout",
+  "CardRarity": "Common",
+  "CardUpgraded": "A",
+  "Playable": true,
+  "Visible": true,
+  "ShowInTome": true,
+  "SpriteSource": "myc_art_burrow",
+  "Fluff": "Sometimes the best fight is the one you sit out.",
+  "EnergyCost": 1,
+  "BaseCardId": "mycburrow"
+}

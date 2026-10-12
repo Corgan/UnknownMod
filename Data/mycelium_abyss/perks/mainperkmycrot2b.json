@@ -1,0 +1,8 @@
+{
+  "Id": "mainperkmycrot2b",
+  "CardClass": "None",
+  "MainPerk": true,
+  "IconTextValue": "+1",
+  "SpriteSource": "aura:myc_sporerot",
+  "CustomDescription": "Spore Rot this hero applies also spreads 1 Spore Rot to another random enemy."
+}

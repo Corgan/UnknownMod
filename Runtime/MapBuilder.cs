@@ -114,29 +114,7 @@ namespace UnknownMod.Runtime
 
                 // Spawn mapPiece children (requirement-gated sprite overlays)
                 if (zoneDef.Nodes.TryGetValue(kvp.Key, out var nd))
-                {
-                    foreach (var mp in nd.MapPieces)
-                    {
-                        Sprite mpSprite = FindMapPieceSprite(mp.SpriteName);
-                        if (mpSprite == null) continue;
-
-                        var mpGO = new GameObject("mapPiece");
-                        mpGO.transform.SetParent(nodeGO.transform, false);
-                        mpGO.transform.localPosition = new Vector3(mp.PosX, mp.PosY, 0f);
-                        mpGO.transform.localScale = new Vector3(mp.ScaleX, mp.ScaleY, 1f);
-                        var sr = mpGO.AddComponent<SpriteRenderer>();
-                        sr.sprite = mpSprite;
-                        sr.sortingOrder = mp.SortingOrder;
-                        sr.color = new Color(mp.ColorR, mp.ColorG, mp.ColorB, mp.ColorA);
-                        sr.flipX = mp.FlipX;
-                        sr.flipY = mp.FlipY;
-                        if (!string.IsNullOrEmpty(mp.SortingLayer))
-                        {
-                            try { sr.sortingLayerName = mp.SortingLayer; }
-                            catch { }
-                        }
-                    }
-                }
+                    SpawnMapPieces(nodeGO.transform, nd);
             }
 
             var roadsGO = new GameObject("Roads");
@@ -148,6 +126,131 @@ namespace UnknownMod.Runtime
             return true;
         }
 
+        private static void SpawnMapPieces(Transform nodeT, NodeDef nd)
+        {
+            foreach (var mp in nd.MapPieces)
+            {
+                Sprite mpSprite = FindMapPieceSprite(mp.SpriteName);
+                if (mpSprite == null) continue;
+
+                var mpGO = new GameObject("mapPiece");
+                mpGO.transform.SetParent(nodeT, false);
+                mpGO.transform.localPosition = new Vector3(mp.PosX, mp.PosY, 0f);
+                mpGO.transform.localScale = new Vector3(mp.ScaleX, mp.ScaleY, 1f);
+                var sr = mpGO.AddComponent<SpriteRenderer>();
+                sr.sprite = mpSprite;
+                sr.sortingOrder = mp.SortingOrder;
+                sr.color = new Color(mp.ColorR, mp.ColorG, mp.ColorB, mp.ColorA);
+                sr.flipX = mp.FlipX;
+                sr.flipY = mp.FlipY;
+                if (!string.IsNullOrEmpty(mp.SortingLayer))
+                {
+                    try { sr.sortingLayerName = mp.SortingLayer; }
+                    catch { }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Apply a zone patch to the game's own prefab map right after it is instantiated: spawn nodes the
+        /// prefab lacks, move patched nodes, and add roads. Must run before MapManager.GetMapNodes indexes nodes.
+        /// </summary>
+        public static void ApplyPatchToBaseMap(string zoneId, Transform worldTransform)
+        {
+            if (!ModRegistry.LoadedZonePatches.TryGetValue(zoneId, out var patch) || worldTransform == null) return;
+
+            Transform root = null;
+            for (int i = 0; i < worldTransform.childCount; i++)
+                if (string.Equals(worldTransform.GetChild(i).gameObject.name, zoneId, System.StringComparison.OrdinalIgnoreCase))
+                { root = worldTransform.GetChild(i); break; }
+            if (root == null) return;
+            var nodesT = root.Find("Nodes");
+            var roadsT = root.Find("Roads");
+            if (nodesT == null) return;
+
+            try
+            {
+                GameObject template = FindNodeTemplate();
+                var existing = new Dictionary<string, Transform>(System.StringComparer.OrdinalIgnoreCase);
+                foreach (Transform c in nodesT) existing[c.gameObject.name] = c;
+
+                int added = 0;
+                foreach (var nd in patch.Nodes.Values)
+                {
+                    if (existing.TryGetValue(nd.NodeId, out var nodeT))
+                    {
+                        if (Mathf.Abs(nd.PosX) > 0.0001f || Mathf.Abs(nd.PosY) > 0.0001f)
+                            nodeT.localPosition = new Vector3(nd.PosX, nd.PosY, nodeT.localPosition.z);
+                        // The scene node still points at the prefab's NodeData; the patch registered a replacement
+                        var existingComp = nodeT.GetComponent<Node>();
+                        var patched = Globals.Instance.GetNodeData(nd.NodeId);
+                        if (existingComp != null && patched != null) existingComp.nodeData = patched;
+                        continue;
+                    }
+                    if (template == null) continue;
+                    var go = Object.Instantiate(template, nodesT);
+                    go.name = nd.NodeId;
+                    go.transform.localPosition = new Vector3(nd.PosX, nd.PosY, 0f);
+                    go.transform.localScale = Vector3.one;
+                    go.SetActive(true);
+                    var comp = go.GetComponent<Node>();
+                    if (comp != null) comp.nodeData = Globals.Instance.GetNodeData(nd.NodeId);
+                    SpawnMapPieces(go.transform, nd);
+                    existing[nd.NodeId] = go.transform;
+                    added++;
+                }
+
+                int roads = 0;
+                if (roadsT != null)
+                {
+                    // Waypoints are stored in Nodes-parent space; convert into the Roads container's space
+                    Vector3 delta = roadsT.localPosition - nodesT.localPosition;
+                    Material mat = FindRoadMaterial() ?? new Material(Shader.Find("Sprites/Default"));
+                    if (string.IsNullOrEmpty(_nodeSortingLayer) && nodesT.childCount > 0)
+                    {
+                        var sr = nodesT.GetComponentInChildren<SpriteRenderer>(true);
+                        if (sr != null) _nodeSortingLayer = sr.sortingLayerName;
+                    }
+
+                    var have = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
+                    foreach (Transform c in roadsT) have.Add(c.gameObject.name);
+
+                    foreach (var kvp in patch.Roads)
+                    {
+                        var pts = kvp.Value.Waypoints.Select(wp => new Vector3(wp[0], wp[1], 0f) - delta).ToArray();
+                        if (pts.Length < 2) continue;
+                        // Replace a prefab road of the same name so edited waypoints win
+                        for (int i = roadsT.childCount - 1; i >= 0; i--)
+                            if (string.Equals(roadsT.GetChild(i).gameObject.name, kvp.Key, System.StringComparison.OrdinalIgnoreCase))
+                                Object.Destroy(roadsT.GetChild(i).gameObject);
+                        CreateRoadLR(roadsT, kvp.Key, pts, mat);
+                        have.Add(kvp.Key);
+                        roads++;
+                    }
+
+                    // Straight roads for new nodes' connections that have no explicit road
+                    foreach (var nd in patch.Nodes.Values)
+                    {
+                        if (!existing.TryGetValue(nd.NodeId, out var a)) continue;
+                        foreach (var conn in nd.Connections)
+                        {
+                            string key = nd.NodeId + "-" + conn, rev = conn + "-" + nd.NodeId;
+                            if (have.Contains(key) || have.Contains(rev)) continue;
+                            if (!existing.TryGetValue(conn, out var b)) continue;
+                            CreateRoadLR(roadsT, key, new[] { a.localPosition - delta, b.localPosition - delta }, mat);
+                            have.Add(key);
+                            roads++;
+                        }
+                    }
+                }
+
+                Plugin.Log.LogInfo($"[MapBuilder] Patched base map '{zoneId}': +{added} nodes, {roads} roads.");
+            }
+            catch (System.Exception ex)
+            {
+                Plugin.Log.LogError($"[MapBuilder] ApplyPatchToBaseMap '{zoneId}' failed: {ex}");
+            }
+        }
         // ═══════════════════════════════════════════════════════════════
         //  VISUAL LAYERS (runtime)
         // ═══════════════════════════════════════════════════════════════
@@ -303,7 +406,7 @@ namespace UnknownMod.Runtime
                     {
                         if (!string.IsNullOrEmpty(layer.EffectName))
                         {
-                            var prefab = Globals.Instance?.GetResourceEffect(layer.EffectName);
+                            var prefab = GameResources.GetEffectPrefab(layer.EffectName);
                             if (prefab != null)
                             {
                                 var clone = Object.Instantiate(prefab, go.transform);
@@ -331,19 +434,6 @@ namespace UnknownMod.Runtime
 
         private static GameObject FindNodeTemplate()
         {
-            var mapList = MapManager.Instance?.mapList;
-            if (mapList != null)
-            {
-                for (int i = 0; i < mapList.Count; i++)
-                {
-                    if (mapList[i] == null) continue;
-                    var nodesT = mapList[i].transform.Find("Nodes");
-                    if (nodesT == null || nodesT.childCount == 0) continue;
-                    var nodeComp = nodesT.GetChild(0).GetComponent<Node>();
-                    if (nodeComp != null) return nodesT.GetChild(0).gameObject;
-                }
-            }
-
             var worldT = MapManager.Instance?.worldTransform;
             if (worldT != null)
             {
@@ -356,12 +446,24 @@ namespace UnknownMod.Runtime
                 }
             }
 
+            foreach (var prefab in GameResources.EnumerateMapPrefabs())
+            {
+                if (prefab == null) continue;
+                var nodesT = prefab.transform.Find("Nodes");
+                if (nodesT == null || nodesT.childCount == 0) continue;
+                var nodeComp = nodesT.GetChild(0).GetComponent<Node>();
+                if (nodeComp != null) return nodesT.GetChild(0).gameObject;
+            }
+
             return null;
         }
 
         private static void CreateMapRoads(Transform roadsParent, Dictionary<string, Vector3> nodePositions, ZoneDef zoneDef)
         {
             Material roadMat = FindRoadMaterial() ?? new Material(Shader.Find("Sprites/Default"));
+
+            // Node positions and waypoints are in the nodes container's space; the roads container may sit elsewhere
+            var toRoadSpace = new Vector3(zoneDef.NodesOffsetX - zoneDef.RoadsOffsetX, zoneDef.NodesOffsetY - zoneDef.RoadsOffsetY, 0f);
 
             // Track which connections already have explicit road data
             var createdRoads = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
@@ -382,7 +484,7 @@ namespace UnknownMod.Runtime
                     pts = new Vector3[] { posA, posB };
                 }
 
-                CreateRoadLR(roadsParent, kvp.Key, pts, roadMat);
+                CreateRoadLR(roadsParent, kvp.Key, pts.Select(p => p + toRoadSpace).ToArray(), roadMat);
                 createdRoads.Add(kvp.Key);
             }
 
@@ -398,7 +500,7 @@ namespace UnknownMod.Runtime
 
                     Vector3 posA = nodePositions[kvp.Key];
                     Vector3 posB = nodePositions[conn];
-                    CreateRoadLR(roadsParent, key, new[] { posA, posB }, roadMat);
+                    CreateRoadLR(roadsParent, key, new[] { posA + toRoadSpace, posB + toRoadSpace }, roadMat);
                     createdRoads.Add(key);
                 }
             }

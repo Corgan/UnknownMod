@@ -1,0 +1,16 @@
+{
+  "Id": "myc_rootedstance",
+  "TraitName": "Rooted Stance",
+  "Description": "Slashing, Blunt and Piercing resistance +10%. Playing a Defense card grants 2 Thorns.",
+  "Activations": [
+    "PreBeginCombat",
+    "CastCard"
+  ],
+  "ResistModifiedValue1": 10,
+  "ResistModified3": "Piercing",
+  "ResistModifiedValue3": 10,
+  "ResistModifiedValue2": 10,
+  "ResistModified1": "Slashing",
+  "ResistModified2": "Blunt",
+  "TimesPerTurn": 2
+}

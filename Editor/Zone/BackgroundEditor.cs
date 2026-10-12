@@ -15,9 +15,12 @@ namespace UnknownMod.Editor
     /// reordering, and editing sprite/sorting/position/scale/color per layer.
     /// Supports cloning from existing game backgrounds.
     /// </summary>
-    public partial class BackgroundEditor
+    public partial class BackgroundEditor : IEntityActions
     {
         private readonly ModEditor _parent;
+        private readonly EntityHistory<BackgroundDef> _history;
+        private RenameTracker _ren;
+        private RenameTracker Ren => _ren ??= new RenameTracker("background", (p, patch) => patch ? p.BackgroundPatches : p.Backgrounds, (cur, orig, patch) => _history.Rename(cur, orig, patch));
 
         // Selection / UI state
         private string _selectedBgId;
@@ -105,6 +108,33 @@ namespace UnknownMod.Editor
             _parent = parent;
             _vp = new ViewportRenderer(ViewportOrigin, 1280, 720, 5.4f,
                 new Color(0.08f, 0.08f, 0.1f, 1f), -102f);
+            _history = new EntityHistory<BackgroundDef>
+            {
+                NewDict = p => p.Backgrounds,
+                PatchDict = p => p.BackgroundPatches,
+                Save = (p, d, isPatch) => ModProjectLoader.SaveEntity(p, "backgrounds", d.BackgroundId, d, isPatch),
+                DeleteFiles = (p, id, isPatch) => ModProjectLoader.DeleteEntity(p, "backgrounds", id, isPatch),
+                GetSelected = () => _selectedBgId,
+                Select = id => { _selectedBgId = id; _expandedLayerIdx = -1; _selectedLayerIdx = -1; },
+                Restored = () => { ForceRebuild(); _viewportDirty = true; },
+            };
+        }
+
+        public bool CanDuplicate => false;
+        public bool CanUndo => _history.CanUndo;
+        public bool CanRedo => _history.CanRedo;
+
+        public void Run(EditorCommand command)
+        {
+            if (command == EditorCommand.Undo) _history.Undo();
+            else if (command == EditorCommand.Redo) _history.Redo();
+        }
+
+        private void TrackSelected(ModProject proj)
+        {
+            if (string.IsNullOrEmpty(_selectedBgId)) return;
+            if (proj.Backgrounds.TryGetValue(_selectedBgId, out var bg)) _history.Track(_selectedBgId, false, bg);
+            else if (proj.BackgroundPatches.TryGetValue(_selectedBgId, out var bgp)) _history.Track(_selectedBgId, true, bgp);
         }
 
         /// <summary>Mark the current background dirty: auto-save to disk.</summary>
@@ -121,6 +151,7 @@ namespace UnknownMod.Editor
             }
             proj.IsDirty = true;
             proj.LastChangeTime = UnityEngine.Time.realtimeSinceStartup;
+            TrackSelected(proj);
         }
 
         /// <summary>Force a full viewport rebuild on the next frame.</summary>
@@ -134,6 +165,9 @@ namespace UnknownMod.Editor
         {
             var proj = Tabs.ModManagerPanel.ActiveProject;
             if (proj == null) { GUILayout.Label("No mod project active."); return; }
+
+            EditorActions.Register(this);
+            TrackSelected(proj);
 
             // Build combined backgrounds dict (new + patches)
             var allBackgrounds = new Dictionary<string, BackgroundDef>();
@@ -179,6 +213,7 @@ namespace UnknownMod.Editor
                 _selectedBgId = newId;
                 _expandedLayerIdx = -1;
                 ModProjectLoader.SaveEntity(proj, "backgrounds", newId, newBg);
+                _history.RecordCreated(newId, false, "new background");
                 proj.IsDirty = true;
             }
 
@@ -193,22 +228,24 @@ namespace UnknownMod.Editor
                 {
                     if (GUILayout.Button("Delete", EditorStyles.DangerButton, GUILayout.Width(60)))
                     {
-                        proj.Backgrounds.Remove(_selectedBgId);
-                        ModProjectLoader.DeleteEntity(proj, "backgrounds", _selectedBgId);
-                        _selectedBgId = bgIds.FirstOrDefault(k => k != _selectedBgId);
+                        string rid = _selectedBgId;
+                        _history.Delete(rid, false, "delete");
+                        _selectedBgId = bgIds.FirstOrDefault(k => k != rid);
                         _expandedLayerIdx = -1;
                         proj.IsDirty = true;
+                        EditorStatus.Toast("Deleted " + rid + " (Ctrl+Z to undo)");
                     }
                 }
                 else if (isPatch)
                 {
                     if (GUILayout.Button("Revert", EditorStyles.DangerButton, GUILayout.Width(60)))
                     {
-                        proj.BackgroundPatches.Remove(_selectedBgId);
-                        ModProjectLoader.DeleteEntity(proj, "backgrounds", _selectedBgId, true);
-                        _selectedBgId = bgIds.FirstOrDefault(k => k != _selectedBgId);
+                        string rid = _selectedBgId;
+                        _history.Delete(rid, true, "revert");
+                        _selectedBgId = bgIds.FirstOrDefault(k => k != rid);
                         _expandedLayerIdx = -1;
                         proj.IsDirty = true;
+                        EditorStatus.Toast("Reverted " + rid + " (Ctrl+Z to undo)");
                     }
                 }
             }
@@ -227,8 +264,12 @@ namespace UnknownMod.Editor
             }
 
             // ── Basic fields ────────────────────────────────────
+            Ren.ApplyUnlessSelected(def.BackgroundId);
+            Ren.Draw();
             string prevBgId = def.BackgroundId;
             def.BackgroundId = EditorFields.TextField("Background ID", def.BackgroundId);
+            if (def.BackgroundId != prevBgId && !ModProjectLoader.IsSafeName(def.BackgroundId))
+                def.BackgroundId = prevBgId; // would not be a valid file name
             if (def.BackgroundId != prevBgId && !string.IsNullOrEmpty(def.BackgroundId))
             {
                 bool wasNew = proj.Backgrounds.ContainsKey(prevBgId);
@@ -238,18 +279,24 @@ namespace UnknownMod.Editor
                 {
                     dict.Remove(prevBgId);
                     dict[def.BackgroundId] = def;
-                    ModProjectLoader.DeleteEntity(proj, "backgrounds", prevBgId, wasPatch);
-                    ModProjectLoader.SaveEntity(proj, "backgrounds", def.BackgroundId, def, wasPatch);
+                    ModProjectLoader.RenameEntity(proj, "backgrounds", prevBgId, def.BackgroundId, def, wasPatch);
                     _selectedBgId = def.BackgroundId;
+                    Ren.Note(proj, prevBgId, def.BackgroundId, wasPatch, ModReferences.FamilyOf(proj, dict));
+                    _history.RecordRenamed(prevBgId, def.BackgroundId, wasPatch);
                 }
                 else
                     def.BackgroundId = prevBgId;
             }
+            string prevBgName = def.DisplayName;
             def.DisplayName = EditorFields.TextField("Display Name", def.DisplayName);
+            if (def.DisplayName != prevBgName) MarkDirty();
 
             // ── Clone from game ─────────────────────────────────
             if (EditorFields.Section("Clone from Game BG", ref _secClone))
                 DrawCloneSection(def);
+
+            if (EditorFields.Section("Quick Build Kit", ref _secKit))
+                DrawKitSection(def);
 
             // ── Layers ──────────────────────────────────────────
             if (EditorFields.Section($"Layers ({def.Layers.Count})", ref _secLayers))
@@ -381,6 +428,7 @@ namespace UnknownMod.Editor
                     _selectedBgId = bgName;
                     _expandedLayerIdx = -1;
                     ModProjectLoader.SaveEntity(proj, "backgrounds", bgName, patchDef, isPatch: true);
+                    _history.RecordCreated(bgName, true, "patch");
                     _showPatchBrowser = false;
                     proj.IsDirty = true;
                 }
@@ -494,7 +542,7 @@ namespace UnknownMod.Editor
                     moveDownIdx = i;
 
                 // Remove
-                if (GUILayout.Button("\u2716", EditorStyles.MiniButton, GUILayout.Width(20)))
+                if (GUILayout.Button(new GUIContent("\u2716", "Remove this layer"), EditorStyles.MiniButton, GUILayout.Width(20)))
                     removeIdx = i;
 
                 GUILayout.EndHorizontal();
@@ -745,7 +793,7 @@ namespace UnknownMod.Editor
             string newSortLayer = GUILayout.TextField(layer.SortingLayer ?? "Background");
             if (newSortLayer != layer.SortingLayer) { layer.SortingLayer = newSortLayer; changed = true; }
             GUILayout.Label("#", GUILayout.Width(10));
-            string orderStr = GUILayout.TextField(layer.SortingOrder.ToString(), GUILayout.Width(50));
+            string orderStr = EditorFields.NumText(layer.SortingOrder.ToString(), GUILayout.Width(50));
             if (int.TryParse(orderStr, out int newOrder) && newOrder != layer.SortingOrder)
             { layer.SortingOrder = newOrder; changed = true; }
             GUILayout.EndHorizontal();
@@ -840,11 +888,11 @@ namespace UnknownMod.Editor
             // Order + Blend
             GUILayout.BeginHorizontal();
             GUILayout.Label("Order:", GUILayout.Width(36));
-            string loStr = GUILayout.TextField(layer.LightOrder.ToString(), GUILayout.Width(40));
+            string loStr = EditorFields.NumText(layer.LightOrder.ToString(), GUILayout.Width(40));
             if (int.TryParse(loStr, out int newLO) && newLO != layer.LightOrder)
             { layer.LightOrder = newLO; changed = true; }
             GUILayout.Label("Blend:", GUILayout.Width(36));
-            string bsStr = GUILayout.TextField(layer.BlendStyleIndex.ToString(), GUILayout.Width(30));
+            string bsStr = EditorFields.NumText(layer.BlendStyleIndex.ToString(), GUILayout.Width(30));
             if (int.TryParse(bsStr, out int newBS) && newBS != layer.BlendStyleIndex)
             { layer.BlendStyleIndex = newBS; changed = true; }
             GUILayout.EndHorizontal();
@@ -905,7 +953,7 @@ namespace UnknownMod.Editor
             // MaxParticles
             GUILayout.BeginHorizontal();
             GUILayout.Label("Max:", GUILayout.Width(36));
-            string mpStr = GUILayout.TextField(layer.MaxParticles.ToString(), GUILayout.Width(60));
+            string mpStr = EditorFields.NumText(layer.MaxParticles.ToString(), GUILayout.Width(60));
             if (int.TryParse(mpStr, out int newMP) && newMP != layer.MaxParticles)
             { layer.MaxParticles = newMP; changed = true; }
             GUILayout.EndHorizontal();
@@ -934,7 +982,7 @@ namespace UnknownMod.Editor
             // Sorting
             GUILayout.BeginHorizontal();
             GUILayout.Label("Sort:", GUILayout.Width(36));
-            string soStr = GUILayout.TextField(layer.SortingOrder.ToString(), GUILayout.Width(50));
+            string soStr = EditorFields.NumText(layer.SortingOrder.ToString(), GUILayout.Width(50));
             if (int.TryParse(soStr, out int newSO) && newSO != layer.SortingOrder)
             { layer.SortingOrder = newSO; changed = true; }
             GUILayout.EndHorizontal();
@@ -986,11 +1034,11 @@ namespace UnknownMod.Editor
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Front:", GUILayout.Width(36));
-                string fsStr = GUILayout.TextField(layer.FrontSortingOrder.ToString(), GUILayout.Width(50));
+                string fsStr = EditorFields.NumText(layer.FrontSortingOrder.ToString(), GUILayout.Width(50));
                 if (int.TryParse(fsStr, out int newFS) && newFS != layer.FrontSortingOrder)
                 { layer.FrontSortingOrder = newFS; changed = true; }
                 GUILayout.Label("Back:", GUILayout.Width(30));
-                string bsStr = GUILayout.TextField(layer.BackSortingOrder.ToString(), GUILayout.Width(50));
+                string bsStr = EditorFields.NumText(layer.BackSortingOrder.ToString(), GUILayout.Width(50));
                 if (int.TryParse(bsStr, out int newBS) && newBS != layer.BackSortingOrder)
                 { layer.BackSortingOrder = newBS; changed = true; }
                 GUILayout.EndHorizontal();
@@ -999,7 +1047,7 @@ namespace UnknownMod.Editor
             // Sorting order
             GUILayout.BeginHorizontal();
             GUILayout.Label("Sort:", GUILayout.Width(36));
-            string soStr = GUILayout.TextField(layer.SortingOrder.ToString(), GUILayout.Width(50));
+            string soStr = EditorFields.NumText(layer.SortingOrder.ToString(), GUILayout.Width(50));
             if (int.TryParse(soStr, out int newSO) && newSO != layer.SortingOrder)
             { layer.SortingOrder = newSO; changed = true; }
             GUILayout.EndHorizontal();
@@ -1100,7 +1148,7 @@ namespace UnknownMod.Editor
             string newSortLayer = GUILayout.TextField(layer.SortingLayer ?? "Background");
             if (newSortLayer != layer.SortingLayer) { layer.SortingLayer = newSortLayer; changed = true; }
             GUILayout.Label("#", GUILayout.Width(10));
-            string orderStr = GUILayout.TextField(layer.SortingOrder.ToString(), GUILayout.Width(50));
+            string orderStr = EditorFields.NumText(layer.SortingOrder.ToString(), GUILayout.Width(50));
             if (int.TryParse(orderStr, out int newOrder) && newOrder != layer.SortingOrder)
             { layer.SortingOrder = newOrder; changed = true; }
             GUILayout.EndHorizontal();
@@ -1193,8 +1241,8 @@ namespace UnknownMod.Editor
                         GUILayout.Label(p.Label, GUILayout.Width(36));
                         if (layer.ShaderFloats == null) layer.ShaderFloats = new System.Collections.Generic.Dictionary<string, float>();
                         if (!layer.ShaderFloats.TryGetValue(p.Name, out float val)) val = p.Default;
-                        string valStr = GUILayout.TextField(val.ToString("F2"), GUILayout.Width(40));
-                        if (float.TryParse(valStr, out float nv) && System.Math.Abs(nv - val) > 0.0001f)
+                        string valStr = EditorFields.NumText(val.ToString("F2", CultureInfo.InvariantCulture), GUILayout.Width(40));
+                        if (EditorFields.TryParseFloat(valStr, out float nv) && System.Math.Abs(nv - val) > 0.0001f)
                         {
                             layer.ShaderFloats[p.Name] = Mathf.Clamp(nv, p.Min, p.Max);
                             changed = true;
@@ -1357,8 +1405,8 @@ namespace UnknownMod.Editor
         private static bool FloatField(string label, ref float value)
         {
             GUILayout.Label(label, GUILayout.Width(12));
-            string s = GUILayout.TextField(value.ToString("F2", CultureInfo.InvariantCulture), GUILayout.ExpandWidth(true));
-            if (float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out float newVal)
+            string s = EditorFields.NumText(value.ToString("F2", CultureInfo.InvariantCulture), GUILayout.ExpandWidth(true));
+            if (EditorFields.TryParseFloat(s, out float newVal)
                 && Mathf.Abs(newVal - value) > 0.001f)
             {
                 value = newVal;

@@ -72,5 +72,9 @@ namespace UnknownMod.Definitions
 
         /// <summary>Up to 6 card IDs (each doubled in-game).</summary>
         public List<string> CardIds = new();
+
+        /// <summary>Rarity used when an element slot is empty.</summary>
+        [JsonConverter(typeof(StringEnumConverter))]
+        public Enums.CardRarity RarityIfElementEmpty = Enums.CardRarity.Common;
     }
 }

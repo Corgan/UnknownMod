@@ -109,42 +109,12 @@ namespace UnknownMod.Editor
                     var item = d.Items[i];
                     GUILayout.BeginVertical(EditorStyles.CompactBox);
 
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label($"<b>#{i}</b>", EditorStyles.RichLabel, GUILayout.Width(30));
-                    GUILayout.FlexibleSpace();
-
-                    // Move up
-                    if (i > 0 && GUILayout.Button("\u2191", EditorStyles.MiniButton, GUILayout.Width(22)))
+                    var rowOp = EditorFields.RowHeader($"<b>#{i}</b>  {item.CardId}", i, d.Items.Count);
+                    if (EditorFields.ApplyRowOp(d.Items, i, rowOp))
                     {
-                        var tmp = d.Items[i];
-                        d.Items[i] = d.Items[i - 1];
-                        d.Items[i - 1] = tmp;
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
                         GUILayout.EndVertical();
                         break;
                     }
-                    // Move down
-                    if (i < d.Items.Count - 1 && GUILayout.Button("\u2193", EditorStyles.MiniButton, GUILayout.Width(22)))
-                    {
-                        var tmp = d.Items[i];
-                        d.Items[i] = d.Items[i + 1];
-                        d.Items[i + 1] = tmp;
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        GUILayout.EndVertical();
-                        break;
-                    }
-                    // Delete
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.Items.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        GUILayout.EndVertical();
-                        break;
-                    }
-                    GUILayout.EndHorizontal();
 
                     // Card reference
                     item.CardId = EditorFields.IdDropdown("Card ID", item.CardId, cardIds, $"loot_card_{i}", pickerMode: EntityPicker.Mode.Card);

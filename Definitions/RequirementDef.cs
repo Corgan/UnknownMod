@@ -29,6 +29,7 @@ namespace UnknownMod.Definitions
         public Enums.Zone RequirementZoneFinishTrackAlternate = Enums.Zone.None;
 
         // ── Card Reference ───────────────────────────────────────
+        public bool WitheredValeUniqueCheck = false;
         public string TrackCard = "";     // CardData ID
 
         // ── Visuals ──────────────────────────────────────────────

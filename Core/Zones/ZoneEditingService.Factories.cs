@@ -27,15 +27,21 @@ namespace UnknownMod.Core
             node.DisableRandom = d.DisableRandom;
             node.VisibleIfNotRequirement = d.VisibleIfNotRequirement;
             node.ExistsSku = d.ExistsSku ?? "";
+            if (!string.IsNullOrEmpty(d.NodeBackgroundSprite))
+                node.NodeBackgroundImg = DataHelper.FindGameSprite(d.NodeBackgroundSprite);
             node.SourceNodeName = "";
+            if (!string.IsNullOrEmpty(d.ReplacementEventId))
+                node.ReplacementEventIfSkuMissing = DataHelper.GetExistingEvent(d.ReplacementEventId);
+            if (!string.IsNullOrEmpty(d.ReplacementCombatId))
+                node.ReplacementCombatIfSkuMissing = DataHelper.GetExistingCombat(d.ReplacementCombatId);
             node.NodesConnected = new NodeData[0];
 
-            // Hero unlock gating
+            // Node is disabled while this hero is in the team (NodeData.ExistsPercent)
             if (!string.IsNullOrEmpty(d.HeroToDisableNodeWhenUnlockedId))
             {
                 var hero = DataHelper.GetSubClass(d.HeroToDisableNodeWhenUnlockedId);
                 if (hero != null)
-                    Traverse.Create(node).Field("heroToDisableNodeWhenUnlocked").SetValue(hero);
+                    Traverse.Create(node).Field("disableNodeIfHeroNotPresentInTeam").SetValue(hero);
             }
 
             // Conditional connection requirements

@@ -1,23 +1,32 @@
 {
   "NodeId": "myc_28",
-  "NodeName": "Test",
+  "NodeName": "The Mycelium Obelisk",
   "Description": "",
-  "PosX": 1.41886926,
-  "PosY": -3.2375586,
+  "PosX": 1.46054685,
+  "PosY": -3.24873066,
   "TravelDestination": false,
   "GoToTown": false,
   "ExistsPercent": 100,
-  "DisableCorruption": false,
+  "DisableCorruption": true,
   "DisableRandom": false,
   "VisibleIfNotRequirement": false,
   "NodeGround": "None",
   "NodeRequirementId": "",
-  "CombatIds": [
-    "cmyc_28"
-  ],
   "CombatTier": "T0",
-  "CombatPercent": -1,
-  "EventPercent": -1,
+  "CombatPercent": 0,
+  "EventIds": [
+    "e_myc_obelisk",
+    "e_myc_obelisk_tier2"
+  ],
+  "EventPercent": 100,
   "NodeEventTier": "T0",
+  "NodeEventPriority": [
+    1,
+    0
+  ],
+  "NodeEventPercent": [
+    100,
+    100
+  ],
   "Connections": []
 }

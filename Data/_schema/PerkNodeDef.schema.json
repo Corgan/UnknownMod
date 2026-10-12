@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PerkNodeDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "Type": {
+      "type": "integer"
+    },
+    "Column": {
+      "type": "integer"
+    },
+    "Row": {
+      "type": "integer"
+    },
+    "LockedInTown": {
+      "type": "boolean"
+    },
+    "NotStack": {
+      "type": "boolean"
+    },
+    "Cost": {
+      "type": "string",
+      "enum": [
+        "PerkCostBase",
+        "PerkCostAdvanced"
+      ]
+    },
+    "Perk": {
+      "type": "string"
+    },
+    "PerkRequired": {
+      "type": "string"
+    },
+    "PerksConnected": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "SpriteSource": {
+      "type": "string"
+    }
+  }
+}

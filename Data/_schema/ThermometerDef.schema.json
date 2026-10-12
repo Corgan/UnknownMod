@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ThermometerDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "ColorHex": {
+      "type": "string"
+    },
+    "GoldBonus": {
+      "type": "number"
+    },
+    "ExpBonus": {
+      "type": "number"
+    },
+    "CardBonus": {
+      "type": "integer"
+    },
+    "CardReward": {
+      "type": "boolean"
+    },
+    "ExpertiseBonus": {
+      "type": "integer"
+    },
+    "UiGold": {
+      "type": "integer"
+    },
+    "UiExp": {
+      "type": "integer"
+    },
+    "UiCard": {
+      "type": "integer"
+    }
+  }
+}

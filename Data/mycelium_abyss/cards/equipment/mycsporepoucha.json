@@ -1,0 +1,17 @@
+{
+  "Id": "mycsporepoucha",
+  "Name": "Spore Pouch",
+  "Description": "At the start of combat, apply <acb>4</acb> Spore Rot to all enemies.",
+  "CardClass": "Item",
+  "CardType": "Accesory",
+  "CardRarity": "Rare",
+  "SpriteSource": "myc_art_sporepouch",
+  "Item": {
+    "Activation": "BeginCombat",
+    "ItemTarget": "AllEnemy",
+    "AuracurseGain1": "myc_sporerot",
+    "AuracurseGainValue1": 4
+  },
+  "CardUpgraded": "A",
+  "BaseCardId": "mycsporepouch"
+}

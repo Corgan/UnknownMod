@@ -1,0 +1,44 @@
+{
+  "EventId": "e_myc_29",
+  "EventName": "The Overgrown Wagon",
+  "Description": "A merchant's wagon lies on its side across the tunnel, its canvas swallowed by pale fungus. Crates have burst open and the spilled cargo is sprouting. Something has been feeding on the driver's lantern oil: a thin trail of cold light leads away into the dark.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Search the cargo.",
+      "Action": 12,
+      "SsLootId": "myc_forage",
+      "SsGold": 30,
+      "FlHealFlat": -10,
+      "HasRoll": true,
+      "RollDC": 1,
+      "RollTarget": 3,
+      "RepeatForAllScouts": true,
+      "SsText": "Beneath the moldy canvas you find a sealed crate that the spores never reached: provisions, and a purse of coins.",
+      "FlText": "A cloud of spores bursts from the crate as you pry it open. Your lungs burn.",
+      "RollMode": 1
+    },
+    {
+      "ReplyText": "Break the wagon apart for its iron fittings.",
+      "Action": 23,
+      "SsGold": 50,
+      "FlHealFlat": -15,
+      "HasRoll": true,
+      "RollDC": 1,
+      "RollTarget": 3,
+      "RepeatForAllWarriors": true,
+      "SsText": "The rotted frame splinters easily. The iron fittings are still worth something to the right buyer.",
+      "FlText": "The frame collapses on top of you and the fungus drops its spores in a thick cloud."
+    },
+    {
+      "ReplyText": "Read the driver's logbook.",
+      "Action": 53,
+      "SsXP": 30,
+      "SsText": "The logbook describes every tunnel the driver crossed before the spores took him. You copy the safest routes."
+    }
+  ]
+}

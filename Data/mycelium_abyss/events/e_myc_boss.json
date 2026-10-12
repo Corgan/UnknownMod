@@ -1,0 +1,21 @@
+{
+  "EventId": "e_myc_boss",
+  "EventName": "The Mycelarch's Hoard",
+  "Description": "The Mycelarch's husk collapses into drifting spores, and the throne-roots go slack. Where the hivemind's heart once pulsed, the network has pushed its treasures to the surface: relics it digested, and trophies grown from its own flesh.",
+  "DescriptionAction": "Time to loot.",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Claim the Mycelarch's hoard.",
+      "Action": 12,
+      "SsText": "The roots part and the hoard is yours.",
+      "SsGold": 150,
+      "SsSupply": 1,
+      "SsXP": 100,
+      "SsLootId": "myc_bossloot"
+    }
+  ]
+}

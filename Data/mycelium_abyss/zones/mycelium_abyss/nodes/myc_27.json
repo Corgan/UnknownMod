@@ -13,7 +13,8 @@
   "NodeGround": "PoisonousAir",
   "NodeRequirementId": "",
   "CombatIds": [
-    "cmyc_8"
+    "cmyc_27",
+    "cmyc_w6"
   ],
   "CombatTier": "T4",
   "CombatPercent": 100,

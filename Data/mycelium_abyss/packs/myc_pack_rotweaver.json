@@ -1,0 +1,27 @@
+{
+  "PackId": "myc_pack_rotweaver",
+  "PackName": "Rotweaver",
+  "RequiredClassId": "",
+  "PackClass": "Scout",
+  "CardIds": [
+    "mycsporestrike",
+    "mycrootlash",
+    "mycsporeburst",
+    "rend",
+    "intimidate",
+    "piercinghowl",
+    "mycmold",
+    "mycparasiticbite"
+  ],
+  "SpecialCardIds": [
+    "mycrotharvest",
+    "mycsporecloud",
+    "mycoutbreak"
+  ],
+  "PerkIds": [
+    "mainperkpoison0",
+    "mainperkpoison1",
+    "mainperkdecay0",
+    "mainperkdecay1a"
+  ]
+}

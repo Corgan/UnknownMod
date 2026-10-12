@@ -1,0 +1,18 @@
+{
+  "CombatId": "emyc_33a",
+  "Description": "The shattered idol wakes the shrine's keepers.",
+  "NpcIds": [
+    "myc_blightcaller",
+    "myc_lurker",
+    "myc_lurker",
+    ""
+  ],
+  "CombatTier": "T3",
+  "Background": "Velkarath_Cave",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

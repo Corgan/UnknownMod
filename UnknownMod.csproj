@@ -13,6 +13,7 @@
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
     <RootNamespace>UnknownMod</RootNamespace>
+    <GameDir Condition="'$(GameDir)' == ''">C:/Program Files (x86)/Steam/steamapps/common/Across the Obelisk</GameDir>
     <DefaultItemExcludes>$(DefaultItemExcludes);Data\**\scripts\**</DefaultItemExcludes>
   </PropertyGroup>
   
@@ -39,6 +40,10 @@
     </Reference>
     <Reference Include="Assembly-CSharp">
       <HintPath>../!libs/Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="Mono.Cecil">
+      <HintPath>$(GameDir)/BepInEx/core/Mono.Cecil.dll</HintPath>
+      <Private>false</Private>
     </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>../!libs/Unity.TextMeshPro.dll</HintPath>
@@ -72,8 +77,13 @@
     </Reference>
   </ItemGroup>
 
-  <Target Name="PostBuild" AfterTargets="Build">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="D:/Steam/steamapps/common/Across the Obelisk/BepInEx/plugins"/>
+  <ItemGroup>
+    <EmbeddedResource Include="Editor\Sprite\Resources\portrait_border_large.png" LogicalName="UnknownMod.portrait_border_large.png" />
+    <EmbeddedResource Include="Editor\Sprite\Resources\portrait_border_small.png" LogicalName="UnknownMod.portrait_border_small.png" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="Build" Condition="Exists('$(GameDir)/BepInEx')">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)/BepInEx/plugins"/>
   </Target>
 
 </Project>

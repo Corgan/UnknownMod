@@ -1,0 +1,9 @@
+{
+  "Id": "mainperkmycsym2a",
+  "CardClass": "None",
+  "MainPerk": true,
+  "IconTextValue": "+1",
+  "SpriteSource": "aura:myc_symbiosis",
+  "AuracurseBonus": "myc_symbiosis",
+  "AuracurseBonusValue": 1
+}

@@ -1,6 +1,6 @@
 {
   "NodeId": "myc_20",
-  "NodeName": "Broodmother's Nest",
+  "NodeName": "The Last Hollow",
   "Description": "",
   "PosX": 4.6,
   "PosY": -1.7,
@@ -12,13 +12,25 @@
   "VisibleIfNotRequirement": false,
   "NodeGround": "None",
   "NodeRequirementId": "",
-  "CombatIds": [
-    "cmyc_9"
+  "CombatTier": "T0",
+  "CombatPercent": 0,
+  "EventIds": [
+    "e_myc_39",
+    "e_myc_20",
+    "e_myc_34"
   ],
-  "CombatTier": "T4",
-  "CombatPercent": 100,
-  "EventPercent": 0,
+  "EventPercent": 100,
   "NodeEventTier": "T0",
+  "NodeEventPriority": [
+    0,
+    1,
+    1
+  ],
+  "NodeEventPercent": [
+    100,
+    100,
+    100
+  ],
   "Connections": [
     "myc_25"
   ]

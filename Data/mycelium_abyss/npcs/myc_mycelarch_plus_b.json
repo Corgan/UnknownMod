@@ -3,23 +3,23 @@
   "Name": "The Mycelarch",
   "Description": "",
   "SpriteSource": "elderdryad",
-  "Hp": 832,
+  "Hp": 672,
   "Speed": 16,
   "Energy": 10,
   "EnergyTurn": 0,
   "CardsInHand": 4,
-  "ResSlash": 29,
-  "ResBlunt": 24,
-  "ResPierce": 24,
-  "ResFire": -6,
-  "ResCold": 29,
-  "ResLight": 4,
-  "ResMind": 39,
-  "ResHoly": -1,
-  "ResShadow": 49,
+  "ResSlash": 34,
+  "ResBlunt": 29,
+  "ResPierce": 29,
+  "ResFire": -1,
+  "ResCold": 34,
+  "ResLight": 9,
+  "ResMind": 44,
+  "ResHoly": 4,
+  "ResShadow": 54,
   "AiCards": [
     {
-      "CardId": "myc_toxicraina",
+      "CardId": "myctoxicraina",
       "Priority": 5,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -34,7 +34,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_fungalbarriera",
+      "CardId": "mycfungalbarriera",
       "Priority": 6,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -49,7 +49,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_sporevolleya",
+      "CardId": "mycsporevolleya",
       "Priority": 4,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -64,7 +64,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_sporespawna",
+      "CardId": "mycsporespawna",
       "Priority": 3,
       "AddCardRound": 1,
       "OnlyCastIf": "Always",
@@ -79,7 +79,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_hallucinobursta",
+      "CardId": "mychallucinobursta",
       "Priority": 7,
       "AddCardRound": 3,
       "OnlyCastIf": "Always",
@@ -94,7 +94,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_pandemica",
+      "CardId": "mycpandemica",
       "Priority": 6,
       "AddCardRound": 3,
       "OnlyCastIf": "Always",
@@ -109,7 +109,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_neurallinka",
+      "CardId": "mycneurallinka",
       "Priority": 8,
       "AddCardRound": 3,
       "OnlyCastIf": "TargetHasNotAuraCurse",
@@ -119,12 +119,12 @@
       "PercentToCast": 0.0,
       "StartsAtObeliskMadnessLevel": 0,
       "StartsAtSingularityMadnessLevel": 0,
-      "AuracurseCastIf": "",
+      "AuracurseCastIf": "powerful",
       "SecondOnlyCastIf": "Always",
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_myceliumapoca",
+      "CardId": "mycmyceliumapoca",
       "Priority": 9,
       "AddCardRound": 6,
       "OnlyCastIf": "Always",
@@ -140,8 +140,8 @@
     }
   ],
   "XpReward": 170,
-  "GoldReward": 110,
-  "TierReward": 3,
+  "GoldReward": 140,
+  "TierReward": 9,
   "IsBoss": true,
   "IsNamed": false,
   "FinishCombatOnDead": true,
@@ -150,7 +150,7 @@
   "PreferredPos": "Front",
   "Immunities": [
     "paralyze",
-    "stun",
+    "sleep",
     "doom"
   ],
   "UpgradedMobId": "",

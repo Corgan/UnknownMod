@@ -138,6 +138,54 @@ namespace UnknownMod.Core
                         .ToArray();
                 }
 
+                // Second pass: requirements can reference nodes built after this node
+                foreach (var d in patch.Nodes.Values)
+                {
+                    if (!newNodes.TryGetValue(d.NodeId, out var nd)) continue;
+                    if (d.ConnectionRequirements == null || d.ConnectionRequirements.Count == 0) continue;
+                    NodeData Resolve(string id) => string.IsNullOrEmpty(id) ? null : (newNodes.TryGetValue(id, out var n) ? n : DataHelper.GetExistingNode(id));
+                    nd.NodesConnectedRequirement = d.ConnectionRequirements.Select(cr => new NodesConnectedRequirement
+                    {
+                        NodeData = Resolve(cr.TargetNodeId),
+                        ConectionRequeriment = string.IsNullOrEmpty(cr.RequirementId) ? null : DataHelper.GetEventRequirement(cr.RequirementId),
+                        ConectionIfNotNode = Resolve(cr.IfNotNodeId),
+                    }).ToArray();
+                }
+
+                // Untouched nodes still point at the NodeData objects this patch just replaced
+                var nodeSource = Traverse.Create(Globals.Instance).Field<Dictionary<string, NodeData>>("_NodeDataSource").Value;
+                if (nodeSource != null && newNodes.Count > 0)
+                {
+                    foreach (var other in nodeSource.Values)
+                    {
+                        if (other == null || newNodes.ContainsKey(other.NodeId)) continue;
+                        var conn = other.NodesConnected;
+                        if (conn != null && conn.Any(c => c != null && newNodes.ContainsKey(c.NodeId)))
+                            other.NodesConnected = conn.Select(c => c != null && newNodes.TryGetValue(c.NodeId, out var rn) ? rn : c).ToArray();
+                        var reqs = other.NodesConnectedRequirement;
+                        if (reqs == null) continue;
+                        foreach (var rq in reqs)
+                        {
+                            if (rq == null) continue;
+                            if (rq.NodeData != null && newNodes.TryGetValue(rq.NodeData.NodeId, out var r1)) rq.NodeData = r1;
+                            if (rq.ConectionIfNotNode != null && newNodes.TryGetValue(rq.ConectionIfNotNode.NodeId, out var r2)) rq.ConectionIfNotNode = r2;
+                        }
+                    }
+                }
+
+                // The map is patched from one effective patch per zone, so a second mod patching the same zone must merge, not replace
+                if (ModRegistry.LoadedZonePatches.TryGetValue(patch.TargetZoneId, out var prior) && !ReferenceEquals(prior, patch))
+                {
+                    var merged = new ZonePatchDef { TargetZoneId = patch.TargetZoneId };
+                    foreach (var kv in prior.Nodes) merged.Nodes[kv.Key] = kv.Value;
+                    foreach (var kv in prior.Roads) merged.Roads[kv.Key] = kv.Value;
+                    foreach (var kv in patch.Nodes) merged.Nodes[kv.Key] = kv.Value;
+                    foreach (var kv in patch.Roads) merged.Roads[kv.Key] = kv.Value;
+                    ModRegistry.LoadedZonePatches[patch.TargetZoneId] = merged;
+                }
+                else
+                    ModRegistry.LoadedZonePatches[patch.TargetZoneId] = patch;
+
                 Plugin.Log.LogInfo($"[Builder] Zone patch '{patch.TargetZoneId}' applied: " +
                     $"{newNodes.Count} nodes, {patch.Roads.Count} roads");
             }
@@ -167,15 +215,21 @@ namespace UnknownMod.Core
             node.DisableRandom = d.DisableRandom;
             node.VisibleIfNotRequirement = d.VisibleIfNotRequirement;
             node.ExistsSku = d.ExistsSku ?? "";
+            if (!string.IsNullOrEmpty(d.NodeBackgroundSprite))
+                node.NodeBackgroundImg = DataHelper.FindGameSprite(d.NodeBackgroundSprite);
             node.SourceNodeName = "";
+            if (!string.IsNullOrEmpty(d.ReplacementEventId))
+                node.ReplacementEventIfSkuMissing = DataHelper.GetExistingEvent(d.ReplacementEventId);
+            if (!string.IsNullOrEmpty(d.ReplacementCombatId))
+                node.ReplacementCombatIfSkuMissing = DataHelper.GetExistingCombat(d.ReplacementCombatId);
             node.NodesConnected = new NodeData[0];
 
-            // Hero unlock gating
+            // Node is disabled while this hero is in the team (NodeData.ExistsPercent)
             if (!string.IsNullOrEmpty(d.HeroToDisableNodeWhenUnlockedId))
             {
                 var hero = DataHelper.GetSubClass(d.HeroToDisableNodeWhenUnlockedId);
                 if (hero != null)
-                    Traverse.Create(node).Field("heroToDisableNodeWhenUnlocked").SetValue(hero);
+                    Traverse.Create(node).Field("disableNodeIfHeroNotPresentInTeam").SetValue(hero);
             }
 
             // Conditional connection requirements

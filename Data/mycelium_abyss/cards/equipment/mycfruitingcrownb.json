@@ -1,0 +1,18 @@
+{
+  "Id": "mycfruitingcrownb",
+  "Name": "Fruiting Crown",
+  "Description": "Healing done <acb>+2</acb>. Max HP <acb>+10</acb>. Mind resistance <acb>+10%</acb>.",
+  "CardClass": "Item",
+  "CardType": "Armor",
+  "CardRarity": "Epic",
+  "SpriteSource": "myc_art_fruitingcrown",
+  "Item": {
+    "Activation": "PreBeginCombat",
+    "HealFlatBonus": 2,
+    "MaxHealth": 10,
+    "ResistModified1": "Mind",
+    "ResistModifiedValue1": 10
+  },
+  "CardUpgraded": "B",
+  "BaseCardId": "mycfruitingcrown"
+}

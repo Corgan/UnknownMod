@@ -25,6 +25,17 @@ namespace UnknownMod.Definitions
         public int ExistsPercent = 100;
         public string ExistsSku = "";
         public bool ShouldSerializeExistsSku() => !string.IsNullOrEmpty(ExistsSku);
+
+        /// <summary>Event used instead of this node's events when the player lacks the DLC named in ExistsSku.</summary>
+        public string ReplacementEventId = "";
+        public bool ShouldSerializeReplacementEventId() => !string.IsNullOrEmpty(ReplacementEventId);
+
+        /// <summary>Combat used instead of this node's combats when the player lacks the DLC named in ExistsSku.</summary>
+        public string ReplacementCombatId = "";
+        public bool ShouldSerializeReplacementCombatId() => !string.IsNullOrEmpty(ReplacementCombatId);
+        /// <summary>Name of a game sprite drawn behind the node icon on the map (NodeData.NodeBackgroundImg).</summary>
+        public string NodeBackgroundSprite = "";
+        public bool ShouldSerializeNodeBackgroundSprite() => !string.IsNullOrEmpty(NodeBackgroundSprite);
         public bool DisableCorruption = false;
         public bool DisableRandom = false;
         public bool VisibleIfNotRequirement = false;
@@ -44,9 +55,6 @@ namespace UnknownMod.Definitions
         public List<string> CombatIds = new();
         public bool ShouldSerializeCombatIds() => CombatIds.Count > 0;
 
-        /// <summary>Backward compat: old format wrote a single "CombatId" string.</summary>
-        [JsonProperty("CombatId")]
-        private string _legacyCombatId { set { if (!string.IsNullOrEmpty(value) && CombatIds.Count == 0) CombatIds.Add(value); } }
 
         /// <summary>Convenience: get/set first combat ID (most nodes have 0-1 combats).</summary>
         [JsonIgnore]
@@ -70,9 +78,6 @@ namespace UnknownMod.Definitions
         public List<string> EventIds = new();
         public bool ShouldSerializeEventIds() => EventIds.Count > 0;
 
-        /// <summary>Backward compat: old format wrote a single "EventId" string.</summary>
-        [JsonProperty("EventId")]
-        private string _legacyEventId { set { if (!string.IsNullOrEmpty(value) && EventIds.Count == 0) EventIds.Add(value); } }
 
         /// <summary>Convenience: get/set first event ID (most nodes have 0-1 events).</summary>
         [JsonIgnore]

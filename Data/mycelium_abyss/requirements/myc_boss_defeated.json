@@ -1,0 +1,13 @@
+{
+  "Id": "myc_boss_defeated",
+  "RequirementName": "Mycelarch Defeated",
+  "Description": "The heart of the Mycelium has been silenced. The way to the obelisk is open.",
+  "AssignToPlayerAtBegin": false,
+  "RequirementTrack": false,
+  "ItemTrack": false,
+  "RequirementZoneFinishTrack": "None",
+  "RequirementZoneFinishTrackAlternate": "None",
+  "WitheredValeUniqueCheck": false,
+  "TrackCard": "",
+  "SpriteSource": ""
+}

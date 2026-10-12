@@ -2,8 +2,8 @@
   "NodeId": "myc_16",
   "NodeName": "Threshold of the Hivemind",
   "Description": "",
-  "PosX": 4.5,
-  "PosY": 2.4,
+  "PosX": 4.569336,
+  "PosY": 2.44589853,
   "TravelDestination": false,
   "GoToTown": false,
   "ExistsPercent": 100,
@@ -13,7 +13,7 @@
   "NodeGround": "None",
   "NodeRequirementId": "",
   "CombatIds": [
-    "cmyc_12"
+    "cmyc_16"
   ],
   "CombatTier": "T4",
   "CombatPercent": 100,
@@ -21,6 +21,6 @@
   "NodeEventTier": "T0",
   "Connections": [
     "myc_21",
-    "myc_22"
+    "myc_31"
   ]
 }

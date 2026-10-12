@@ -2,178 +2,301 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using UnityEngine;
+using UnknownMod.Runtime;
 
 namespace UnknownMod.Definitions
 {
     // ───────────────────────────────────────────────────────────────
-    //  CHARACTER OVERRIDE (NPC / Hero Skin visual customization)
+    //  COMPILED CHARACTER VISUAL GRAPH (new schema)
     // ───────────────────────────────────────────────────────────────
 
-    /// <summary>Whether a CharacterOverrideDef targets an NPC or a Hero Skin.</summary>
-    public enum SkinTargetType { NPC, HeroSkin, Item }
+    public enum VisualAttachmentKind
+    {
+        RigidAttachment,
+        ExtractedSourceSubRig,
+        HostBoundContent,
+        FullPresentationReplacement
+    }
+
+    public enum VisualFacingPolicy
+    {
+        InheritHost,
+        MirrorX,
+        MirrorY,
+        Authored
+    }
+
+    public enum VisualSortingStrategy
+    {
+        HostLayer,
+        ExplicitLayerOrder,
+        SourceLayerOffset
+    }
 
     /// <summary>
-    /// Top-level definition for all visual overrides on an NPC or Hero Skin.
-    /// Serialized as one JSON file per entity. Sections:
-    ///   - Grafts: ordered list of sprite branch imports from other NPCs/skins
-    ///   - BoneOverrides: per-bone transform/visual overrides on the host skeleton
-    ///   - RemovedBones: structural modifications
-    ///   - CustomSprites: texture replacements
-    ///   - Model: scale, offset, flip, tint, alpha
-    ///   - AnimOverrides: per-clip keyframe overrides (host skeleton only)
+    /// Where a node's sprites sit in the character's draw stack. The stack is the host's own sprites in the game's
+    /// order (front to back) with each node inserted as one block, so placement is independent of raw sort numbers.
+    /// Auto is the legacy behaviour: in front when OrderOffset &gt;= 0, otherwise behind.
     /// </summary>
-    [Serializable]
-    public class CharacterOverrideDef : IModEntity
+    public enum VisualPlacement
     {
-        // ── Identity ─────────────────────────────────────────────
+        Auto,
+        Front,
+        Back,
+        InFrontOfPart,
+        BehindPart
+    }
+
+    public enum VisualAnimationMode
+    {
+        Static,
+        HostBound,
+        SourceSynced,
+        Procedural
+    }
+
+    public enum VisualAnimationFallback
+    {
+        None,
+        StaticPose,
+        HostBound,
+        SkipNode
+    }
+
+    /// <summary>
+    /// What a graft rotates and scales about. SpriteCenter pivots on the middle of the grafted sprites, so the gizmo sits on what you see.
+    /// Anchor is the legacy behaviour (the source anchor bone, usually the source root). Missing in old files, which therefore stay Anchor until migrated.
+    /// </summary>
+    public enum VisualPivotMode
+    {
+        Anchor,
+        SpriteCenter
+    }
+
+    public enum VisualAnchorPolicy
+    {
+        LockedAnchor,
+        PreserveSourceMotion
+    }
+
+    public enum RigEffectType
+    {
+        // Colour (multiplies the rig tint)
+        Pulse, Rainbow, Flicker, FadePulse,
+        // Transform (offsets the rig root)
+        Float, Shake, Breathe, Sway,
+        // Particle auras
+        Sparkles, Embers, Spores, Smoke, Snow, Bubbles
+    }
+
+    /// <summary>One live effect on a whole rig. Intensity and Speed scale each type's built-in amplitude and rate (1 = default).</summary>
+    [Serializable]
+    public class RigEffectDef
+    {
+        [JsonConverter(typeof(StringEnumConverter))]
+        public RigEffectType Type = RigEffectType.Pulse;
+        /// <summary>Effect colour (HTML). Empty uses the type's default. Ignored by Rainbow and the transform effects.</summary>
+        public string ColorHex = "";
+        public float Intensity = 1f;
+        public float Speed = 1f;
+        public bool ShouldSerializeColorHex() => !string.IsNullOrEmpty(ColorHex);
+    }
+
+    [Serializable]
+    public class CharacterVisualDef : IModEntity
+    {
         public string Id = "";
         [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
+        public string BasePresentation = "";
 
-        [JsonConverter(typeof(StringEnumConverter))]
-        public SkinTargetType SkinTarget = SkinTargetType.NPC;
-        public bool ShouldSerializeSkinTarget() => SkinTarget != SkinTargetType.NPC;
-
-        /// <summary>Base-game NPC/Skin ID providing the skeleton, animations, and default sprites.</summary>
-        public string BaseSprite = "";
-        public bool ShouldSerializeBaseSprite() => !string.IsNullOrEmpty(BaseSprite);
-
-        // ── Grafts ───────────────────────────────────────────────
-        /// <summary>Ordered list of sprite branch imports from other NPCs/skins.
-        /// Each graft clones the source sprite's bone branch as a GraftPuppet
-        /// with its own Animator synced via AnimatorStateMirror.</summary>
-        public List<GraftDef> Grafts = new();
-        public bool ShouldSerializeGrafts() => Grafts.Count > 0;
-
-        // ── Host Bone Overrides ──────────────────────────────────
-        /// <summary>Per-bone transform/visual overrides for the host skeleton.
-        /// Additive for Animator-driven bones, absolute for added bones.</summary>
-        public Dictionary<string, BoneOverride> BoneOverrides = new();
-
-        public HashSet<string> RemovedBones = new();
-        public bool ShouldSerializeRemovedBones() => RemovedBones.Count > 0;
-
-        // ── Custom Sprites ───────────────────────────────────────
-        public string Spritesheet = "";
-        public Dictionary<string, SpriteDef> CustomSprites = new();
-
-        // ── Model ────────────────────────────────────────────────
-        public ModelOverrides Model = new();
-        public bool ShouldSerializeModel() => !Model.IsDefault();
-
-        // ── Animation Overrides (host skeleton only) ─────────────
-        /// <summary>Per-animation-clip keyframe overrides. Key = clip name.</summary>
-        public Dictionary<string, AnimOverrideDef> AnimOverrides = new();
-
-    }
-
-    // ───────────────────────────────────────────────────────────────
-    //  GRAFT DEFINITION (self-contained graft unit)
-    // ───────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Defines a sprite branch import from another NPC/skin. At runtime, creates
-    /// a GraftPuppet with its own Animator synced to the host via AnimatorStateMirror.
-    /// All overrides within the graft are scoped to this GraftDef.
-    /// </summary>
-    [Serializable]
-    public class GraftDef
-    {
-        /// <summary>Host bone this graft attaches to.</summary>
-        public string TargetBone = "";
-
-        /// <summary>Source in "npc_id/bone_name" or "skin_id/bone_name" format.</summary>
-        public string Source = "";
-
-        /// <summary>Hide the original sprite at the target bone?</summary>
-        public bool ReplaceTarget = true;
-
-        // ── Scoped overrides (only affect bones within this graft) ──
-        public Dictionary<string, BoneOverride> BoneOverrides = new();
-        public bool ShouldSerializeBoneOverrides() => BoneOverrides.Count > 0;
-
-        public Dictionary<string, SpriteDef> CustomSprites = new();
-        public bool ShouldSerializeCustomSprites() => CustomSprites.Count > 0;
-
-        public Dictionary<string, AnimOverrideDef> AnimOverrides = new();
-        public bool ShouldSerializeAnimOverrides() => AnimOverrides.Count > 0;
-    }
-
-    // ───────────────────────────────────────────────────────────────
-    //  MODEL OVERRIDES (scale, offset, flip, tint, alpha)
-    // ───────────────────────────────────────────────────────────────
-
-    [Serializable]
-    public class ModelOverrides
-    {
-        public float Scale = 1f;
-        public float OffsetX = 0f;
-        public float OffsetY = 0f;
+        /// <summary>Mirrors the whole model horizontally. Use it to turn a monster rig into a hero (or the reverse); a graft with no nodes is enough.</summary>
         public bool FlipX = false;
-        public bool FlipY = false;
+        public bool ShouldSerializeFlipX() => FlipX;
+
+        /// <summary>Whole-rig colour tint (HTML colour, multiplied into every renderer) and opacity 0..1.</summary>
         public string TintHex = "";
         public float Alpha = 1f;
+        public bool ShouldSerializeTintHex() => !string.IsNullOrEmpty(TintHex);
+        public bool ShouldSerializeAlpha() => !Mathf.Approximately(Alpha, 1f);
 
-        public bool IsDefault() =>
-            Scale == 1f && OffsetX == 0f && OffsetY == 0f &&
-            !FlipX && !FlipY &&
-            string.IsNullOrEmpty(TintHex) && Alpha >= 1f;
+        /// <summary>Whole-rig hue rotation in degrees (-180..180). Unlike Tint it shifts the existing colours instead of multiplying them.</summary>
+        public float HueShift = 0f;
+        public bool ShouldSerializeHueShift() => !Mathf.Approximately(HueShift, 0f);
+
+        /// <summary>Animated colour, motion and particle effects applied to the whole rig.</summary>
+        public List<RigEffectDef> Effects = new();
+        public bool ShouldSerializeEffects() => Effects != null && Effects.Count > 0;
+
+        public List<VisualNodeDef> Nodes = new();
+
+        /// <summary>Edits to the host rig's own transforms (bones and sprite parts): offset, rotate, scale, tint and effects. Applied on top of the animation every frame.</summary>
+        public List<HostPartDef> HostParts = new();
+        public bool ShouldSerializeHostParts() => HostParts != null && HostParts.Count > 0;
+
+        /// <summary>Canonical host paths of SpriteRenderers to keep disabled while this graph is applied
+        /// (replaces the host sprite a node stands in for). Re-enforced every frame.</summary>
+        public List<CanonicalTransformRef> HostHiddenRenderers = new();
+        public bool ShouldSerializeHostHiddenRenderers() => HostHiddenRenderers != null && HostHiddenRenderers.Count > 0;
+
+        public void Normalize()
+        {
+            if (Nodes == null) Nodes = new List<VisualNodeDef>();
+            if (Effects == null) Effects = new List<RigEffectDef>();
+            Effects.RemoveAll(e => e == null);
+            if (HostHiddenRenderers == null) HostHiddenRenderers = new List<CanonicalTransformRef>();
+            for (int i = 0; i < HostHiddenRenderers.Count; i++)
+                if (HostHiddenRenderers[i] == null) HostHiddenRenderers[i] = new CanonicalTransformRef();
+            if (HostParts == null) HostParts = new List<HostPartDef>();
+            HostParts.RemoveAll(p => p == null);
+            foreach (var part in HostParts) part.Normalize();
+            foreach (var node in Nodes)
+            {
+                if (node == null) continue;
+                if (node.HostSocketRef == null) node.HostSocketRef = new CanonicalTransformRef();
+                if (node.SourceAnchorRef == null) node.SourceAnchorRef = new CanonicalTransformRef();
+                if (node.SourceSubtreeRef == null) node.SourceSubtreeRef = new CanonicalTransformRef();
+                if (node.RendererRefs == null) node.RendererRefs = new List<CanonicalTransformRef>();
+                if (node.LocalAttachmentTransform == null) node.LocalAttachmentTransform = new LocalAttachmentTransform();
+                if (node.SortingPolicy == null) node.SortingPolicy = new VisualSortingPolicy();
+                if (node.AnimationPolicy == null) node.AnimationPolicy = new AnimationPolicyDef();
+                if (node.AnimationPolicy.ClipMap == null) node.AnimationPolicy.ClipMap = new Dictionary<string, string>();
+                if (node.Overrides == null) node.Overrides = new VisualNodeOverrides();
+                for (int i = node.RendererRefs.Count - 1; i >= 0; i--)
+                    if (node.RendererRefs[i] == null) node.RendererRefs[i] = new CanonicalTransformRef();
+            }
+        }
     }
 
+    /// <summary>An edit to one transform of the host rig. Position, rotation and scale are offsets from whatever the animation produces, in the parent's space.
+    /// Tint, opacity and effects apply to the part's sprites and everything beneath it.</summary>
     [Serializable]
-    public class BoneOverride
+    public class HostPartDef
     {
-        public float PosX = 0f;
-        public float PosY = 0f;
+        public CanonicalTransformRef HostRef = new();
+        public float PositionX = 0f;
+        public float PositionY = 0f;
         public float Rotation = 0f;
         public float ScaleX = 1f;
         public float ScaleY = 1f;
-        public bool Visible = true;
-        public int SortingOffset = 0;
-        public string ColorHex = "";
-        public bool FlipX = false;
-        public bool FlipY = false;
+        public float HueShift = 0f;
+        public string TintHex = "";
         public float Alpha = 1f;
-        /// <summary>Pivot X override (0–1). -1 means use original sprite pivot.</summary>
-        public float PivotX = -1f;
-        /// <summary>Pivot Y override (0–1). -1 means use original sprite pivot.</summary>
-        public float PivotY = -1f;
+        public List<RigEffectDef> Effects = new();
+
+        public bool ShouldSerializePositionX() => !Mathf.Approximately(PositionX, 0f);
+        public bool ShouldSerializePositionY() => !Mathf.Approximately(PositionY, 0f);
+        public bool ShouldSerializeRotation() => !Mathf.Approximately(Rotation, 0f);
+        public bool ShouldSerializeScaleX() => !Mathf.Approximately(ScaleX, 1f);
+        public bool ShouldSerializeScaleY() => !Mathf.Approximately(ScaleY, 1f);
+        public bool ShouldSerializeTintHex() => !string.IsNullOrEmpty(TintHex);
+        public bool ShouldSerializeAlpha() => !Mathf.Approximately(Alpha, 1f);
+        public bool ShouldSerializeHueShift() => !Mathf.Approximately(HueShift, 0f);
+        public bool ShouldSerializeEffects() => Effects != null && Effects.Count > 0;
+
+        /// <summary>True when the part changes nothing, so it can be dropped without altering the rig.</summary>
+        public bool IsNeutral()
+        {
+            return Mathf.Approximately(PositionX, 0f) && Mathf.Approximately(PositionY, 0f) && Mathf.Approximately(Rotation, 0f)
+                && Mathf.Approximately(ScaleX, 1f) && Mathf.Approximately(ScaleY, 1f)
+                && string.IsNullOrEmpty(TintHex) && Mathf.Approximately(Alpha, 1f) && Mathf.Approximately(HueShift, 0f) && (Effects == null || Effects.Count == 0);
+        }
+
+        public void ResetTransform() { PositionX = 0f; PositionY = 0f; Rotation = 0f; ScaleX = 1f; ScaleY = 1f; }
+
+        public void Normalize()
+        {
+            if (HostRef == null) HostRef = new CanonicalTransformRef();
+            if (Effects == null) Effects = new List<RigEffectDef>();
+            Effects.RemoveAll(e => e == null);
+        }
     }
 
     [Serializable]
-    public class SpriteDef
+    public class VisualNodeDef
     {
-        public string ImagePath = "";
-        public float[] Rect = null;
-        public float PivotX = 0.5f;
-        public float PivotY = 0.5f;
-        public float PPU = 0f;
+        public string NodeId = "";
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public VisualAttachmentKind AttachmentKind = VisualAttachmentKind.RigidAttachment;
+
+        public CanonicalTransformRef HostSocketRef = new();
+        public string SourcePrefabRef = "";
+        public CanonicalTransformRef SourceAnchorRef = new();
+        public CanonicalTransformRef SourceSubtreeRef = new();
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public VisualPivotMode Pivot = VisualPivotMode.Anchor;
+        public bool ShouldSerializePivot() => Pivot != VisualPivotMode.Anchor;
+
+        public List<CanonicalTransformRef> RendererRefs = new();
+        public LocalAttachmentTransform LocalAttachmentTransform = new();
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public VisualFacingPolicy FacingPolicy = VisualFacingPolicy.InheritHost;
+
+        public VisualSortingPolicy SortingPolicy = new();
+        public AnimationPolicyDef AnimationPolicy = new();
+        public VisualNodeOverrides Overrides = new();
     }
 
-    /// <summary>Per-clip animation override. Stores bone keyframes for one animation clip.</summary>
     [Serializable]
-    public class AnimOverrideDef
+    public class CanonicalTransformRef
     {
-        public string ClipName = "";
-        /// <summary>Key = bone name, Value = list of keyframes sorted by Time.</summary>
-        public Dictionary<string, List<BoneKeyframe>> BoneKeyframes = new();
+        public string Path = "";
     }
 
-    /// <summary>A single keyframe for a bone within an animation override.</summary>
     [Serializable]
-    public class BoneKeyframe
+    public class LocalAttachmentTransform
     {
-        /// <summary>Normalized time within the clip (0 = start, 1 = end).</summary>
-        public float Time = 0f;
-        public float PosX = 0f;
-        public float PosY = 0f;
+        public float PositionX = 0f;
+        public float PositionY = 0f;
         public float Rotation = 0f;
         public float ScaleX = 1f;
         public float ScaleY = 1f;
     }
 
-    // ───────────────────────────────────────────────────────────────
-    //  VALIDATION
-    // ───────────────────────────────────────────────────────────────
+    [Serializable]
+    public class VisualSortingPolicy
+    {
+        [JsonConverter(typeof(StringEnumConverter))]
+        public VisualSortingStrategy Strategy = VisualSortingStrategy.HostLayer;
+        public int Layer = 0;
+        public int Order = 0;
+        public int OrderOffset = 0;
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public VisualPlacement Placement = VisualPlacement.Auto;
+        /// <summary>Canonical path of the host SpriteRenderer used by InFrontOfPart / BehindPart.</summary>
+        public string ReferencePath = "";
+    }
+
+    [Serializable]
+    public class AnimationPolicyDef
+    {
+        [JsonConverter(typeof(StringEnumConverter))]
+        public VisualAnimationMode Mode = VisualAnimationMode.Static;
+        public Dictionary<string, string> ClipMap = new();
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public VisualAnimationFallback Fallback = VisualAnimationFallback.None;
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        public VisualAnchorPolicy AnchorPolicy = VisualAnchorPolicy.LockedAnchor;
+        public string ProceduralControllerRef = "";
+    }
+
+    [Serializable]
+    public class VisualNodeOverrides
+    {
+        public bool Visible = true;
+        public string TintHex = "";
+        public float Alpha = 1f;
+        public float Scale = 1f;
+        public float HueShift = 0f;
+        public bool ShouldSerializeHueShift() => !Mathf.Approximately(HueShift, 0f);
+    }
+
 
     public enum DiagSeverity { Error, Warning, Info }
 
@@ -184,113 +307,5 @@ namespace UnknownMod.Definitions
         public string Message;
         public DiagMessage(DiagSeverity sev, string msg) { Severity = sev; Message = msg; }
         public override string ToString() => $"[{Severity}] {Message}";
-    }
-
-    public static class OverrideValidator
-    {
-        /// <summary>Validate a CharacterOverrideDef and return a list of diagnostics.</summary>
-        public static List<DiagMessage> Validate(CharacterOverrideDef ovr, ICollection<string> knownBoneNames = null)
-        {
-            var diags = new List<DiagMessage>();
-            if (ovr == null) { diags.Add(new DiagMessage(DiagSeverity.Error, "Override definition is null.")); return diags; }
-
-            // ── Identity ──
-            if (string.IsNullOrEmpty(ovr.Id))
-                diags.Add(new DiagMessage(DiagSeverity.Error, "Id is empty."));
-
-            // ── Grafts ──
-            for (int i = 0; i < ovr.Grafts.Count; i++)
-            {
-                var g = ovr.Grafts[i];
-                string prefix = $"Graft #{i + 1}";
-                if (string.IsNullOrEmpty(g.TargetBone))
-                    diags.Add(new DiagMessage(DiagSeverity.Error, $"{prefix}: TargetBone is empty."));
-                else if (knownBoneNames != null && !knownBoneNames.Contains(g.TargetBone))
-                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{prefix}: TargetBone '{g.TargetBone}' not found in host skeleton."));
-                if (string.IsNullOrEmpty(g.Source))
-                    diags.Add(new DiagMessage(DiagSeverity.Error, $"{prefix}: Source is empty."));
-                ValidateBoneOverrides(g.BoneOverrides, $"{prefix} BoneOverrides", diags);
-                ValidateCustomSprites(g.CustomSprites, $"{prefix} CustomSprites", diags);
-            }
-
-            // Check duplicate graft targets
-            var graftTargets = new HashSet<string>();
-            for (int i = 0; i < ovr.Grafts.Count; i++)
-            {
-                var tb = ovr.Grafts[i].TargetBone;
-                if (!string.IsNullOrEmpty(tb) && !graftTargets.Add(tb))
-                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"Graft #{i + 1}: duplicate TargetBone '{tb}' (multiple grafts on same bone)."));
-            }
-
-            // ── Host BoneOverrides ──
-            ValidateBoneOverrides(ovr.BoneOverrides, "BoneOverrides", diags);
-
-            // ── CustomSprites ──
-            ValidateCustomSprites(ovr.CustomSprites, "CustomSprites", diags);
-
-            // ── RemovedBones ──
-            if (knownBoneNames != null)
-            {
-                foreach (var rb in ovr.RemovedBones)
-                {
-                    if (!knownBoneNames.Contains(rb))
-                        diags.Add(new DiagMessage(DiagSeverity.Info, $"RemovedBone '{rb}' not found in current skeleton (may be from a different base)."));
-                }
-            }
-
-            // ── Model ──
-            if (ovr.Model.Scale <= 0f)
-                diags.Add(new DiagMessage(DiagSeverity.Warning, "Model.Scale is <= 0."));
-            if (ovr.Model.Alpha < 0f || ovr.Model.Alpha > 1f)
-                diags.Add(new DiagMessage(DiagSeverity.Warning, $"Model.Alpha ({ovr.Model.Alpha}) is outside [0, 1]."));
-            if (!string.IsNullOrEmpty(ovr.Model.TintHex))
-            {
-                if (!ovr.Model.TintHex.StartsWith("#"))
-                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"Model.TintHex '{ovr.Model.TintHex}' should start with '#'."));
-            }
-
-            // ── AnimOverrides ──
-            foreach (var kvp in ovr.AnimOverrides)
-            {
-                if (string.IsNullOrEmpty(kvp.Key))
-                    diags.Add(new DiagMessage(DiagSeverity.Error, "AnimOverride has empty clip name key."));
-                foreach (var bkvp in kvp.Value.BoneKeyframes)
-                {
-                    for (int k = 1; k < bkvp.Value.Count; k++)
-                    {
-                        if (bkvp.Value[k].Time <= bkvp.Value[k - 1].Time)
-                            diags.Add(new DiagMessage(DiagSeverity.Warning,
-                                $"AnimOverride '{kvp.Key}' bone '{bkvp.Key}': keyframes not sorted by time at index {k}."));
-                    }
-                }
-            }
-
-            return diags;
-        }
-
-        private static void ValidateBoneOverrides(Dictionary<string, BoneOverride> overrides, string context, List<DiagMessage> diags)
-        {
-            foreach (var kvp in overrides)
-            {
-                var bo = kvp.Value;
-                if (bo.ScaleX == 0f || bo.ScaleY == 0f)
-                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: scale is zero (bone will be invisible)."));
-                if (bo.Alpha < 0f || bo.Alpha > 1f)
-                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: Alpha ({bo.Alpha}) is outside [0, 1]."));
-                if (!string.IsNullOrEmpty(bo.ColorHex) && !bo.ColorHex.StartsWith("#"))
-                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: ColorHex '{bo.ColorHex}' should start with '#'."));
-            }
-        }
-
-        private static void ValidateCustomSprites(Dictionary<string, SpriteDef> custom, string context, List<DiagMessage> diags)
-        {
-            foreach (var kvp in custom)
-            {
-                if (string.IsNullOrEmpty(kvp.Value.ImagePath))
-                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: ImagePath is empty."));
-                if (kvp.Value.PPU < 0f)
-                    diags.Add(new DiagMessage(DiagSeverity.Warning, $"{context}['{kvp.Key}']: PPU ({kvp.Value.PPU}) is negative."));
-            }
-        }
     }
 }

@@ -14,6 +14,10 @@ namespace UnknownMod
     [HarmonyPatch]
     public static partial class Patches
     {
+        private static bool _contentInjectionRunning;
+        private static bool _contentInjectionCompleted;
+        private static bool _contentInjectionFailed;
+
         // ═══════════════════════════════════════════════════════════════
         //  BASE-GAME NULL GUARDS
         // ═══════════════════════════════════════════════════════════════
@@ -38,22 +42,39 @@ namespace UnknownMod
         // ═══════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// After Globals.CreateGameContent() finishes loading vanilla data,
-        /// discover and build all modded content via LoadOrderManager.
+        /// Inject modded content after vanilla content is complete and before
+        /// PopupManager.Initialize() runs.
         /// </summary>
-        [HarmonyPatch(typeof(Globals), "CreateGameContent")]
-        [HarmonyPostfix]
-        public static void CreateGameContent_Postfix()
+        [HarmonyPatch(typeof(PopupManager), "Initialize")]
+        [HarmonyPrefix]
+        public static void PopupManagerInitialize_Prefix()
         {
+            if (_contentInjectionRunning || _contentInjectionCompleted || _contentInjectionFailed)
+                return;
+
+            _contentInjectionRunning = true;
             Plugin.Log.LogInfo("[Patches] Injecting modded content...");
 
-            // Load all mods from disk in load-order sequence and build them
-            LoadOrderManager.LoadAndBuildAll();
+            try
+            {
+                // Load all mods from disk in load-order sequence and build them
+                LoadOrderManager.LoadAndBuildAll();
 
-            // Ensure the persistent editor exists
-            ModRegistry.EnsureEditorExists();
+                // Ensure the persistent editor exists
+                ModRegistry.EnsureEditorExists();
 
-            Plugin.Log.LogInfo("[Patches] Modded content injection complete.");
+                _contentInjectionCompleted = true;
+                Plugin.Log.LogInfo("[Patches] Modded content injection complete.");
+            }
+            catch (System.Exception ex)
+            {
+                _contentInjectionFailed = true;
+                Plugin.Log.LogError($"[Patches] Modded content injection failed: {ex.Message}\n{ex.StackTrace}");
+            }
+            finally
+            {
+                _contentInjectionRunning = false;
+            }
         }
 
         /// <summary>
@@ -93,7 +114,7 @@ namespace UnknownMod
         /// <summary>
         /// Intercept MapManager.IncludeMapPrefab() for modded zones.
         /// When a node from a modded zone is requested, build the zone map at runtime
-        /// instead of looking for a pre-built prefab in mapList.
+        /// instead of looking for a pre-built prefab from the resource catalog.
         /// </summary>
         [HarmonyPatch(typeof(MapManager), "IncludeMapPrefab")]
         [HarmonyPrefix]
@@ -116,5 +137,14 @@ namespace UnknownMod
                     || MapBuilder.MapExists(zoneId, MapManager.Instance.worldTransform);
             return false;
         }
-    }
+        /// <summary>After the game instantiates a base-game zone prefab, apply any mod zone patch to it.</summary>
+        [HarmonyPatch(typeof(MapManager), "IncludeMapPrefab")]
+        [HarmonyPostfix]
+        public static void IncludeMapPrefab_Postfix(string nodeId, bool __result)
+        {
+            if (!__result || string.IsNullOrEmpty(nodeId)) return;
+            var zone = Globals.Instance.GetNodeData(nodeId)?.NodeZone;
+            if (zone == null || ModRegistry.IsModdedZone(zone.ZoneId)) return;
+            MapBuilder.ApplyPatchToBaseMap(zone.ZoneId, MapManager.Instance.worldTransform);
+        }    }
 }

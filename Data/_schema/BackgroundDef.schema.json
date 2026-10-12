@@ -1,0 +1,208 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BackgroundDef",
+  "type": "object",
+  "properties": {
+    "BackgroundId": {
+      "type": "string"
+    },
+    "DisplayName": {
+      "type": "string"
+    },
+    "Layers": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/BackgroundLayerDef"
+      }
+    }
+  },
+  "definitions": {
+    "BackgroundLayerDef": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "Type": {
+          "type": "string",
+          "enum": [
+            "Sprite",
+            "ParticleSystem",
+            "Light",
+            "SpriteMask",
+            "Container",
+            "Shader",
+            "PrefabEffect"
+          ]
+        },
+        "SpriteName": {
+          "type": "string"
+        },
+        "SortingOrder": {
+          "type": "integer"
+        },
+        "SortingLayer": {
+          "type": "string"
+        },
+        "PosX": {
+          "type": "number"
+        },
+        "PosY": {
+          "type": "number"
+        },
+        "PosZ": {
+          "type": "number"
+        },
+        "ScaleX": {
+          "type": "number"
+        },
+        "ScaleY": {
+          "type": "number"
+        },
+        "Rotation": {
+          "type": "number"
+        },
+        "ColorR": {
+          "type": "number"
+        },
+        "ColorG": {
+          "type": "number"
+        },
+        "ColorB": {
+          "type": "number"
+        },
+        "ColorA": {
+          "type": "number"
+        },
+        "FlipX": {
+          "type": "boolean"
+        },
+        "FlipY": {
+          "type": "boolean"
+        },
+        "Visible": {
+          "type": "boolean"
+        },
+        "LightType": {
+          "type": "integer"
+        },
+        "Intensity": {
+          "type": "number"
+        },
+        "FalloffIntensity": {
+          "type": "number"
+        },
+        "PointLightInnerAngle": {
+          "type": "number"
+        },
+        "PointLightOuterAngle": {
+          "type": "number"
+        },
+        "PointLightInnerRadius": {
+          "type": "number"
+        },
+        "PointLightOuterRadius": {
+          "type": "number"
+        },
+        "ShapeLightFalloffSize": {
+          "type": "number"
+        },
+        "LightOrder": {
+          "type": "integer"
+        },
+        "BlendStyleIndex": {
+          "type": "integer"
+        },
+        "ShadowsEnabled": {
+          "type": "boolean"
+        },
+        "ShadowIntensity": {
+          "type": "number"
+        },
+        "Duration": {
+          "type": "number"
+        },
+        "Loop": {
+          "type": "boolean"
+        },
+        "Prewarm": {
+          "type": "boolean"
+        },
+        "StartLifetime": {
+          "type": "number"
+        },
+        "StartSpeed": {
+          "type": "number"
+        },
+        "StartSize": {
+          "type": "number"
+        },
+        "MaxParticles": {
+          "type": "integer"
+        },
+        "SimulationSpeed": {
+          "type": "number"
+        },
+        "PlayOnAwake": {
+          "type": "boolean"
+        },
+        "GravityModifier": {
+          "type": "number"
+        },
+        "EmissionRate": {
+          "type": "number"
+        },
+        "EffectName": {
+          "type": "string"
+        },
+        "AlphaCutoff": {
+          "type": "number"
+        },
+        "CustomRange": {
+          "type": "boolean"
+        },
+        "FrontSortingOrder": {
+          "type": "integer"
+        },
+        "BackSortingOrder": {
+          "type": "integer"
+        },
+        "ShaderName": {
+          "type": "string"
+        },
+        "MaskInteraction": {
+          "type": "integer"
+        },
+        "Preset": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Scanlines",
+            "Vignette",
+            "Noise",
+            "Gradient",
+            "Checkerboard"
+          ]
+        },
+        "PresetParam1": {
+          "type": "number"
+        },
+        "PresetParam2": {
+          "type": "number"
+        },
+        "ShaderKeywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ShaderFloats": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  }
+}

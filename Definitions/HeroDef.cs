@@ -37,6 +37,27 @@ namespace UnknownMod.Definitions
         public bool Female = false;
         public float StickerOffsetX = 0f;
 
+        // Per-slot overrides applied after SpriteSource. Sprites are looked up by name (game or mod sprites),
+        // sounds by clip name (game clips or files in the mod's audio/ folder). Empty = keep the source value.
+        public string SpriteBorderLocked = "";
+        public string StickerBase = "";
+        public string StickerLove = "";
+        public string StickerSurprise = "";
+        public string StickerAngry = "";
+        public string StickerIndifferent = "";
+        public string ActionSound = "";
+        public string HitSound = "";
+        public List<string> HitSounds = new();
+        public bool ShouldSerializeHitSounds() => HitSounds != null && HitSounds.Count > 0;
+        public bool ShouldSerializeSpriteBorderLocked() => !string.IsNullOrEmpty(SpriteBorderLocked);
+        public bool ShouldSerializeStickerBase() => !string.IsNullOrEmpty(StickerBase);
+        public bool ShouldSerializeStickerLove() => !string.IsNullOrEmpty(StickerLove);
+        public bool ShouldSerializeStickerSurprise() => !string.IsNullOrEmpty(StickerSurprise);
+        public bool ShouldSerializeStickerAngry() => !string.IsNullOrEmpty(StickerAngry);
+        public bool ShouldSerializeStickerIndifferent() => !string.IsNullOrEmpty(StickerIndifferent);
+        public bool ShouldSerializeActionSound() => !string.IsNullOrEmpty(ActionSound);
+        public bool ShouldSerializeHitSound() => !string.IsNullOrEmpty(HitSound);
+
         // ── Class ────────────────────────────────────────────────
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.HeroClass HeroClass = Enums.HeroClass.Warrior;
@@ -94,6 +115,7 @@ namespace UnknownMod.Definitions
         public string Trait4B = "";
         // ── Character Replacement ──────────────────────────────
         public List<HeroCardDef> CardsOnReplaceCharacter = new();
+        public List<HeroCardDef> CardsOnReplaceCharacterInSingularity = new();
         public string PerksOnReplace = "";
         public bool UseXpFromOriginal = false;
         // ── Challenge Packs ──────────────────────────────────────

@@ -1,38 +1,45 @@
 {
   "EventId": "e_myc_15",
-  "EventName": "The Spore Rift",
-  "Description": "A jagged crack splits the cavern floor, pulsing with concentrated spore energy. The air above shimmers with hallucinogenic haze, bending light and sound into unsettling patterns. Across the rift, the path continues — but the gap is wide.",
-  "DescriptionAction": "How do you cross?",
+  "EventName": "The Spore Shaft",
+  "Description": "A vertical shaft plunges through the cavern floor, its walls crusted with crystallized spores that glitter in the dark. Warm air rises from below, carrying a faint, rhythmic hum.",
+  "DescriptionAction": "How do you proceed?",
   "SpriteSource": "",
   "EventTier": "T0",
   "ReplyRandom": 0,
   "RequirementId": "",
   "Replies": [
     {
-      "ReplyText": "Jump across the rift.",
-      "Action": 29,
-      "SsText": "You leap over the chasm. Spore-laden air singes your lungs mid-flight, but you land safely on the other side.",
-      "SsHealFlat": -10,
-      "SsXP": 15
-    },
-    {
-      "ReplyText": "Attempt to seal the rift with magic.",
-      "Action": 30,
+      "ReplyText": "Descend the rope ladder.",
+      "Action": 40,
+      "FlText": "The rope snaps mid-climb. You drop the last stretch and land hard.",
+      "SsGold": 40,
+      "FlHealFlat": -20,
       "HasRoll": true,
-      "RollDC": 5,
-      "RollCard": 3,
-      "SsText": "Arcane energy knits the rift shut. The spore plume collapses inward, and blessed silence fills the chamber. The path ahead is clear.",
-      "SsXP": 50,
-      "FlText": "Your spell destabilizes the rift. Spore energy erupts violently, and twisted forms claw their way out of the crack.",
-      "FlCombatId": "cmyc_5"
+      "RollDC": 2,
+      "SsText": "The rope holds. At the bottom you find the remains of a previous expedition, and a little of their gear is still good.",
+      "SsXP": 30,
+      "RepeatForAllWarriors": true,
+      "RollTarget": 3
     },
     {
-      "ReplyText": "Harvest concentrated spores.",
+      "ReplyText": "Seal the shaft with magic.",
+      "Action": 30,
+      "FlText": "The shaft convulses and the spores answer with a brood of hungry things.",
+      "HasRoll": true,
+      "SsText": "The spore vents fall silent. The crystal growths dull and the air clears.",
+      "SsXP": 50,
+      "RollDC": 2,
+      "FlCombatId": "emyc_15a",
+      "RepeatForAllMages": true,
+      "RollTarget": 3
+    },
+    {
+      "ReplyText": "Collect the crystallized spore dust.",
       "Action": 27,
-      "GoldCost": 150,
-      "SsText": "You spend coin on a containment vessel and carefully siphon the concentrated spore energy. The harvest yields valuable reagents and hard-won insight.",
-      "SsGold": 80,
-      "SsXP": 30
+      "SsDust": 60,
+      "SsXP": 30,
+      "SsText": "You pay a scavenger crew for the right to scrape the shaft walls clean. The dust fetches a fine price among alchemists.",
+      "GoldCost": 100
     }
   ]
 }

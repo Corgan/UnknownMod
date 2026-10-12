@@ -17,12 +17,42 @@ namespace UnknownMod.Definitions
         public string Description = "";
         public string SpriteSource = "";
 
-        /// <summary>Optional CharacterOverrideDef ID for visual overrides (bone grafts, sprite swaps, tint, etc.).
-        /// When set, the runtime builds a custom prefab with these overrides applied.
-        /// The CharacterOverrideDef's BaseSprite must match this NPC's SpriteSource.
-        /// Leave empty to use the base model as-is with no overrides.</summary>
-        public string SpriteSkinId = "";
-        public bool ShouldSerializeSpriteSkinId() => !string.IsNullOrEmpty(SpriteSkinId);
+        /// <summary>Audio clip name played when this NPC is hit (game clip or file in the mod audio/ folder). Blank keeps the SpriteSource NPC's sound.</summary>
+        public string HitSound = "";
+        public bool ShouldSerializeHitSound() => !string.IsNullOrEmpty(HitSound);
+
+        /// <summary>Extra hit sounds picked in turn (game clip names or files in the mod audio/ folder). Added to HitSound.</summary>
+        public List<string> HitSounds = new();
+        public bool ShouldSerializeHitSounds() => HitSounds != null && HitSounds.Count > 0;
+
+        /// <summary>Animation retarget: game trigger (attack, cast, hit, pet) to the rig's own trigger name. "-" plays nothing.</summary>
+        public Dictionary<string, string> AnimTriggers = new();
+        public bool ShouldSerializeAnimTriggers() => AnimTriggers != null && AnimTriggers.Count > 0;
+
+        /// <summary>Do not borrow a neighbouring animation (cast for attack and back) when the rig lacks a trigger.</summary>
+        public bool AnimNoFallback = false;
+        public bool ShouldSerializeAnimNoFallback() => AnimNoFallback;
+
+        /// <summary>Optional Graft Sprite (visual graph) id. A graft replaces SpriteSource as the sprite; its Host Model is the rig.</summary>
+
+        public string VisualGraphId = "";
+        public bool ShouldSerializeVisualGraphId() => !string.IsNullOrEmpty(VisualGraphId);
+
+        /// <summary>Sprite name (mod PNG file name or game sprite name) used as the portrait instead of the one copied from SpriteSource.</summary>
+        public string Portrait = "";
+        public bool ShouldSerializePortrait() => !string.IsNullOrEmpty(Portrait);
+
+        /// <summary>Mirror the portrait horizontally.</summary>
+        public bool FlipPortrait = false;
+        public bool ShouldSerializeFlipPortrait() => FlipPortrait;
+
+        /// <summary>Zoom of the portrait content inside its frame (above 1 zooms in and crops, below 1 shrinks). 1 = unchanged.</summary>
+        public float PortraitScale = 1f;
+        public float PortraitOffsetX = 0f;
+        public float PortraitOffsetY = 0f;
+        public bool ShouldSerializePortraitScale() => PortraitScale != 1f;
+        public bool ShouldSerializePortraitOffsetX() => PortraitOffsetX != 0f;
+        public bool ShouldSerializePortraitOffsetY() => PortraitOffsetY != 0f;
 
         public int Hp = 100;
         public int Speed = 10;

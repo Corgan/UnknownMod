@@ -417,20 +417,107 @@ namespace UnknownMod.Editor
             if (string.IsNullOrEmpty(heroId))
             { EditorStyles.ViewportPlaceholder(vp, "Select a hero to preview"); return; }
 
-            var preview = ModEditor.EntityPreview;
-            if (preview == null)
-            { DrawPreviewError(vp, "Renderer not initialized"); return; }
+            var scData = DataHelper.GetSubClass(heroId);
+            var skins = SkinsOfHero(scData, heroId);
+            _heroPreviewSkin.TryGetValue(heroId, out var chosen);
+            SkinData skin = skins.FirstOrDefault(s => s.SkinId == chosen) ?? skins.FirstOrDefault(s => s.BaseSkin) ?? skins.FirstOrDefault();
 
-            preview.ResizeRT((int)vp.width, (int)vp.height);
-            if (preview.ShowHero(heroId))
+            float reserve = def != null ? Mathf.Min(160f, vp.height * 0.4f) : 0f;
+            var area = new Rect(vp.x, vp.y, vp.width, vp.height - reserve);
+            DrawHeroSheet(area, skin, scData, skins, heroId);
+            DrawHeroOverlay(vp, heroId, def);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  HERO SHEET  (rig + every portrait / silhouette slot)
+        // ═══════════════════════════════════════════════════════════════
+
+        private static readonly Dictionary<string, string> _heroPreviewSkin = new();
+
+        private static List<SkinData> SkinsOfHero(SubClassData sc, string heroId)
+        {
+            var list = new List<SkinData>();
+            try
             {
-                preview.Tick();
-                GUI.DrawTexture(vp, preview.RT, ScaleMode.ScaleToFit);
-                DrawHeroOverlay(vp, heroId, def);
+                foreach (var s in Globals.Instance.GetSkinsBySubclass(sc?.Id ?? heroId))
+                    if (s != null) list.Add(s);
             }
+            catch { }
+            return list;
+        }
+
+        private static string SpriteLabel(string label, Sprite s) =>
+            s == null ? $"<color=#f88>{label}: none</color>" : $"{label} <color=#777>{(int)s.rect.width}x{(int)s.rect.height}</color>";
+
+        /// <summary>
+        /// Draws the animated rig on the left and each art slot (portrait, large portrait, silhouettes, class icon) on the right.
+        /// <paramref name="skins"/> adds a skin picker for heroes with several skins; null hides it.
+        /// </summary>
+        private static void DrawHeroSheet(Rect area, SkinData skin, SubClassData hero, List<SkinData> skins, string heroId)
+        {
+            float rigW = area.width * 0.58f;
+            var rigRect = new Rect(area.x, area.y, rigW, area.height);
+            var artRect = new Rect(area.x + rigW, area.y, area.width - rigW, area.height);
+
+            float chipH = 0f;
+            if (skins != null && skins.Count > 1)
+            {
+                chipH = 22f;
+                float cx = rigRect.x + 4;
+                foreach (var s in skins)
+                {
+                    string label = string.IsNullOrEmpty(s.SkinName) ? s.SkinId : s.SkinName;
+                    float cwid = Mathf.Max(48f, label.Length * 7f + 12f);
+                    var chip = new Rect(cx, rigRect.y + 4, cwid, 18f);
+                    bool active = skin != null && s.SkinId == skin.SkinId;
+                    var prev = GUI.color;
+                    if (active) GUI.color = new Color(0.5f, 1f, 1f);
+                    if (GUI.Button(chip, label, _replyStyle) && heroId != null) _heroPreviewSkin[heroId] = s.SkinId;
+                    GUI.color = prev;
+                    cx += cwid + 4;
+                    if (cx > rigRect.xMax - 40) break;
+                }
+                chipH += 8f;
+            }
+
+            // ── Rig ──
+            var rigBody = new Rect(rigRect.x, rigRect.y + chipH, rigRect.width, rigRect.height - chipH - 18f);
+            GUI.Label(new Rect(rigRect.x + 6, rigRect.yMax - 18f, rigRect.width - 12, 16f),
+                skin != null ? $"Rig  <color=#777>{skin.SkinId}</color>" : "Rig", _smallLabel);
+            var preview = ModEditor.EntityPreview;
+            if (skin == null)
+                DrawPreviewError(rigBody, "Hero has no skin, so no rig");
+            else if (preview == null)
+                DrawPreviewError(rigBody, "Renderer not initialized");
             else
             {
-                DrawPreviewError(vp, preview.LastError);
+                preview.ResizeRT((int)rigBody.width, (int)rigBody.height);
+                if (preview.ShowSkinRig(skin.SkinId))
+                {
+                    preview.Tick();
+                    GUI.DrawTexture(rigBody, preview.RT, ScaleMode.ScaleToFit);
+                }
+                else DrawPreviewError(rigBody, preview.LastError);
+            }
+
+            // ── Art slots ──
+            var slots = new List<(string, Sprite)>
+            {
+                ("Portrait", skin?.SpritePortrait),
+                ("Portrait (Large)", skin?.SpritePortraitGrande),
+                ("Silhouette", skin?.SpriteSilueta),
+                ("Silhouette (Large)", skin?.SpriteSiluetaGrande),
+            };
+            if (hero != null) slots.Add(("Hero Portrait", hero.SpritePortrait));
+
+            float cellH = artRect.height / slots.Count;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                var cell = new Rect(artRect.x + 4, artRect.y + i * cellH + 2, artRect.width - 8, cellH - 4);
+                GUI.DrawTexture(cell, _overlayBgTex);
+                GUI.Label(new Rect(cell.x + 4, cell.y + 1, cell.width - 8, 16f), SpriteLabel(slots[i].Item1, slots[i].Item2), _smallLabel);
+                var spriteArea = new Rect(cell.x + 4, cell.y + 17f, cell.width - 8, cell.height - 21f);
+                if (slots[i].Item2 != null && spriteArea.height > 8f) DrawSprite(spriteArea, slots[i].Item2);
             }
         }
 
@@ -468,7 +555,10 @@ namespace UnknownMod.Editor
 
             if (def != null)
             {
-                GUI.Label(new Rect(vp.x + pad, y, contentW, 18), $"Activation: {def.Activation}", _subtitleStyle);
+                string activations = def.Activations != null && def.Activations.Count > 0
+                    ? string.Join(", ", def.Activations.Select(a => a.ToString()))
+                    : Enums.EventActivation.None.ToString();
+                GUI.Label(new Rect(vp.x + pad, y, contentW, 18), $"Activation: {activations}", _subtitleStyle);
                 y += 22;
 
                 // Stat bonuses
@@ -507,21 +597,13 @@ namespace UnknownMod.Editor
             if (string.IsNullOrEmpty(skinId))
             { EditorStyles.ViewportPlaceholder(vp, "Select a skin to preview"); return; }
 
-            var preview = ModEditor.EntityPreview;
-            if (preview == null)
-            { DrawPreviewError(vp, "Renderer not initialized"); return; }
+            var skinData = DataHelper.GetSkin(skinId);
+            if (skinData == null)
+            { DrawPreviewError(vp, $"SkinData '{skinId}' not found"); return; }
 
-            preview.ResizeRT((int)vp.width, (int)vp.height);
-            if (preview.ShowSkin(skinId))
-            {
-                preview.Tick();
-                GUI.DrawTexture(vp, preview.RT, ScaleMode.ScaleToFit);
-                DrawSkinOverlay(vp, skinId, def);
-            }
-            else
-            {
-                DrawPreviewError(vp, preview.LastError);
-            }
+            var area = new Rect(vp.x, vp.y, vp.width, vp.height - 48f);
+            DrawHeroSheet(area, skinData, skinData.SkinSubclass, null, null);
+            DrawSkinOverlay(vp, skinId, def);
         }
 
         // ═══════════════════════════════════════════════════════════════

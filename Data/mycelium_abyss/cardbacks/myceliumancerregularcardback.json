@@ -1,0 +1,20 @@
+{
+  "Id": "myceliumancerRegularCardback",
+  "CardbackName": "Mycelial",
+  "CardbackTextId": "",
+  "CardbackOrder": 1,
+  "BaseCardback": false,
+  "Locked": false,
+  "ShowIfLocked": false,
+  "RankLevel": 8,
+  "Sku": "",
+  "SteamStat": "",
+  "AdventureLevel": 0,
+  "ObeliskLevel": 0,
+  "SingularityLevel": 0,
+  "PdxAccountRequired": false,
+  "HideInGame": false,
+  "CardbackSubclass": "myceliumancer",
+  "SpriteSource": "",
+  "SpriteOverride": "myc_cardback_regular"
+}

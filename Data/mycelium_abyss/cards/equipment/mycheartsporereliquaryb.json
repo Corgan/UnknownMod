@@ -1,0 +1,22 @@
+{
+  "Id": "mycheartsporereliquaryb",
+  "Name": "Heartspore Reliquary",
+  "Description": "At the start of combat, apply <acb>3</acb> Spore Rot to all enemies and gain <acb>2</acb> Symbiosis.<br2>Also gain <acb>3</acb> Thorns.",
+  "CardClass": "Item",
+  "CardType": "Accesory",
+  "CardRarity": "Mythic",
+  "SpriteSource": "myc_art_reliquary",
+  "Item": {
+    "Activation": "BeginCombat",
+    "ItemTarget": "AllEnemy",
+    "AuracurseGain1": "myc_sporerot",
+    "AuracurseGainValue1": 3,
+    "AuracurseGainSelf1": "myc_symbiosis",
+    "AuracurseGainSelfValue1": 2,
+    "AuracurseGainSelf2": "thorns",
+    "AuracurseGainSelfValue2": 3,
+    "DropOnly": true
+  },
+  "CardUpgraded": "B",
+  "BaseCardId": "mycheartsporereliquary"
+}

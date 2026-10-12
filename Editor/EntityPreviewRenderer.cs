@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
@@ -32,15 +33,15 @@ namespace UnknownMod.Editor
         private RenderTexture _rt;
         private GameObject _root;
         private readonly List<GameObject> _objects = new();
+        private readonly List<VisualGraphInstance> _graphInstances = new();
         private GameObject _bgInstance;  // background tracked separately from framing
         private string _cacheKey;
         private bool _needsRender;
         private bool _animated;      // true = re-render every frame for animation
         private int _lastRenderFrame;
 
-        // ── Combat background prefab cache (loaded once via additive scene) ──
+        // ── Combat background prefab cache (lazily loaded from the ResourceCatalog) ──
         private static Dictionary<string, GameObject> _bgPrefabCache;
-        private static bool _bgCacheRequested;
         private static bool _bgCacheFailed;
 
         /// <summary>Get a cached background prefab by enum name (case-insensitive). Returns null if not cached.</summary>
@@ -155,6 +156,7 @@ namespace UnknownMod.Editor
         {
             if (_cam == null) return;
             if (Time.frameCount == _lastRenderFrame) return;
+            LoopEffect();
             if (_animated || _needsRender)
             {
                 _cam.Render();
@@ -165,11 +167,15 @@ namespace UnknownMod.Editor
 
         private void ClearObjects()
         {
+            foreach (var instance in _graphInstances)
+                if (instance != null) instance.DestroyImmediate();
+            _graphInstances.Clear();
             foreach (var go in _objects)
                 if (go != null) UnityEngine.Object.DestroyImmediate(go);
             _objects.Clear();
             if (_bgInstance != null) { UnityEngine.Object.DestroyImmediate(_bgInstance); _bgInstance = null; }
             _animated = false;
+            _effectName = null;
             DoRender();  // render the now-empty scene so RT doesn't show stale content
         }
 
@@ -253,10 +259,10 @@ namespace UnknownMod.Editor
                 {
                     try
                     {
-                        var go = UnityEngine.Object.Instantiate(gm.CardPrefab, Origin, Quaternion.identity, _root.transform);
+                        var ci = UnityEngine.Object.Instantiate(gm.CardPrefab, Origin, Quaternion.identity, _root.transform);
+                        var go = ci.gameObject;
                         _objects.Add(go);
 
-                        var ci = go.GetComponent<CardItem>();
                         if (ci != null)
                         {
                             ci.Init();
@@ -321,10 +327,10 @@ namespace UnknownMod.Editor
                 {
                     try
                     {
-                        var go = UnityEngine.Object.Instantiate(gm.CardPrefab, Origin, Quaternion.identity, _root.transform);
+                        var ci = UnityEngine.Object.Instantiate(gm.CardPrefab, Origin, Quaternion.identity, _root.transform);
+                        var go = ci.gameObject;
                         _objects.Add(go);
 
-                        var ci = go.GetComponent<CardItem>();
                         if (ci != null)
                         {
                             ci.Init();
@@ -366,71 +372,76 @@ namespace UnknownMod.Editor
         }
 
         // ═══════════════════════════════════════════════════════════════
-        //  SPRITE SKIN OVERRIDE RESOLUTION (for NPC / encounter previews)
+        //  GRAFT SPRITE RESOLUTION (for NPC / encounter previews)
         // ═══════════════════════════════════════════════════════════════
 
-        /// <summary>
-        /// Resolve a CharacterOverrideDef for the given NPC entity ID.
-        /// Checks the active mod project in order:
-        ///   1. NpcDef.SpriteSkinId (explicit override key)
-        ///   2. SpriteSkins / SpriteSkinPatches keyed by NPC ID (convention: skin key == NPC ID)
-        ///   3. Zone-level SpriteSkins keyed by NPC ID
-        /// </summary>
-        private static CharacterOverrideDef ResolveNpcOverride(string npcId, out string zoneId)
+        /// <summary>Attach the NPC's Graft Sprite (from the active project) to a freshly instantiated preview model.</summary>
+        private void AttachNpcGraft(string npcId, GameObject model)
         {
-            zoneId = null;
-            var proj = Tabs.ModManagerPanel.ActiveProject;
-            if (proj == null) return null;
+            var project = Tabs.ModManagerPanel.ActiveProject;
+            NpcDef def = null;
+            if (project == null || (!project.Npcs.TryGetValue(npcId, out def) && !project.NpcPatches.TryGetValue(npcId, out def))) return;
+            CompiledCharacterVisualGraph graph;
+            if (string.IsNullOrEmpty(def.VisualGraphId) || !ModRegistry.TryResolveVisualGraphForNpc(def, out graph)) return;
+            var hostAnimator = model.GetComponentInChildren<Animator>();
+            var result = VisualInstanceFactory.CreateAttachments(graph, model.transform, null, hostAnimator, false);
+            foreach (var diagnostic in result.Diagnostics) Plugin.Log.LogWarning("[EntityPreview] " + diagnostic);
+            if (result.Success) _graphInstances.Add(result.Instance);
+            else result.Instance?.DestroyImmediate();
+        }
+        private void AttachGraft(CompiledCharacterVisualGraph graph, GameObject model)
+        {
+            var hostAnimator = model.GetComponentInChildren<Animator>();
+            var result = VisualInstanceFactory.CreateAttachments(graph, model.transform, null, hostAnimator, false);
+            foreach (var diagnostic in result.Diagnostics) Plugin.Log.LogWarning("[EntityPreview] " + diagnostic);
+            if (result.Success) _graphInstances.Add(result.Instance);
+            else result.Instance?.DestroyImmediate();
+        }
 
-            zoneId = proj.ModId;
+        /// <summary>Render a skin's animated in-battle rig (SkinGo) with its Graft Sprite applied, if any.</summary>
+        public bool ShowSkinRig(string skinId)
+        {
+            EnsureInit();
+            string key = "rig:" + (skinId ?? "");
+            if (key == _cacheKey && !_needsRender) return _objects.Count > 0;
 
-            // 1. Check explicit SpriteSkinId on the NpcDef (if set)
-            NpcDef npcDef = null;
-            if (proj.Npcs.TryGetValue(npcId, out npcDef) || proj.NpcPatches.TryGetValue(npcId, out npcDef))
+            ClearObjects();
+            _cacheKey = key;
+            _animated = false;
+
+            try
             {
-                if (!string.IsNullOrEmpty(npcDef.SpriteSkinId))
-                {
-                    if (proj.SpriteSkins.TryGetValue(npcDef.SpriteSkinId, out var spriteDef))
-                        return spriteDef;
-                    if (proj.SpriteSkinPatches.TryGetValue(npcDef.SpriteSkinId, out spriteDef))
-                        return spriteDef;
-                }
+                var skinData = string.IsNullOrEmpty(skinId) ? null : DataHelper.GetSkin(skinId);
+                if (skinData == null) { LastError = $"SkinData '{skinId}' not found"; return false; }
+                if (skinData.SkinGo == null) { LastError = $"Skin '{skinId}' has no animated rig"; return false; }
+
+                var go = UnityEngine.Object.Instantiate(skinData.SkinGo, Origin, Quaternion.identity, _root.transform);
+                go.transform.localPosition = Vector3.zero;
+                go.SetActive(true);
+                _objects.Add(go);
+                if (ModRegistry.TryResolveVisualGraphForSkin(skinId, out var graph)) AttachGraft(graph, go);
+                EvaluateGraphInstances(go.GetComponentInChildren<Animator>(), go);
+                _animated = true;
+
+                AutoFrame(0.55f);
+                DoRender();
+                return true;
             }
-
-            // 2. SpriteSkins are keyed by NpcId — look up directly
-            if (proj.SpriteSkins.TryGetValue(npcId, out var skinDef))
-                return skinDef;
-            if (proj.SpriteSkinPatches.TryGetValue(npcId, out skinDef))
-                return skinDef;
-
-            return null;
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[EntityPreview] Skin rig render failed: {ex.Message}");
+                LastError = $"Exception: {ex.Message}";
+                ClearObjects();
+                return false;
+            }
         }
 
-        /// <summary>
-        /// Get the customized model for an NPC, applying sprite skin overrides
-        /// from the current editing context. Returns the original model if no
-        /// override exists. Also outputs the override def for attaching
-        /// CharacterOverrideDriver after instantiation.
-        /// </summary>
-        private static GameObject GetOverriddenModel(string npcId, GameObject sourceModel, out CharacterOverrideDef overrideDef)
+        private void EvaluateGraphInstances(Animator animator, GameObject host)
         {
-            overrideDef = ResolveNpcOverride(npcId, out string zoneId);
-            if (overrideDef == null || sourceModel == null) return sourceModel;
-
-            // Invalidate cached prefab so current edits are always reflected
-            NpcPrefabBuilder.InvalidateCache(npcId);
-            var customPrefab = NpcPrefabBuilder.BuildCustomPrefab(npcId, sourceModel, overrideDef, zoneId);
-            return customPrefab ?? sourceModel;
-        }
-
-        /// <summary>Check if a CharacterOverrideDef has per-frame overrides that need CharacterOverrideDriver.</summary>
-        private static bool HasPerFrameOverrides(CharacterOverrideDef def)
-        {
-            return def.BoneOverrides.Count > 0 ||
-                   def.CustomSprites.Count > 0 ||
-                   def.Grafts.Count > 0 ||
-                   !def.Model.IsDefault() ||
-                   (def.AnimOverrides != null && def.AnimOverrides.Count > 0);
+            AnimationClip clip = animator?.runtimeAnimatorController?.animationClips?.FirstOrDefault();
+            if (clip == null || host == null) return;
+            clip.SampleAnimation(host, 0f);
+            foreach (var instance in _graphInstances) instance?.EvaluateAt(clip, 0f);
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -464,27 +475,16 @@ namespace UnknownMod.Editor
                 var model = npcData.GameObjectAnimated;
                 if (model != null)
                 {
-                    // Apply sprite skin overrides from the current editing context
-                    CharacterOverrideDef overrideDef = null;
-                    model = GetOverriddenModel(npcId, model, out overrideDef);
-
                     try
                     {
                         var go = UnityEngine.Object.Instantiate(model, Origin, Quaternion.identity, _root.transform);
                         go.transform.localPosition = Vector3.zero;
-                        go.SetActive(true); // custom prefabs are built inactive
+                        go.SetActive(true);
                         _objects.Add(go);
-
-                        // Attach CharacterOverrideDriver for per-frame effects (bone transforms, model, keyframes, grafts)
-                        if (overrideDef != null && HasPerFrameOverrides(overrideDef))
-                        {
-                            var ovr = go.AddComponent<CharacterOverrideDriver>();
-                            ovr.Init(overrideDef);
-                        }
-
+                        AttachNpcGraft(npcId, go);
                         // Force idle pose evaluation
                         var anim = go.GetComponentInChildren<Animator>();
-                        if (anim != null) anim.Update(0);
+                        EvaluateGraphInstances(anim, go);
 
                         _animated = true;
                         placed = true;
@@ -675,27 +675,17 @@ namespace UnknownMod.Editor
                     var model = npcData.GameObjectAnimated;
                     if (model != null)
                     {
-                        // Apply sprite skin overrides from the current editing context
-                        CharacterOverrideDef overrideDef = null;
-                        model = GetOverriddenModel(npcIds[i], model, out overrideDef);
-
                         try
                         {
                             var go = UnityEngine.Object.Instantiate(model, Vector3.zero, Quaternion.identity, charGroup.transform);
                             go.transform.localPosition = new Vector3(x, 0, z);
-                            go.SetActive(true); // custom prefabs are built inactive
+                            go.SetActive(true);
                             _animated = true;
                             placed = true;
 
-                            // Attach CharacterOverrideDriver for per-frame effects
-                            if (overrideDef != null && HasPerFrameOverrides(overrideDef))
-                            {
-                                var ovr = go.AddComponent<CharacterOverrideDriver>();
-                                ovr.Init(overrideDef);
-                            }
-
+                            AttachNpcGraft(npcIds[i], go);
                             var anim = go.GetComponentInChildren<Animator>();
-                            if (anim != null) anim.Update(0);
+                            EvaluateGraphInstances(anim, go);
                         }
                         catch { /* fall through to sprite */ }
                     }
@@ -804,126 +794,31 @@ namespace UnknownMod.Editor
         }
 
         /// <summary>
-        /// Additively load the Combat scene to extract MatchManager.backgroundPrefabs,
-        /// cache them, then unload. Same pattern as ZoneEditingService's Map scene load.
+        /// Cache the vanilla background prefabs. They are lazily loaded from Resources/Backgrounds by name
+        /// (ResourceCatalog) so no Combat scene load is needed any more.
         /// </summary>
         internal static void EnsureBgCache()
         {
-            if (_bgPrefabCache != null || _bgCacheRequested || _bgCacheFailed) return;
-            _bgCacheRequested = true;
+            if (_bgPrefabCache != null || _bgCacheFailed) return;
+            if (Globals.Instance == null) return;
 
-            ZoneEditingService.SuppressSceneLoad++;
-
-            // Register callback BEFORE loading — sceneLoaded fires when content is ready,
-            // after Awake() but before Start(). This is where we extract data + tear down.
-            SceneManager.sceneLoaded += OnCombatSceneLoaded;
-
-            try
+            var cache = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
+            foreach (var prefab in GameResources.GetAllBackgroundPrefabs())
             {
-                Plugin.Log.LogInfo("[EntityPreview] Loading Combat scene (additive, async) for background prefabs...");
-                var op = SceneManager.LoadSceneAsync("Combat", LoadSceneMode.Additive);
-                if (op == null)
-                {
-                    // Scene not in build settings — LoadSceneAsync returns null without throwing
-                    Plugin.Log.LogWarning("[EntityPreview] Combat scene not available (LoadSceneAsync returned null).");
-                    SceneManager.sceneLoaded -= OnCombatSceneLoaded;
-                    _bgCacheFailed = true;
-                    ZoneEditingService.SuppressSceneLoad--;
-                }
+                if (prefab == null) continue;
+                cache[prefab.name] = prefab;
             }
-            catch (Exception ex)
+
+            if (cache.Count == 0)
             {
-                Plugin.Log.LogError($"[EntityPreview] Combat scene load failed: {ex.Message}\n{ex.StackTrace}");
-                SceneManager.sceneLoaded -= OnCombatSceneLoaded;
+                Plugin.Log.LogWarning("[EntityPreview] No background prefabs found via Globals.GetBackgroundPrefab.");
                 _bgCacheFailed = true;
-                ZoneEditingService.SuppressSceneLoad--;
+                return;
             }
-        }
 
-        /// <summary>
-        /// Callback fired when the Combat scene finishes loading (after Awake, before Start).
-        /// Extract backgroundPrefabs, destroy all MonoBehaviours, then unload.
-        /// </summary>
-        private static void OnCombatSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            if (scene.name != "Combat") return;
-            SceneManager.sceneLoaded -= OnCombatSceneLoaded;
-
-            try
-            {
-                var rootObjects = scene.GetRootGameObjects();
-                Plugin.Log.LogInfo($"[EntityPreview] Combat scene loaded: {rootObjects.Length} root objects.");
-
-                // Deactivate all roots IMMEDIATELY to prevent rendering / OnEnable
-                foreach (var root in rootObjects)
-                    root.SetActive(false);
-
-                // Extract backgroundPrefabs from MatchManager
-                foreach (var root in rootObjects)
-                {
-                    var mm = root.GetComponentInChildren<MatchManager>(true);
-                    if (mm == null) continue;
-
-                    Plugin.Log.LogInfo($"[EntityPreview]   MatchManager found, backgroundPrefabs={mm.backgroundPrefabs?.Count ?? -1}");
-                    if (mm.backgroundPrefabs != null && mm.backgroundPrefabs.Count > 0)
-                    {
-                        _bgPrefabCache = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
-                        foreach (var prefab in mm.backgroundPrefabs)
-                        {
-                            if (prefab == null) continue;
-                            _bgPrefabCache[prefab.name] = prefab;
-                        }
-                        _bgCacheGeneration++;
-                        Plugin.Log.LogInfo($"[EntityPreview]   Cached {_bgPrefabCache.Count} background prefabs.");
-                    }
-                    break;
-                }
-
-                // Destroy ALL MonoBehaviours so nothing fires Start/coroutines/etc.
-                int destroyed = 0;
-                foreach (var root in rootObjects)
-                {
-                    foreach (var mb in root.GetComponentsInChildren<MonoBehaviour>(true))
-                    {
-                        UnityEngine.Object.DestroyImmediate(mb);
-                        destroyed++;
-                    }
-                }
-                Plugin.Log.LogInfo($"[EntityPreview]   Destroyed {destroyed} MonoBehaviours.");
-
-                // Unload the scene; release suppression when unload completes
-                SceneManager.sceneUnloaded += OnCombatUnloaded;
-                SceneManager.UnloadSceneAsync(scene);
-
-                if (_bgPrefabCache == null || _bgPrefabCache.Count == 0)
-                {
-                    Plugin.Log.LogWarning("[EntityPreview] No background prefabs found in Combat scene.");
-                    _bgCacheFailed = true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogError($"[EntityPreview] Combat scene extraction failed: {ex.Message}\n{ex.StackTrace}");
-                _bgCacheFailed = true;
-                // Ensure the scene is unloaded even on failure
-                try
-                {
-                    SceneManager.sceneUnloaded += OnCombatUnloaded;
-                    SceneManager.UnloadSceneAsync(scene);
-                }
-                catch
-                {
-                    ZoneEditingService.SuppressSceneLoad--;
-                }
-            }
-        }
-
-        private static void OnCombatUnloaded(Scene scene)
-        {
-            if (scene.name != "Combat") return;
-            SceneManager.sceneUnloaded -= OnCombatUnloaded;
-            ZoneEditingService.SuppressSceneLoad--;
-            Plugin.Log.LogInfo("[EntityPreview] Combat scene unloaded, suppression released.");
+            _bgPrefabCache = cache;
+            _bgCacheGeneration++;
+            Plugin.Log.LogInfo($"[EntityPreview] Cached {cache.Count} background prefabs.");
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -985,11 +880,15 @@ namespace UnknownMod.Editor
                 // Cache reply prefab (clone so it survives scene unload)
                 if (em.replyPrefab != null)
                 {
-                    _eventReplyPrefab = UnityEngine.Object.Instantiate(em.replyPrefab);
-                    _eventReplyPrefab.name = "EventReplyPrefab_Cached";
-                    _eventReplyPrefab.SetActive(false);
-                    UnityEngine.Object.DontDestroyOnLoad(_eventReplyPrefab);
-                    Plugin.Log.LogInfo("[EntityPreview]   Cached event reply prefab.");
+                    var reply = UnityEngine.Object.Instantiate(em.replyPrefab);
+                    if (reply != null && reply.gameObject != null)
+                    {
+                        _eventReplyPrefab = reply.gameObject;
+                        _eventReplyPrefab.name = "EventReplyPrefab_Cached";
+                        _eventReplyPrefab.SetActive(false);
+                        UnityEngine.Object.DontDestroyOnLoad(_eventReplyPrefab);
+                        Plugin.Log.LogInfo("[EntityPreview]   Cached event reply prefab.");
+                    }
                 }
 
                 // Cache the EventManager's GO as a layout template (clone hierarchy)
@@ -1111,7 +1010,16 @@ namespace UnknownMod.Editor
                 var scData = DataHelper.GetSubClass(heroId);
                 if (scData == null) { LastError = $"SubClassData '{heroId}' not found"; return false; }
 
+                // SubClassData.SpritePortrait is only assigned at runtime from the hero's skin, so fall back to skins
                 Sprite portrait = scData.SpritePortrait;
+                if (portrait == null)
+                {
+                    foreach (var skin in Globals.Instance.GetSkinsBySubclass(scData.Id ?? heroId))
+                    {
+                        portrait = skin?.SpritePortraitGrande ?? skin?.SpritePortrait;
+                        if (portrait != null) break;
+                    }
+                }
                 if (portrait == null) { LastError = $"Hero '{heroId}' has no portrait sprite"; return false; }
 
                 var go = new GameObject("HeroSprite");
@@ -1176,6 +1084,63 @@ namespace UnknownMod.Editor
                 ClearObjects();
                 return false;
             }
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        //  VFX EFFECT PREVIEW  (prefab from the Effects catalog, replayed on a loop)
+        // ═══════════════════════════════════════════════════════════════
+
+        private string _effectName;
+        private float _effectStart;
+        private const float EffectLifetime = 2.5f;   // the game destroys effect instances after 2.5s
+        private const float EffectLoopGap = 0.6f;
+
+        /// <summary>Instantiate a game effect at the preview origin. Replays itself every few seconds until another Show* call replaces it.</summary>
+        public bool ShowEffect(string effectName, bool forceRestart = false)
+        {
+            EnsureInit();
+            string key = "fx:" + (effectName ?? "");
+            if (!forceRestart && key == _cacheKey && _effectName != null) return true;
+
+            ClearObjects();
+            _cacheKey = key;
+            _effectName = null;
+
+            if (string.IsNullOrEmpty(effectName)) { LastError = "No effect name"; DoRender(); return false; }
+
+            var prefab = GameResources.GetEffectPrefab(effectName);
+            if (prefab == null) { LastError = $"Effect '{effectName}' not found"; return false; }
+
+            try
+            {
+                var go = UnityEngine.Object.Instantiate(prefab, _root.transform);
+                go.transform.localPosition = Vector3.zero;
+                _objects.Add(go);
+                _effectName = effectName;
+                _effectStart = Time.realtimeSinceStartup;
+                _animated = true;
+                _cam.orthographicSize = 3f;
+                _cam.transform.position = Origin + new Vector3(0, 0, -10);
+                DoRender();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"[EntityPreview] Effect render failed: {ex.Message}");
+                LastError = $"Exception: {ex.Message}";
+                ClearObjects();
+                return false;
+            }
+        }
+
+        /// <summary>Seconds into the current effect play, or 0 when no effect is showing.</summary>
+        public float EffectTime => _effectName == null ? 0f : Time.realtimeSinceStartup - _effectStart;
+
+        private void LoopEffect()
+        {
+            if (_effectName == null) return;
+            if (Time.realtimeSinceStartup - _effectStart > EffectLifetime + EffectLoopGap)
+                ShowEffect(_effectName, true);
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -1497,7 +1462,7 @@ namespace UnknownMod.Editor
                 {
                     if (!string.IsNullOrEmpty(layer.EffectName))
                     {
-                        var prefab = Globals.Instance?.GetResourceEffect(layer.EffectName);
+                        var prefab = GameResources.GetEffectPrefab(layer.EffectName);
                         if (prefab != null)
                         {
                             var clone = UnityEngine.Object.Instantiate(prefab, go.transform);

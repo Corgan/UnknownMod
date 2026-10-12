@@ -1,0 +1,69 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EconomyDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "Enabled": {
+      "type": "boolean"
+    },
+    "Rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/PriceRuleDef"
+      }
+    }
+  },
+  "definitions": {
+    "PriceRuleDef": {
+      "type": "object",
+      "properties": {
+        "Name": {
+          "type": "string"
+        },
+        "Enabled": {
+          "type": "boolean"
+        },
+        "Function": {
+          "type": "string",
+          "enum": [
+            "Craft",
+            "Upgrade",
+            "Transform",
+            "Remove",
+            "Item",
+            "Corruption",
+            "Divination",
+            "Reroll"
+          ]
+        },
+        "Rarity": {
+          "type": "string"
+        },
+        "CardType": {
+          "type": "string"
+        },
+        "CardId": {
+          "type": "string"
+        },
+        "ShopId": {
+          "type": "string"
+        },
+        "Percent": {
+          "type": "integer"
+        },
+        "Flat": {
+          "type": "integer"
+        },
+        "SetTo": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

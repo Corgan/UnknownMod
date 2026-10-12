@@ -31,9 +31,11 @@ namespace UnknownMod.Core
             Traverse.Create(req).Field("requirementZoneFinishTrackAlternateFinalAct")
                 .SetValue(d.RequirementZoneFinishTrackAlternate);
 
+            Traverse.Create(req).Field("WitheredValeUniqueCheck").SetValue(d.WitheredValeUniqueCheck);
+
             // Resolve card reference
             if (!string.IsNullOrEmpty(d.TrackCard))
-                req.TrackCard = GetCard(d.TrackCard);
+                req.TrackCard = GetCardSource(d.TrackCard);
 
             // Copy sprites from source requirement
             if (!string.IsNullOrEmpty(d.SpriteSource))
@@ -57,7 +59,8 @@ namespace UnknownMod.Core
             d.RequirementZoneFinishTrackAlternate = Traverse.Create(req)
                 .Field<Enums.Zone>("requirementZoneFinishTrackAlternateFinalAct").Value;
 
-            d.TrackCard = req.TrackCard != null ? GetCardId(req.TrackCard) : "";
+            d.TrackCard = req.TrackCard != null ? req.TrackCard.Id ?? "" : "";
+            d.WitheredValeUniqueCheck = Traverse.Create(req).Field<bool>("WitheredValeUniqueCheck").Value;
 
             // Self as sprite source for overrides
             d.SpriteSource = d.Id;
@@ -86,6 +89,7 @@ namespace UnknownMod.Core
             cb.ObeliskLevel = d.ObeliskLevel;
             cb.SingularityLevel = d.SingularityLevel;
             cb.PdxAccountRequired = d.PdxAccountRequired;
+            cb.HideInGame = d.HideInGame;
 
             // Wire SubClass reference
             if (!string.IsNullOrEmpty(d.CardbackSubclass))
@@ -97,6 +101,11 @@ namespace UnknownMod.Core
                 var src = GetCardback(d.SpriteSource);
                 if (src != null)
                     cb.CardbackSprite = src.CardbackSprite;
+            }
+            if (!string.IsNullOrEmpty(d.SpriteOverride))
+            {
+                var spr = UnknownMod.Runtime.SpriteUtils.FindSpriteByName(d.SpriteOverride);
+                if (spr != null) cb.CardbackSprite = spr;
             }
 
             return cb;
@@ -120,6 +129,7 @@ namespace UnknownMod.Core
             d.ObeliskLevel = cb.ObeliskLevel;
             d.SingularityLevel = cb.SingularityLevel;
             d.PdxAccountRequired = cb.PdxAccountRequired;
+            d.HideInGame = cb.HideInGame;
             d.CardbackSubclass = cb.CardbackSubclass != null
                 ? NormalizeKey(cb.CardbackSubclass.SubClassName)
                 : "";
@@ -173,29 +183,13 @@ namespace UnknownMod.Core
             if (!string.IsNullOrEmpty(d.RequiredClassId))
                 pack.RequiredClass = GetSubClass(d.RequiredClassId);
 
-            // Card slots 0–5
-            for (int i = 0; i < 6; i++)
-            {
-                string cardId = i < d.CardIds.Count ? d.CardIds[i] : "";
-                CardData card = !string.IsNullOrEmpty(cardId) ? GetCard(cardId) : null;
-                switch (i)
-                {
-                    case 0: pack.Card0 = card; break;
-                    case 1: pack.Card1 = card; break;
-                    case 2: pack.Card2 = card; break;
-                    case 3: pack.Card3 = card; break;
-                    case 4: pack.Card4 = card; break;
-                    case 5: pack.Card5 = card; break;
-                }
-            }
-            // Special card slots 0–1
-            for (int i = 0; i < 2; i++)
-            {
-                string cardId = i < d.SpecialCardIds.Count ? d.SpecialCardIds[i] : "";
-                CardData card = !string.IsNullOrEmpty(cardId) ? GetCard(cardId) : null;
-                if (i == 0) pack.CardSpecial0 = card;
-                else pack.CardSpecial1 = card;
-            }
+            pack.Cards = new List<CardDataNew>();
+            foreach (var cardId in d.CardIds ?? new List<string>())
+                pack.Cards.Add(string.IsNullOrEmpty(cardId) ? null : GetCardSource(cardId));
+
+            pack.CardsSpecial = new List<CardDataNew>();
+            foreach (var cardId in d.SpecialCardIds ?? new List<string>())
+                pack.CardsSpecial.Add(string.IsNullOrEmpty(cardId) ? null : GetCardSource(cardId));
             // Perks
             if (d.PerkIds != null && d.PerkIds.Count > 0)
             {
@@ -224,17 +218,17 @@ namespace UnknownMod.Core
             d.RequiredClassId = pack.RequiredClass != null ? pack.RequiredClass.SubClassName ?? "" : "";
 
             d.CardIds = new List<string>();
-            CardData[] cards = { pack.Card0, pack.Card1, pack.Card2, pack.Card3, pack.Card4, pack.Card5 };
-            foreach (var c in cards)
-                d.CardIds.Add(c != null ? c.Id ?? "" : "");
+            if (pack.Cards != null)
+                foreach (var c in pack.Cards)
+                    d.CardIds.Add(c != null ? c.Id ?? "" : "");
             // Trim trailing empties
             while (d.CardIds.Count > 0 && string.IsNullOrEmpty(d.CardIds[d.CardIds.Count - 1]))
                 d.CardIds.RemoveAt(d.CardIds.Count - 1);
 
             d.SpecialCardIds = new List<string>();
-            CardData[] specials = { pack.CardSpecial0, pack.CardSpecial1 };
-            foreach (var c in specials)
-                d.SpecialCardIds.Add(c != null ? c.Id ?? "" : "");
+            if (pack.CardsSpecial != null)
+                foreach (var c in pack.CardsSpecial)
+                    d.SpecialCardIds.Add(c != null ? c.Id ?? "" : "");
             while (d.SpecialCardIds.Count > 0 && string.IsNullOrEmpty(d.SpecialCardIds[d.SpecialCardIds.Count - 1]))
                 d.SpecialCardIds.RemoveAt(d.SpecialCardIds.Count - 1);
 
@@ -256,19 +250,15 @@ namespace UnknownMod.Core
             pack.ModSpeed = d.ModSpeed;
             pack.ModIterations = d.ModIterations;
 
-            for (int i = 0; i < 4; i++)
+            pack.Cards = new List<PlayerPackCardData>();
+            foreach (var slot in d.Slots ?? new List<CardPlayerSlot>())
             {
-                var slot = i < d.Slots.Count ? d.Slots[i] : null;
-                CardData card = slot != null && !string.IsNullOrEmpty(slot.CardId) ? GetCard(slot.CardId) : null;
-                bool boon = slot?.RandomBoon ?? false;
-                bool injury = slot?.RandomInjury ?? false;
-                switch (i)
+                pack.Cards.Add(new PlayerPackCardData
                 {
-                    case 0: pack.Card0 = card; pack.Card0RandomBoon = boon; pack.Card0RandomInjury = injury; break;
-                    case 1: pack.Card1 = card; pack.Card1RandomBoon = boon; pack.Card1RandomInjury = injury; break;
-                    case 2: pack.Card2 = card; pack.Card2RandomBoon = boon; pack.Card2RandomInjury = injury; break;
-                    case 3: pack.Card3 = card; pack.Card3RandomBoon = boon; pack.Card3RandomInjury = injury; break;
-                }
+                    card = slot != null && !string.IsNullOrEmpty(slot.CardId) ? GetCardSource(slot.CardId) : null,
+                    cardRandomBoon = slot?.RandomBoon ?? false,
+                    cardRandomInjury = slot?.RandomInjury ?? false
+                });
             }
             return pack;
         }
@@ -282,17 +272,17 @@ namespace UnknownMod.Core
             d.ModIterations = pack.ModIterations;
             d.Slots = new List<CardPlayerSlot>();
 
-            CardData[] cards = { pack.Card0, pack.Card1, pack.Card2, pack.Card3 };
-            bool[] boons = { pack.Card0RandomBoon, pack.Card1RandomBoon, pack.Card2RandomBoon, pack.Card3RandomBoon };
-            bool[] injuries = { pack.Card0RandomInjury, pack.Card1RandomInjury, pack.Card2RandomInjury, pack.Card3RandomInjury };
-            for (int i = 0; i < 4; i++)
+            if (pack.Cards != null)
             {
-                d.Slots.Add(new CardPlayerSlot
+                foreach (var card in pack.Cards)
                 {
-                    CardId = cards[i] != null ? cards[i].Id ?? "" : "",
-                    RandomBoon = boons[i],
-                    RandomInjury = injuries[i]
-                });
+                    d.Slots.Add(new CardPlayerSlot
+                    {
+                        CardId = card.card != null ? card.card.Id ?? "" : "",
+                        RandomBoon = card.cardRandomBoon,
+                        RandomInjury = card.cardRandomInjury
+                    });
+                }
             }
             // Trim trailing empty slots
             while (d.Slots.Count > 0 && string.IsNullOrEmpty(d.Slots[d.Slots.Count - 1].CardId)
@@ -309,21 +299,11 @@ namespace UnknownMod.Core
         {
             var pack = ScriptableObject.CreateInstance<CardPlayerPairsPackData>();
             pack.PackId = d.PackId;
+            pack.RarityIfElementEmplty = d.RarityIfElementEmpty;
 
-            for (int i = 0; i < 6; i++)
-            {
-                string cardId = i < d.CardIds.Count ? d.CardIds[i] : "";
-                CardData card = !string.IsNullOrEmpty(cardId) ? GetCard(cardId) : null;
-                switch (i)
-                {
-                    case 0: pack.Card0 = card; break;
-                    case 1: pack.Card1 = card; break;
-                    case 2: pack.Card2 = card; break;
-                    case 3: pack.Card3 = card; break;
-                    case 4: pack.Card4 = card; break;
-                    case 5: pack.Card5 = card; break;
-                }
-            }
+            pack.Cards = new List<CardDataNew>();
+            foreach (var cardId in d.CardIds ?? new List<string>())
+                pack.Cards.Add(string.IsNullOrEmpty(cardId) ? null : GetCardSource(cardId));
             return pack;
         }
 
@@ -332,10 +312,11 @@ namespace UnknownMod.Core
         {
             var d = new CardPlayerPairsPackDef();
             d.PackId = pack.PackId ?? "";
+            d.RarityIfElementEmpty = pack.RarityIfElementEmplty;
             d.CardIds = new List<string>();
-            CardData[] cards = { pack.Card0, pack.Card1, pack.Card2, pack.Card3, pack.Card4, pack.Card5 };
-            foreach (var c in cards)
-                d.CardIds.Add(c != null ? c.Id ?? "" : "");
+            if (pack.Cards != null)
+                foreach (var c in pack.Cards)
+                    d.CardIds.Add(c != null ? c.Id ?? "" : "");
             while (d.CardIds.Count > 0 && string.IsNullOrEmpty(d.CardIds[d.CardIds.Count - 1]))
                 d.CardIds.RemoveAt(d.CardIds.Count - 1);
             return d;

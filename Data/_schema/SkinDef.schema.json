@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SkinDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "SkinName": {
+      "type": "string"
+    },
+    "SkinSubclass": {
+      "type": "string"
+    },
+    "BaseSkin": {
+      "type": "boolean"
+    },
+    "SkinOrder": {
+      "type": "integer"
+    },
+    "PerkLevel": {
+      "type": "integer"
+    },
+    "Sku": {
+      "type": "string"
+    },
+    "SteamStat": {
+      "type": "string"
+    },
+    "SkinTextId": {
+      "type": "string"
+    },
+    "HideInGame": {
+      "type": "boolean"
+    },
+    "SpriteSource": {
+      "type": "string"
+    },
+    "VisualGraphId": {
+      "type": "string"
+    },
+    "AnimTriggers": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "AnimNoFallback": {
+      "type": "boolean"
+    },
+    "PortraitSource": {
+      "type": "string"
+    },
+    "Portrait": {
+      "type": "string"
+    },
+    "PortraitLarge": {
+      "type": "string"
+    },
+    "Silhouette": {
+      "type": "string"
+    },
+    "SilhouetteLarge": {
+      "type": "string"
+    },
+    "FlipPortrait": {
+      "type": "boolean"
+    },
+    "PortraitScale": {
+      "type": "number"
+    },
+    "PortraitOffsetX": {
+      "type": "number"
+    },
+    "PortraitOffsetY": {
+      "type": "number"
+    },
+    "HeroSelectionScreenScale": {
+      "type": "number"
+    },
+    "HeroSelectionScreenOffsetX": {
+      "type": "number"
+    }
+  }
+}

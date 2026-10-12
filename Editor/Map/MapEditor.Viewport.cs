@@ -52,7 +52,9 @@ namespace UnknownMod.Editor
             if (_spritePickerTargetLayer != null)
                 DrawSpritePickerOverlay(vp);
 
-            HandleInput(vp, drawn, zone);
+            // The picker is modal: its own controls handle their events, the layer behind must not see them.
+            if (_spritePickerTargetLayer == null)
+                HandleInput(vp, drawn, zone);
         }
 
         private void DrawEmpty(Rect vp, string msg)

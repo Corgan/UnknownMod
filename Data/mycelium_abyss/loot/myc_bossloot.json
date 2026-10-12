@@ -1,0 +1,39 @@
+{
+  "Id": "myc_bossloot",
+  "NumItems": 3,
+  "GoldQuantity": 150,
+  "PercentUncommon": 0,
+  "PercentRare": 0,
+  "PercentEpic": 60,
+  "PercentMythic": 40,
+  "Items": [
+    {
+      "CardId": "mycheartstaff",
+      "Percent": 60,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "mycthronecarapace",
+      "Percent": 60,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "mychivesignet",
+      "Percent": 60,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "mycheartsporereliquary",
+      "Percent": 60,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    }
+  ]
+}

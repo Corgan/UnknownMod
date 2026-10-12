@@ -1,0 +1,28 @@
+{
+  "EventId": "e_myc_obelisk_tier2",
+  "EventName": "The Mycelium Obelisk",
+  "Description": "Beyond the throne, the roots part to reveal a cracked obelisk, its runes drowned in pale fungal light. Where the Mycelarch's hum fades, the stone sings in a purer note. You read the runes aloud, and the obelisk wall warps and ripples into a set of portals.\n\nThe party's wounds knit in the glow as the spores finally let go.",
+  "DescriptionAction": "Which portal do you want to cross?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "_tier2",
+  "Replies": [
+    {
+      "ReplyText": "Cross the black portal, from which a cold, hollow wind comes out.",
+      "Action": 29,
+      "SsText": "You step through the shimmering wall. Spores fall away like ash, and the world rearranges itself around you.",
+      "SsHealPercent": 100.0,
+      "SsNodeTravelId": "voidlow_0",
+      "SsRequirementUnlockId": "_tier3"
+    },
+    {
+      "ReplyText": "Cross the dark green portal, from which the smell of rotting leaves comes out.",
+      "Action": 29,
+      "SsText": "You step through the shimmering wall. Spores fall away like ash, and the world rearranges itself around you.",
+      "SsHealPercent": 100.0,
+      "SsNodeTravelId": "woods_0",
+      "SsRequirementUnlockId": "_tier3"
+    }
+  ]
+}

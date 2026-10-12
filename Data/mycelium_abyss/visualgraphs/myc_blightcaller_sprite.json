@@ -1,0 +1,468 @@
+{
+  "Id": "myc_blightcaller_sprite",
+  "BasePresentation": "druid",
+  "Effects": [
+    {
+      "Type": "Smoke",
+      "Intensity": 0.0,
+      "Speed": 1.0
+    }
+  ],
+  "Nodes": [
+    {
+      "NodeId": "node_1",
+      "AttachmentKind": "RigidAttachment",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_3[0]/bone_19[0]"
+      },
+      "SourcePrefabRef": "adultspider",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "Head[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": -0.6,
+        "PositionY": 0.05,
+        "Rotation": -61.7,
+        "ScaleX": 1.09,
+        "ScaleY": 1.09
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "node_2",
+      "AttachmentKind": "RigidAttachment",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_8[0]/bone_9[0]/bone_10[0]"
+      },
+      "SourcePrefabRef": "pirate",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "OrangeBag[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": 0.14,
+        "PositionY": -0.03,
+        "Rotation": -92.52,
+        "ScaleX": 0.77,
+        "ScaleY": 0.77
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "abdomen",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_4[0]/bone_5[0]"
+      },
+      "SourcePrefabRef": "adultspider",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "Abdomen[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": 0.33,
+        "PositionY": 0.04,
+        "Rotation": 282.36,
+        "ScaleX": 1.1,
+        "ScaleY": 1.1
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "frontleg2",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_4[0]/bone_5[0]/bone_7[0]"
+      },
+      "SourcePrefabRef": "adultspider",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "FrontLeg2[0]"
+        },
+        {
+          "Path": "FrontLeg1[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": -0.5,
+        "PositionY": -0.32,
+        "Rotation": 143.55,
+        "ScaleX": 1.1,
+        "ScaleY": 1.1
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "frontleg4",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_4[0]/bone_5[0]/bone_7[0]"
+      },
+      "SourcePrefabRef": "adultspider",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "FrontLeg4[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": -0.45,
+        "PositionY": 0.0,
+        "Rotation": 144.37,
+        "ScaleX": 1.1,
+        "ScaleY": 1.1
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "frontleg42",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_4[0]/bone_5[0]/bone_7[0]"
+      },
+      "SourcePrefabRef": "adultspider",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "FrontLeg4[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": -0.29,
+        "PositionY": -0.19,
+        "Rotation": 144.37,
+        "ScaleX": 1.1,
+        "ScaleY": 1.1
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "frontleg1",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_4[0]/bone_5[0]/bone_7[0]"
+      },
+      "SourcePrefabRef": "adultspider",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "FrontLeg1[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": -0.05,
+        "PositionY": 0.24,
+        "Rotation": 86.26,
+        "ScaleX": 1.1,
+        "ScaleY": 1.1
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "frontleg23",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_4[0]/bone_5[0]/bone_7[0]"
+      },
+      "SourcePrefabRef": "adultspider",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "FrontLeg2[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": 0.11,
+        "PositionY": 0.13,
+        "Rotation": 113.57,
+        "ScaleX": 1.1,
+        "ScaleY": 1.1
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "frontleg24",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_4[0]/bone_5[0]/bone_7[0]"
+      },
+      "SourcePrefabRef": "adultspider",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "FrontLeg2[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": -0.02,
+        "PositionY": 0.07,
+        "Rotation": 104.87,
+        "ScaleX": 1.1,
+        "ScaleY": 1.1
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    }
+  ],
+  "HostHiddenRenderers": [
+    {
+      "Path": "Cabeza[0]"
+    },
+    {
+      "Path": "Arma[0]"
+    },
+    {
+      "Path": "shadow[0]"
+    }
+  ]
+}

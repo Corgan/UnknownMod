@@ -1,8 +1,8 @@
 {
   "EventId": "e_myc_24",
   "EventName": "The Hivemind Nexus",
-  "Description": "The passage widens into a pulsing organic chamber. At its center, a massive fungal brain — easily the size of a cart — throbs with bioluminescent energy. Thick tendrils extend from it into the walls, floor, and ceiling, connecting to the entire network around you. This is a nexus point of the Mycelium's consciousness.",
-  "DescriptionAction": "What is your approach?",
+  "Description": "The passage widens into a pulsing organic chamber. At its center, a massive fungal brain, easily the size of a house, hangs suspended by thousands of tendrils. Every strand twitches in time with a rhythm you can feel in your teeth.",
+  "DescriptionAction": "What do you do?",
   "SpriteSource": "",
   "EventTier": "T0",
   "ReplyRandom": 0,
@@ -10,26 +10,35 @@
   "Replies": [
     {
       "ReplyText": "Attempt to commune with the hivemind.",
-      "Action": 30,
-      "HasRoll": true,
-      "RollDC": 6,
-      "RollCard": 3,
-      "SsText": "Your consciousness touches the vast alien intelligence of the Mycelium. For a terrifying moment, you see through a million eyes — and among the visions, you glimpse the weak points of its strongest guardian.",
+      "Action": 51,
+      "FlText": "The hivemind recoils from your touch, lashing out with a wave of agony.",
       "SsXP": 50,
-      "FlText": "The hivemind's consciousness is overwhelming. Alien thoughts flood your brain in an unstoppable torrent, leaving you dazed and disoriented as you wrench free.",
-      "FlHealFlat": -20
+      "FlHealFlat": -20,
+      "HasRoll": true,
+      "RollDC": 3,
+      "SsText": "The hivemind opens to you, and you glimpse the shape of the Mycelarch. A tithe of the hive's memory settles into your mind, as a gift.",
+      "SsRewardTier": "5",
+      "RepeatForAllMages": true,
+      "RollTarget": 3
     },
     {
       "ReplyText": "Attack the nexus directly.",
-      "Action": 29,
-      "SsText": "You charge the pulsing mass, weapons raised. The tendrils lash out in defense as the hivemind screams silently, summoning its guardians.",
-      "SsCombatId": "cmyc_8"
+      "Action": 2,
+      "SsText": "The nexus screams and the hive answers.",
+      "SsCombatId": "emyc_24a"
     },
     {
-      "ReplyText": "Sever the tendrils. [Warrior]",
-      "Action": 29,
-      "SsText": "With powerful, precise strikes, you hack through the thick tendrils connecting the nexus to the walls. The fungal brain shudders and dims as its connections are severed, weakening the network around you.",
-      "SsXP": 30
+      "ReplyText": "Sever the tendrils.",
+      "Action": 23,
+      "FlText": "The tendrils thrash and the nexus screams, drawing the hive down on your heads.",
+      "SsLootId": "myc_forage",
+      "FlCombatId": "emyc_24b",
+      "HasRoll": true,
+      "RollDC": 3,
+      "SsText": "You hack the tendrils apart and the nexus goes still. Its drained reservoirs pour out as a glistening treasure.",
+      "SsXP": 30,
+      "RepeatForAllWarriors": true,
+      "RollTarget": 3
     }
   ]
 }

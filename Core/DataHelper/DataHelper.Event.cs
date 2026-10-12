@@ -48,6 +48,11 @@ namespace UnknownMod.Core
             var reply = new EventReplyData();
             reply.ReplyText = r.ReplyText ?? "";
             reply.ReplyActionText = r.Action;
+            // EventReplyData is a plain class, so unset lists stay null; EventManager.FinalResolution iterates them unguarded.
+            reply.SsAddCards = new List<CardDataNew>();
+            reply.FlAddCards = new List<CardDataNew>();
+            reply.SscAddCards = new List<CardDataNew>();
+            reply.FlcAddCards = new List<CardDataNew>();
             reply.GoldCost = r.GoldCost;
             reply.DustCost = r.DustCost;
 
@@ -61,29 +66,29 @@ namespace UnknownMod.Core
             if (!string.IsNullOrEmpty(r.RequiredClassId))
                 reply.RequiredClass = GetSubClass(r.RequiredClassId);
             if (!string.IsNullOrEmpty(r.RequirementItemId))
-                reply.RequirementItem = GetCard(r.RequirementItemId);
+                reply.RequiredItem = GetCardSource(r.RequirementItemId);
             if (r.RequirementItemIds != null && r.RequirementItemIds.Count > 0)
             {
-                var items = new List<CardData>();
+                var items = new List<CardDataNew>();
                 foreach (var id in r.RequirementItemIds)
                 {
-                    var card = GetCard(id);
+                    var card = GetCardSource(id);
                     if (card != null) items.Add(card);
                 }
-                reply.RequirementItems = items;
+                reply.RequiredItems = items;
             }
             if (r.RequirementCardIds != null && r.RequirementCardIds.Count > 0)
             {
-                var cards = new List<CardData>();
+                var cards = new List<CardDataNew>();
                 foreach (var id in r.RequirementCardIds)
                 {
-                    var card = GetCard(id);
+                    var card = GetCardSource(id);
                     if (card != null) cards.Add(card);
                 }
                 reply.RequirementCard = cards;
             }
             if (!string.IsNullOrEmpty(r.ReplyShowCardId))
-                reply.ReplyShowCard = GetCard(r.ReplyShowCardId);
+                reply.ReplyShowCard = GetCardSource(r.ReplyShowCardId);
             reply.RequirementMultiplayer = r.RequirementMultiplayer;
             reply.RepeatForAllCharacters = r.RepeatForAllCharacters;
             reply.RepeatForAllWarriors = r.RepeatForAllWarriors;
@@ -213,6 +218,15 @@ namespace UnknownMod.Core
                 }
             }
 
+            // Card destruction: Ss and Fl only; clear crafted cards: Ss only
+            if (p == "ss" || p == "fl")
+            {
+                t.Field($"{p}CardDestruction").SetValue(o.CardDestruction);
+                t.Field($"{p}CardDestructionAmount").SetValue(o.CardDestructionAmount);
+            }
+            if (p == "ss")
+                t.Field("ssClearCraftedCards").SetValue(o.ClearCraftedCards);
+
             // Ss and Ssc: FinishEarlyAccess
             if (p == "ss" || p == "ssc")
             {
@@ -239,17 +253,52 @@ namespace UnknownMod.Core
             if (!string.IsNullOrEmpty(o.RequirementLockId))
                 t.Field($"{p}RequirementLock").SetValue(GetEventRequirement(o.RequirementLockId));
             if (!string.IsNullOrEmpty(o.RequirementLock2Id))
-                t.Field($"{p}RequirementLock2").SetValue(GetEventRequirement(o.RequirementLock2Id));
-            if (!string.IsNullOrEmpty(o.AddItemId))
-                t.Field($"{p}AddItem").SetValue(GetCard(o.AddItemId));
-            if (!string.IsNullOrEmpty(o.AddCard1Id))
-                t.Field($"{p}AddCard1").SetValue(GetCard(o.AddCard1Id));
-            if (!string.IsNullOrEmpty(o.AddCard2Id))
-                t.Field($"{p}AddCard2").SetValue(GetCard(o.AddCard2Id));
-            if (!string.IsNullOrEmpty(o.AddCard3Id))
-                t.Field($"{p}AddCard3").SetValue(GetCard(o.AddCard3Id));
+            {
+                if (p == "ss")
+                    t.Field("ssRequirementLock2").SetValue(GetEventRequirement(o.RequirementLock2Id));
+                else
+                    Plugin.Log.LogWarning($"[Event] Ignoring unsupported {p} RequirementLock2Id '{o.RequirementLock2Id}'.");
+            }
+            SetOutcomeCards(reply, p, o);
             if (!string.IsNullOrEmpty(o.RewardTier) && int.TryParse(o.RewardTier, out int tier))
                 t.Field($"{p}RewardTier").SetValue(GetTierReward(tier));
+        }
+
+        private static void SetOutcomeCards(EventReplyData reply, string prefix, OutcomeDef outcome)
+        {
+            var cards = new List<CardDataNew>();
+            AddCard(cards, outcome.AddCard1Id);
+            AddCard(cards, outcome.AddCard2Id);
+            AddCard(cards, outcome.AddCard3Id);
+            if (cards.Count > 0)
+            {
+                switch (prefix)
+                {
+                    case "ss": reply.SsAddCards = cards; break;
+                    case "fl": reply.FlAddCards = cards; break;
+                    case "ssc": reply.SscAddCards = cards; break;
+                    case "flc": reply.FlcAddCards = cards; break;
+                }
+            }
+
+            if (string.IsNullOrEmpty(outcome.AddItemId)) return;
+            var item = GetCardSource(outcome.AddItemId);
+            switch (prefix)
+            {
+                case "ss": reply.SsAddItem = item; break;
+                case "fl": reply.FlAddItem = item; break;
+                case "ssc": reply.SscAddItem = item; break;
+                case "flc": reply.FlcAddItem = item; break;
+            }
+        }
+
+        private static void AddCard(List<CardDataNew> cards, string id)
+        {
+            if (!string.IsNullOrEmpty(id))
+            {
+                var card = GetCardSource(id);
+                if (card != null) cards.Add(card);
+            }
         }
     }
 }

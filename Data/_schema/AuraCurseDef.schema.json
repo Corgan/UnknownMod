@@ -1,0 +1,748 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AuraCurseDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "ACName": {
+      "type": "string"
+    },
+    "IsAura": {
+      "type": "boolean"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "MaxCharges": {
+      "type": "integer"
+    },
+    "MaxMadnessCharges": {
+      "type": "integer"
+    },
+    "AuraConsumed": {
+      "type": "integer"
+    },
+    "ChargesMultiplierDescription": {
+      "type": "integer"
+    },
+    "ChargesAuxNeedForOne1": {
+      "type": "number"
+    },
+    "ChargesAuxNeedForOne2": {
+      "type": "integer"
+    },
+    "Sprite": {
+      "type": "string"
+    },
+    "EffectTick": {
+      "type": "string"
+    },
+    "EffectTickSides": {
+      "type": "string"
+    },
+    "Sound": {
+      "type": "string"
+    },
+    "SoundRework": {
+      "type": "string"
+    },
+    "Removable": {
+      "type": "boolean"
+    },
+    "GainCharges": {
+      "type": "boolean"
+    },
+    "IconShow": {
+      "type": "boolean"
+    },
+    "CombatlogShow": {
+      "type": "boolean"
+    },
+    "Preventable": {
+      "type": "boolean"
+    },
+    "CanBeAddedToImmunityDespiteNotBeingPreventable": {
+      "type": "boolean"
+    },
+    "PriorityOnConsumption": {
+      "type": "integer"
+    },
+    "ConsumeAll": {
+      "type": "boolean"
+    },
+    "ConsumedAtCast": {
+      "type": "boolean"
+    },
+    "ConsumedAtTurnBegin": {
+      "type": "boolean"
+    },
+    "ConsumedAtTurn": {
+      "type": "boolean"
+    },
+    "ConsumedAtRoundBegin": {
+      "type": "boolean"
+    },
+    "ConsumedAtRound": {
+      "type": "boolean"
+    },
+    "ProduceDamageWhenConsumed": {
+      "type": "boolean"
+    },
+    "ProduceHealWhenConsumed": {
+      "type": "boolean"
+    },
+    "DieWhenConsumedAll": {
+      "type": "boolean"
+    },
+    "AuraDamageType": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "AuraDamageChargesBasedOnACCharges": {
+      "type": "string"
+    },
+    "AuraDamageIncreasedTotal": {
+      "type": "integer"
+    },
+    "AuraDamageIncreasedPerStack": {
+      "type": "number"
+    },
+    "AuraDamageIncreasedPercent": {
+      "type": "integer"
+    },
+    "AuraDamageIncreasedPercentPerStack": {
+      "type": "number"
+    },
+    "AuraDamageIncreasedPercentPerStackPerEnergy": {
+      "type": "number"
+    },
+    "AuraDamageType2": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "AuraDamageIncreasedTotal2": {
+      "type": "integer"
+    },
+    "AuraDamageIncreasedPerStack2": {
+      "type": "number"
+    },
+    "AuraDamageIncreasedPercent2": {
+      "type": "integer"
+    },
+    "AuraDamageIncreasedPercentPerStack2": {
+      "type": "number"
+    },
+    "AuraDamageIncreasedPercentPerStackPerEnergy2": {
+      "type": "number"
+    },
+    "AuraDamageType3": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "AuraDamageIncreasedTotal3": {
+      "type": "integer"
+    },
+    "AuraDamageIncreasedPerStack3": {
+      "type": "number"
+    },
+    "AuraDamageIncreasedPercent3": {
+      "type": "integer"
+    },
+    "AuraDamageIncreasedPercentPerStack3": {
+      "type": "number"
+    },
+    "AuraDamageIncreasedPercentPerStackPerEnergy3": {
+      "type": "number"
+    },
+    "AuraDamageType4": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "AuraDamageIncreasedTotal4": {
+      "type": "integer"
+    },
+    "AuraDamageIncreasedPerStack4": {
+      "type": "number"
+    },
+    "AuraDamageIncreasedPercent4": {
+      "type": "integer"
+    },
+    "AuraDamageIncreasedPercentPerStack4": {
+      "type": "number"
+    },
+    "AuraDamageIncreasedPercentPerStackPerEnergy4": {
+      "type": "number"
+    },
+    "HealDoneTotal": {
+      "type": "integer"
+    },
+    "HealDonePerStack": {
+      "type": "integer"
+    },
+    "HealDonePercent": {
+      "type": "integer"
+    },
+    "HealDonePercentPerStack": {
+      "type": "integer"
+    },
+    "HealDonePercentPerStackPerEnergy": {
+      "type": "integer"
+    },
+    "HealReceivedTotal": {
+      "type": "integer"
+    },
+    "HealReceivedPerStack": {
+      "type": "integer"
+    },
+    "HealReceivedPercent": {
+      "type": "integer"
+    },
+    "HealReceivedPercentPerStack": {
+      "type": "integer"
+    },
+    "CardsDrawPerStack": {
+      "type": "integer"
+    },
+    "ChargesPreReqForDamageReflection": {
+      "type": "integer"
+    },
+    "DamageReflectedModifierType": {
+      "type": "string",
+      "enum": [
+        "DamagePerAuraCharge",
+        "DamagePerDamageReceived",
+        "DamagePerDamageBlocked"
+      ]
+    },
+    "DamageReflectedMultiplier": {
+      "type": "integer"
+    },
+    "DamageReflectedType": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageReflectedConsumeCharges": {
+      "type": "integer"
+    },
+    "BlockChargesGainedPerStack": {
+      "type": "integer"
+    },
+    "NoRemoveBlockAtTurnEnd": {
+      "type": "boolean"
+    },
+    "GrantBlockToTeamForAmountOfDamageBlocked": {
+      "type": "boolean"
+    },
+    "ChargesPreReqForGrantBlockToTeamForAmountOfDamageBlocked": {
+      "type": "integer"
+    },
+    "DamagePreventedPerStack": {
+      "type": "integer"
+    },
+    "CursePreventedPerStack": {
+      "type": "integer"
+    },
+    "PreventedAuraCurse": {
+      "type": "string"
+    },
+    "PreventedAuraCurseStackPerStack": {
+      "type": "integer"
+    },
+    "IncreasedDamageReceivedType": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "IncreasedDirectDamageChargesMultiplierNeededForOne": {
+      "type": "integer"
+    },
+    "IncreasedDirectDamageReceivedPerTurn": {
+      "type": "integer"
+    },
+    "IncreasedDirectDamageReceivedPerStack": {
+      "type": "number"
+    },
+    "IncreasedPercentDamageReceivedPerTurn": {
+      "type": "integer"
+    },
+    "IncreasedPercentDamageReceivedPerStack": {
+      "type": "integer"
+    },
+    "IncreasedDamageReceivedType2": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "IncreasedDirectDamageChargesMultiplierNeededForOne2": {
+      "type": "integer"
+    },
+    "IncreasedDirectDamageReceivedPerTurn2": {
+      "type": "integer"
+    },
+    "IncreasedDirectDamageReceivedPerStack2": {
+      "type": "number"
+    },
+    "IncreasedPercentDamageReceivedPerTurn2": {
+      "type": "integer"
+    },
+    "IncreasedPercentDamageReceivedPerStack2": {
+      "type": "integer"
+    },
+    "PreventedDamageTypePerStack": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "PreventedDamagePerStack": {
+      "type": "integer"
+    },
+    "HealAttackerPerStack": {
+      "type": "integer"
+    },
+    "HealAttackerConsumeCharges": {
+      "type": "integer"
+    },
+    "CharacterStatModified": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Hp",
+        "Speed",
+        "Energy",
+        "EnergyTurn"
+      ]
+    },
+    "CharacterStatChargesMultiplierNeededForOne": {
+      "type": "integer"
+    },
+    "CharacterStatModifiedValue": {
+      "type": "integer"
+    },
+    "CharacterStatModifiedValuePerStack": {
+      "type": "number"
+    },
+    "CharacterStatAbsolute": {
+      "type": "boolean"
+    },
+    "CharacterStatAbsoluteValue": {
+      "type": "integer"
+    },
+    "CharacterStatAbsoluteValuePerStack": {
+      "type": "integer"
+    },
+    "ResistModified": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "ResistModifiedValue": {
+      "type": "number"
+    },
+    "ResistModifiedPercentagePerStack": {
+      "type": "number"
+    },
+    "ResistModified2": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "ResistModifiedValue2": {
+      "type": "number"
+    },
+    "ResistModifiedPercentagePerStack2": {
+      "type": "number"
+    },
+    "ResistModified3": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "ResistModifiedValue3": {
+      "type": "number"
+    },
+    "ResistModifiedPercentagePerStack3": {
+      "type": "number"
+    },
+    "ExplodeAtStacks": {
+      "type": "integer"
+    },
+    "HealTotalOnExplode": {
+      "type": "integer"
+    },
+    "HealPerChargeOnExplode": {
+      "type": "number"
+    },
+    "HealTargetOnExplode": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Caster",
+        "CasterTeam",
+        "Target",
+        "TargetTeam"
+      ]
+    },
+    "ACOnExplode": {
+      "type": "string"
+    },
+    "ACTotalChargesOnExplode": {
+      "type": "integer"
+    },
+    "ACChargesPerStackChargeOnExplode": {
+      "type": "integer"
+    },
+    "DamageTypeWhenConsumed": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "ConsumedDamageChargesBasedOnACCharges": {
+      "type": "string"
+    },
+    "ConsumeDamageChargesIfACApplied": {
+      "type": "string"
+    },
+    "DamageWhenConsumed": {
+      "type": "integer"
+    },
+    "DamageWhenConsumedPerCharge": {
+      "type": "number"
+    },
+    "DamageSidesWhenConsumed": {
+      "type": "integer"
+    },
+    "DamageSidesWhenConsumedPerCharge": {
+      "type": "integer"
+    },
+    "DoubleDamageIfCursesLessThan": {
+      "type": "integer"
+    },
+    "HealWhenConsumed": {
+      "type": "integer"
+    },
+    "HealWhenConsumedPerCharge": {
+      "type": "number"
+    },
+    "HealSidesWhenConsumed": {
+      "type": "integer"
+    },
+    "HealSidesWhenConsumedPerCharge": {
+      "type": "number"
+    },
+    "RemoveAuraCurse": {
+      "type": "string"
+    },
+    "RemoveAuraCurse2": {
+      "type": "string"
+    },
+    "GainAuraCurseConsumption": {
+      "type": "string"
+    },
+    "GainAuraCurseConsumptionPerCharge": {
+      "type": "integer"
+    },
+    "GainChargesFromThisAuraCurse": {
+      "type": "string"
+    },
+    "GainAuraCurseConsumption2": {
+      "type": "string"
+    },
+    "GainAuraCurseConsumptionPerCharge2": {
+      "type": "integer"
+    },
+    "GainChargesFromThisAuraCurse2": {
+      "type": "string"
+    },
+    "RevealCardsPerCharge": {
+      "type": "integer"
+    },
+    "ModifyCardCostPerChargeNeededForOne": {
+      "type": "integer"
+    },
+    "DisabledCardTypes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "None",
+          "Melee_Attack",
+          "Ranged_Attack",
+          "Magic_Attack",
+          "Defense",
+          "Fire_Spell",
+          "Cold_Spell",
+          "Lightning_Spell",
+          "Mind_Spell",
+          "Shadow_Spell",
+          "Holy_Spell",
+          "Curse_Spell",
+          "Healing_Spell",
+          "Book",
+          "Small_Weapon",
+          "Song",
+          "Skill",
+          "Power",
+          "Injury",
+          "Attack",
+          "Spell",
+          "Boon",
+          "Weapon",
+          "Armor",
+          "Jewelry",
+          "Accesory",
+          "Pet",
+          "Corruption",
+          "Enchantment",
+          "Food",
+          "Flask",
+          "Petrare",
+          "EchoEconomy",
+          "EchoOverpowered",
+          "Echo_Spell"
+        ]
+      }
+    },
+    "Invulnerable": {
+      "type": "boolean"
+    },
+    "Stealth": {
+      "type": "boolean"
+    },
+    "Taunt": {
+      "type": "boolean"
+    },
+    "SkipsNextTurn": {
+      "type": "boolean"
+    },
+    "SkipEndTurnRemovalIfNoBegin": {
+      "type": "boolean"
+    },
+    "ACBonusData": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AuraCurseChargesBonusDef"
+      }
+    },
+    "AuraDamageConditionalBonuses": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/AuraDamageBonusDef"
+      }
+    }
+  },
+  "definitions": {
+    "AuraCurseChargesBonusDef": {
+      "type": "object",
+      "properties": {
+        "AuraCurseId": {
+          "type": "string"
+        },
+        "ChargesBonus": {
+          "type": "integer"
+        },
+        "RequiredChargesForBonus": {
+          "type": "integer"
+        },
+        "BonusType": {
+          "type": "string",
+          "enum": [
+            "flatBonus",
+            "percentageBonus",
+            "bonusPerCharge"
+          ]
+        }
+      }
+    },
+    "AuraDamageBonusDef": {
+      "type": "object",
+      "properties": {
+        "DamageType": {
+          "type": "string",
+          "enum": [
+            "None",
+            "Slashing",
+            "Blunt",
+            "Piercing",
+            "Fire",
+            "Cold",
+            "Lightning",
+            "Mind",
+            "Holy",
+            "Shadow",
+            "All",
+            "Bleed"
+          ]
+        },
+        "BasedOnACId": {
+          "type": "string"
+        },
+        "FlatBonus": {
+          "type": "integer"
+        },
+        "FlatBonusPerStack": {
+          "type": "number"
+        },
+        "PercentBonus": {
+          "type": "integer"
+        },
+        "PercentBonusPerStack": {
+          "type": "number"
+        },
+        "PercentBonusPerStackPerEnergy": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

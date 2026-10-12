@@ -22,16 +22,19 @@ namespace UnknownMod
             if (__instance.BossNpc != null)
                 return;
 
-            NPC[] team = __instance.GetTeamNPC();
+            var team = __instance.GetTeamNPC();
             if (team == null) return;
-            foreach (NPC npc in team)
+            foreach (Character character in team)
             {
+                NPC npc = character as NPC;
                 if (npc == null || !npc.NPCIsBoss()) continue;
 
                 var controller = ScriptLoader.FindBossController(npc.NpcData.Id);
                 if (controller != null)
                 {
-                    __instance.BossNpc = controller.CreateBossNpc(npc);
+                    var boss = ScriptHost.Call<BossNPC>(controller, "CreateBossNpc", () => controller.CreateBossNpc(npc));
+                    if (boss == null) continue;
+                    __instance.BossNpc = boss;
                     Plugin.Log.LogInfo($"[Patches] Boss controller '{controller.GetType().Name}' activated for '{npc.NpcData.Id}'");
                     break;
                 }

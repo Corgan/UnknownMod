@@ -1,0 +1,38 @@
+{
+  "EventId": "e_myc_35",
+  "EventName": "The Sprout Choir",
+  "Description": "A ring of knee-high sprouts sways in the dark, humming a slow tune through their caps. Each one glows faintly, and the hum seems to travel through the soles of your feet.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Join the song.",
+      "Action": 16,
+      "SsHealPercent": 30.0,
+      "SsXP": 15,
+      "SsText": "The tune settles into your bones. Aches fade and the cave feels a little less hostile."
+    },
+    {
+      "ReplyText": "Dig up the largest sprout.",
+      "Action": 23,
+      "SsAddItemId": "mycthornbloomring",
+      "SsXP": 20,
+      "FlCombatId": "emyc_35a",
+      "HasRoll": true,
+      "RollDC": 3,
+      "RollTarget": 3,
+      "RepeatForAllWarriors": true,
+      "SsText": "Beneath the sprout, wound in its roots, is a ring of living thorn and bloom.",
+      "FlText": "The humming stops all at once. Every sprout turns toward you."
+    },
+    {
+      "ReplyText": "Leave them be.",
+      "Action": 11,
+      "SsXP": 10,
+      "SsText": "The song follows you for a while, then fades."
+    }
+  ]
+}

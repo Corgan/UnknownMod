@@ -76,6 +76,16 @@ namespace UnknownMod.Core
 
             public void Set(object obj, object value)
             {
+                var mt = MemberType;
+                if (value != null && mt != null && !mt.IsInstanceOfType(value))
+                {
+                    try { value = Convert.ChangeType(value, Nullable.GetUnderlyingType(mt) ?? mt); }
+                    catch (Exception)
+                    {
+                        Plugin.Log.LogWarning($"[FieldMapper] Type mismatch on {obj.GetType().Name}.{(Field?.Name ?? Property?.Name)}: cannot store {value.GetType().Name} as {mt.Name}; skipped.");
+                        return;
+                    }
+                }
                 if (Field != null) Field.SetValue(obj, value);
                 else if (Property != null && Property.CanWrite) Property.SetValue(obj, value);
             }
@@ -91,9 +101,14 @@ namespace UnknownMod.Core
             var key = (soType, name);
             if (!_soCache.TryGetValue(key, out var acc))
             {
-                acc.Field = AccessTools.Field(soType, name);
-                if (acc.Field == null)
-                    acc.Property = AccessTools.Property(soType, name);
+                const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+                // Walk the hierarchy by hand: AccessTools.Field logs a HarmonyX warning for every miss,
+                // and most mapped members are properties.
+                for (var t = soType; t != null && !acc.IsValid; t = t.BaseType)
+                {
+                    acc.Field = t.GetField(name, flags);
+                    if (acc.Field == null) acc.Property = t.GetProperty(name, flags);
+                }
                 if (!acc.IsValid)
                     Plugin.Log.LogWarning($"[FieldMapper] SO member '{name}' not found on {soType.Name}");
                 _soCache[key] = acc;
@@ -159,7 +174,7 @@ namespace UnknownMod.Core
                         var cardId = val as string;
                         if (!string.IsNullOrEmpty(cardId))
                         {
-                            var card = DataHelper.GetCard(cardId);
+                            var card = DataHelper.GetCardSource(cardId);
                             if (card != null) soAcc.Set(so, card);
                         }
                         break;
@@ -213,7 +228,7 @@ namespace UnknownMod.Core
                         break;
 
                     case RefType.Card:
-                        var card = soAcc.Get(so) as CardData;
+                        var card = soAcc.Get(so) as CardDataNew;
                         defAcc.Set(def, card != null ? (card.Id ?? "") : "");
                         break;
 

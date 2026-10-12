@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CinematicDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "PrefabName": {
+      "type": "string"
+    },
+    "SoundSource": {
+      "type": "string"
+    },
+    "EventId": {
+      "type": "string"
+    },
+    "CombatId": {
+      "type": "string"
+    },
+    "EndAdventure": {
+      "type": "boolean"
+    }
+  }
+}

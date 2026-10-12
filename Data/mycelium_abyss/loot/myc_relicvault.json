@@ -1,0 +1,56 @@
+{
+  "Id": "myc_relicvault",
+  "NumItems": 2,
+  "GoldQuantity": 60,
+  "Items": [
+    {
+      "CardId": "mycsporecapmantle",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "mycmycelialblade",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "mycsymbioticidol",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "mycfruitingcrown",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "mycrotstaff",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "mycthornbloomring",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "mycsporepouch",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    }
+  ]
+}

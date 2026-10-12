@@ -1,0 +1,23 @@
+{
+  "Id": "mycrootbounda",
+  "Name": "Rootbound",
+  "CardType": "Defense",
+  "EffectTarget": "defend",
+  "TargetSide": "Friend",
+  "TargetType": "Single",
+  "Description": "<Gain><br2><Aura_AuraCharges> <Aura2_AuraCharges>",
+  "Aura": "block",
+  "AuraCharges": 12,
+  "Aura2": "thorns",
+  "Aura2Charges": 3,
+  "CardClass": "Scout",
+  "CardRarity": "Uncommon",
+  "CardUpgraded": "A",
+  "Playable": true,
+  "Visible": true,
+  "ShowInTome": true,
+  "SpriteSource": "myc_art_rootbound",
+  "Fluff": "Hold fast. The soil will hold you.",
+  "EnergyCost": 1,
+  "BaseCardId": "mycrootbound"
+}

@@ -1,0 +1,378 @@
+{
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "**/cards/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/CardDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/loot/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/LootDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/npcs/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/NpcDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/auracurse/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/AuraCurseDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/heroes/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/HeroDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/traits/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/TraitDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/skins/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/SkinDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/perks/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/PerkDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/perknodes/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/PerkNodeDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/requirements/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/RequirementDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/cardbacks/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/CardbackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/tierrewards/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/TierRewardDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/keynotes/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/KeyNoteDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/cinematics/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/CinematicDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/corruptionpacks/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/CorruptionPackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/challengetraits/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/ChallengeTraitDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/weeklychallenges/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/WeeklyChallengeDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/visualgraphs/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/CharacterVisualDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/packs/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/PackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/cardplayerpacks/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/CardPlayerPackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/cardplayerpairspacks/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/CardPlayerPairsPackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/herodata/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/HeroDataDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/backgrounds/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/BackgroundDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/events/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/EventDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/combats/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/CombatDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/thermometers/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/ThermometerDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/thermometertiers/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/ThermometerTierDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/bettingteams/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/BettingTeamDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/memorysequences/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/MemorySequenceDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/cardpairrewards/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/CardPairRewardDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/rulesets/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/RuleSetDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/economies/**/*.json",
+        "!**/_patches/**"
+      ],
+      "url": "./_schema/EconomyDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/cards/**/*.json"
+      ],
+      "url": "./_schema/CardDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/loot/**/*.json"
+      ],
+      "url": "./_schema/LootDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/npcs/**/*.json"
+      ],
+      "url": "./_schema/NpcDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/auracurse/**/*.json"
+      ],
+      "url": "./_schema/AuraCurseDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/heroes/**/*.json"
+      ],
+      "url": "./_schema/HeroDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/traits/**/*.json"
+      ],
+      "url": "./_schema/TraitDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/skins/**/*.json"
+      ],
+      "url": "./_schema/SkinDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/perks/**/*.json"
+      ],
+      "url": "./_schema/PerkDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/perknodes/**/*.json"
+      ],
+      "url": "./_schema/PerkNodeDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/requirements/**/*.json"
+      ],
+      "url": "./_schema/RequirementDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/cardbacks/**/*.json"
+      ],
+      "url": "./_schema/CardbackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/tierrewards/**/*.json"
+      ],
+      "url": "./_schema/TierRewardDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/keynotes/**/*.json"
+      ],
+      "url": "./_schema/KeyNoteDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/cinematics/**/*.json"
+      ],
+      "url": "./_schema/CinematicDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/corruptionpacks/**/*.json"
+      ],
+      "url": "./_schema/CorruptionPackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/challengetraits/**/*.json"
+      ],
+      "url": "./_schema/ChallengeTraitDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/weeklychallenges/**/*.json"
+      ],
+      "url": "./_schema/WeeklyChallengeDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/visualgraphs/**/*.json"
+      ],
+      "url": "./_schema/CharacterVisualDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/packs/**/*.json"
+      ],
+      "url": "./_schema/PackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/cardplayerpacks/**/*.json"
+      ],
+      "url": "./_schema/CardPlayerPackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/cardplayerpairspacks/**/*.json"
+      ],
+      "url": "./_schema/CardPlayerPairsPackDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/herodata/**/*.json"
+      ],
+      "url": "./_schema/HeroDataDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/events/**/*.json"
+      ],
+      "url": "./_schema/EventDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/combats/**/*.json"
+      ],
+      "url": "./_schema/CombatDef.schema.json"
+    },
+    {
+      "fileMatch": [
+        "**/_patches/backgrounds/**/*.json"
+      ],
+      "url": "./_schema/BackgroundDef.schema.json"
+    }
+  ]
+}

@@ -3,15 +3,22 @@
   "Description": "Twin casters channel the hivemind's fury behind a living wall.",
   "NpcIds": [
     "myc_blightcaller",
-    "myc_blightcaller",
-    "myc_golem"
+    "myc_thrall",
+    "myc_golem",
+    ""
   ],
   "CombatTier": "T4",
-  "Background": "Spider_Lair",
+  "Background": "Sewers",
   "NpcRemoveInMadness0Index": -1,
   "HealHeroes": false,
   "IsRift": false,
   "NpcToSummonOnKilledId": "",
   "EventDataId": "",
-  "CombatEffects": []
+  "CombatEffects": [
+    {
+      "AuraCurse": "myc_symbiosis",
+      "Charges": 1,
+      "Target": "Monsters"
+    }
+  ]
 }

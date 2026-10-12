@@ -55,7 +55,7 @@ namespace UnknownMod.Definitions
         public int ResistModifiedValue = 0;
 
         // ── Visuals ──────────────────────────────────────────────
-        /// <summary>ID of an existing PerkData to copy the icon sprite from.</summary>
+        /// <summary>ID of an existing PerkData to copy the icon sprite from, or "aura:&lt;id&gt;" to use an aura's sprite.</summary>
         public string SpriteSource = "";
     }
 
@@ -71,7 +71,9 @@ namespace UnknownMod.Definitions
         [JsonIgnore] public string EntityId { get => Id; set => Id = value; }
 
         // ── Layout ───────────────────────────────────────────────
+        /// <summary>Tab: 0 general, 1 physical, 2 elemental, 3 mystical.</summary>
         public int Type = 0;
+        /// <summary>Grid column 0..11. Every vanilla column is occupied, so -1..-4 add columns to the left (the panel widens automatically). Row is 0..6.</summary>
         public int Column = 0;
         public int Row = 0;
 
@@ -89,7 +91,7 @@ namespace UnknownMod.Definitions
         public List<string> PerksConnected = new(); // PerkNodeData IDs
 
         // ── Visuals ──────────────────────────────────────────────
-        /// <summary>ID of an existing PerkNodeData to copy the sprite from.</summary>
+        /// <summary>ID of an existing PerkNodeData to copy the sprite from, or "aura:&lt;id&gt;" to use an aura's sprite (named after the aura so the hover keynote resolves).</summary>
         public string SpriteSource = "";
     }
 }

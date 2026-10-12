@@ -440,7 +440,7 @@ namespace UnknownMod.Editor
                 {
                     if (!string.IsNullOrEmpty(layer.EffectName))
                     {
-                        var prefab = Globals.Instance?.GetResourceEffect(layer.EffectName);
+                        var prefab = GameResources.GetEffectPrefab(layer.EffectName);
                         if (prefab != null)
                         {
                             var clone = Object.Instantiate(prefab, go.transform);

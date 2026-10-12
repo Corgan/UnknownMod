@@ -16,7 +16,7 @@ namespace UnknownMod.Editor.Tabs
     public class ZoneTabEditor
     {
         private readonly ModEditor _editor;
-        public enum SubTab { Zones, Event, Encounter, Background }
+        public enum SubTab { Zones, Event, Encounter, Background, Requirement }
         public enum ZoneInnerTab { Map, Node, Road }
         public SubTab ActiveSubTab { get; set; } = SubTab.Zones;
         public ZoneInnerTab ActiveZoneInnerTab { get; set; } = ZoneInnerTab.Map;
@@ -24,15 +24,37 @@ namespace UnknownMod.Editor.Tabs
         // ── Zone selector state ──────────────────────────────────
         public string SelectedZoneId { get; set; }
         private bool _showPatchBrowser;
+        private bool _showGenerator;
+        private ZoneGeneratorPanel _generator;
         private Vector2 _patchBrowserScroll;
         private string _patchFilter = "";
 
-        public ZoneTabEditor(ModEditor editor) => _editor = editor;
+        private readonly ZoneHistory _history;
 
-        /// <summary>Per-frame tick — handles zone auto-save timer.</summary>
+        public ZoneTabEditor(ModEditor editor)
+        {
+            _editor = editor;
+            _history = new ZoneHistory(editor, () => SelectedZoneId, SelectZone);
+            _generator = new ZoneGeneratorPanel(editor, () => SelectedZoneId);
+        }
+
+        private void SelectZone(string id)
+        {
+            SelectedZoneId = id;
+            _editor.SelectedNodeId = null;
+            _editor.SelectedEventId = null;
+            _editor.SelectedCombatId = null;
+            ZoneEditingService.CurrentZone = null;
+            ZoneEditingService.CurrentPatch = null;
+        }
+
+        /// <summary>Per-frame tick — handles zone auto-save timer and zone undo snapshots.</summary>
         public void Tick()
         {
             ZoneEditingService.TickAutoSave();
+            var proj = ModManagerPanel.ActiveProject;
+            if (proj != null && ActiveSubTab == SubTab.Zones && !string.IsNullOrEmpty(SelectedZoneId))
+                _history.Poll(proj, SelectedZoneId, false);
         }
 
         public void DrawPanel()
@@ -59,6 +81,9 @@ namespace UnknownMod.Editor.Tabs
                 case SubTab.Encounter:
                     _editor.EncounterEdit?.DrawPanel();
                     break;
+                case SubTab.Requirement:
+                    _editor.RequirementEdit?.DrawPanel();
+                    break;
                 case SubTab.Background:
                     _editor.BackgroundEdit?.DrawPanel();
                     break;
@@ -68,6 +93,7 @@ namespace UnknownMod.Editor.Tabs
         /// <summary>Draw the Zones sub-panel with zone selector + inner tabs (Map/Nodes/Roads).</summary>
         private void DrawZonesPanel(ModProject proj)
         {
+            EditorActions.Register(_history);
             DrawZoneSelector(proj);
             EditorStyles.Separator();
             DrawZoneInnerTabBar();
@@ -290,6 +316,16 @@ namespace UnknownMod.Editor.Tabs
             var proj = ModManagerPanel.ActiveProject;
             if (proj == null) return;
 
+            if (ActiveSubTab == SubTab.Zones && !string.IsNullOrEmpty(SelectedZoneId))
+                _history.Poll(proj, SelectedZoneId, true);
+
+            if (ActiveSubTab == SubTab.Requirement)
+            {
+                if (_editor.RequirementEdit != null && _editor.RequirementEdit.HandleChanges())
+                    HotReloadRequirement(proj);
+                return;
+            }
+
             bool changed = false;
             switch (ActiveSubTab)
             {
@@ -343,6 +379,15 @@ namespace UnknownMod.Editor.Tabs
             proj.IsDirty = true;
             proj.LastChangeTime = Time.realtimeSinceStartup;
             ModEditor.EntityPreview?.Invalidate();
+        }
+
+        private void HotReloadRequirement(ModProject proj)
+        {
+            var id = _editor.RequirementEdit?.SelectedId;
+            if (id == null) return;
+            if (!proj.Requirements.TryGetValue(id, out var def) && !proj.RequirementPatches.TryGetValue(id, out def)) return;
+            try { DataHelper.RegisterRequirement(DataHelper.MakeRequirement(def)); }
+            catch (System.Exception ex) { Plugin.Log.LogWarning($"[ZoneTab] Requirement hot-reload failed: {ex.Message}"); }
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -400,10 +445,10 @@ namespace UnknownMod.Editor.Tabs
 
             if (GUILayout.Button("+ New Zone", EditorStyles.MiniButton, GUILayout.Width(80)))
             {
-                string newId = $"{proj.ModId}_new_zone";
+                string newId = $"{ModProjectLoader.IdPrefix(proj.ModId)}_new_zone";
                 int suffix = 1;
                 while (proj.Zones.ContainsKey(newId) || proj.ZonePatches.ContainsKey(newId))
-                    newId = $"{proj.ModId}_new_zone{suffix++}";
+                    newId = $"{ModProjectLoader.IdPrefix(proj.ModId)}_new_zone{suffix++}";
 
                 var def = new ZoneDef
                 {
@@ -433,10 +478,14 @@ namespace UnknownMod.Editor.Tabs
 
                 ModProjectLoader.SaveZone(proj, def);
                 proj.IsDirty = true;
+                _history.Created(proj, newId, "new zone");
             }
 
             if (GUILayout.Button("Patch Base \u25BE", EditorStyles.MiniButton, GUILayout.Width(100)))
                 _showPatchBrowser = !_showPatchBrowser;
+
+            if (GUILayout.Button(new GUIContent("Generate Layout \u25BE", "Build a whole node map from a list of layers (Obelisk-style or adventure)"), EditorStyles.MiniButton, GUILayout.Width(120)))
+                _showGenerator = !_showGenerator;
 
             // Delete (new zone) / Revert (patch)
             if (!string.IsNullOrEmpty(SelectedZoneId))
@@ -445,23 +494,18 @@ namespace UnknownMod.Editor.Tabs
                 bool isPatch = proj.ZonePatches.ContainsKey(SelectedZoneId);
                 if (isNew)
                 {
-                    if (GUILayout.Button("Delete", EditorStyles.DangerButton, GUILayout.Width(60)))
+                    if (GUILayout.Button(new GUIContent("Delete", "Delete this zone (Ctrl+Z to undo)"), EditorStyles.DangerButton, GUILayout.Width(60)))
                     {
-                        proj.Zones.Remove(SelectedZoneId);
-                        ModRegistry.LoadedZones.Remove(SelectedZoneId);
-                        DeleteZoneFolder(proj, SelectedZoneId, false);
-                        SelectedZoneId = allIds.FirstOrDefault(k => k != SelectedZoneId);
-                        proj.IsDirty = true;
+                        _history.Delete(proj, SelectedZoneId, "delete zone");
+                        EditorStatus.Toast("Zone deleted (Ctrl+Z to undo)");
                     }
                 }
                 else if (isPatch)
                 {
-                    if (GUILayout.Button("Revert", EditorStyles.DangerButton, GUILayout.Width(60)))
+                    if (GUILayout.Button(new GUIContent("Revert", "Remove this patch and go back to the base-game zone (Ctrl+Z to undo)"), EditorStyles.DangerButton, GUILayout.Width(60)))
                     {
-                        proj.ZonePatches.Remove(SelectedZoneId);
-                        DeleteZoneFolder(proj, SelectedZoneId, true);
-                        SelectedZoneId = allIds.FirstOrDefault(k => k != SelectedZoneId);
-                        proj.IsDirty = true;
+                        _history.Delete(proj, SelectedZoneId, "revert zone patch");
+                        EditorStatus.Toast("Patch reverted (Ctrl+Z to undo)");
                     }
                 }
             }
@@ -471,6 +515,9 @@ namespace UnknownMod.Editor.Tabs
             // ── Patch browser ────────────────────────────────────
             if (_showPatchBrowser)
                 DrawPatchBrowser(proj);
+
+            if (_showGenerator)
+                _generator.DrawPanel();
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -510,6 +557,7 @@ namespace UnknownMod.Editor.Tabs
                     SaveZonePatch(proj, patch);
                     _showPatchBrowser = false;
                     proj.IsDirty = true;
+                    _history.Created(proj, id, "patch zone");
                 }
             }
             GUILayout.EndScrollView();
@@ -523,7 +571,7 @@ namespace UnknownMod.Editor.Tabs
         /// Detect the prefix used by a base-game zone's nodes.
         /// Scans Globals._NodeDataSource for nodes that belong to the zone.
         /// </summary>
-        private static string DetectZonePrefix(string zoneId)
+        internal static string DetectZonePrefix(string zoneId)
         {
             var nodeDict = HarmonyLib.Traverse.Create(Globals.Instance)
                 .Field<Dictionary<string, NodeData>>("_NodeDataSource").Value;
@@ -575,13 +623,21 @@ namespace UnknownMod.Editor.Tabs
 
         internal static void SaveZonePatch(ModProject proj, ZonePatchDef patch)
         {
+            ModProjectLoader.SaveZonePatchMeta(proj, patch);
             foreach (var kvp in patch.Nodes)
                 ModProjectLoader.SaveZonePatchEntity(proj, patch.TargetZoneId, "nodes", kvp.Key, kvp.Value);
+
+            string patchDir = System.IO.Path.Combine(ModProjectLoader.ModFolder(proj.ModId), "zones", "_patches", patch.TargetZoneId);
+            ModProjectLoader.PruneStaleJson(System.IO.Path.Combine(patchDir, "nodes"), patch.Nodes.Keys);
+
+            string roadsPath = System.IO.Path.Combine(patchDir, "roads.json");
             if (patch.Roads.Count > 0)
                 ModProjectLoader.SaveRoads(proj, patch.TargetZoneId, patch.Roads, true);
+            else if (System.IO.File.Exists(roadsPath))
+                System.IO.File.Delete(roadsPath);
         }
 
-        private static void DeleteZoneFolder(ModProject proj, string zoneId, bool isPatch)
+        internal static void DeleteZoneFolder(ModProject proj, string zoneId, bool isPatch)
         {
             string folder = isPatch
                 ? System.IO.Path.Combine(ModProjectLoader.ModFolder(proj.ModId), "zones", "_patches", zoneId)
@@ -606,6 +662,7 @@ namespace UnknownMod.Editor.Tabs
             SubTabButton("Zones", SubTab.Zones);
             SubTabButton("Events", SubTab.Event);
             SubTabButton("Encounters", SubTab.Encounter);
+            SubTabButton("Requirements", SubTab.Requirement);
             SubTabButton("BGs", SubTab.Background);
             GUILayout.EndHorizontal();
         }

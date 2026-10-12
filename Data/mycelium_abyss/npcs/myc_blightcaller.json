@@ -3,8 +3,8 @@
   "Name": "Blightcaller",
   "Description": "",
   "SpriteSource": "druid",
-  "SpriteSkinId": "myc_blightcaller",
-  "Hp": 140,
+  "VisualGraphId": "myc_blightcaller_sprite",
+  "Hp": 161,
   "Speed": 14,
   "Energy": 10,
   "EnergyTurn": 0,
@@ -20,7 +20,7 @@
   "ResShadow": 30,
   "AiCards": [
     {
-      "CardId": "myc_miasma",
+      "CardId": "mycmiasma",
       "Priority": 5,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -35,7 +35,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_fungalregen",
+      "CardId": "mycfungalregen",
       "Priority": 6,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -50,9 +50,9 @@
       "SecondValueCastIf": 0.0
     }
   ],
-  "XpReward": 24,
-  "GoldReward": 16,
-  "TierReward": 3,
+  "XpReward": 42,
+  "GoldReward": 39,
+  "TierReward": 4,
   "IsBoss": false,
   "IsNamed": false,
   "FinishCombatOnDead": false,

@@ -1,0 +1,13 @@
+{
+  "Id": "myc_morel_p3",
+  "RequirementName": "Morel's Route",
+  "Description": "Morel's complete route. It ends in a hollow behind the Mycelarch's throne, reachable once the Mycelarch has fallen.",
+  "AssignToPlayerAtBegin": false,
+  "RequirementTrack": false,
+  "ItemTrack": true,
+  "RequirementZoneFinishTrack": "None",
+  "RequirementZoneFinishTrackAlternate": "None",
+  "WitheredValeUniqueCheck": false,
+  "TrackCard": "",
+  "SpriteSource": "smallmap"
+}

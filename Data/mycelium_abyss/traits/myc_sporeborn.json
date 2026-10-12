@@ -1,0 +1,14 @@
+{
+  "Id": "myc_sporeborn",
+  "TraitName": "Sporeborn",
+  "Description": "Spore Rot +1, Symbiosis +1. Immune to Poison. When an enemy dies with 4+ Spore Rot, half of it spreads to another enemy.",
+  "Activations": [
+    "PreBeginCombat",
+    "CharacterKilled"
+  ],
+  "AuracurseBonusValue1": 1,
+  "AuracurseBonusValue2": 1,
+  "AuracurseBonus2": "myc_symbiosis",
+  "AuracurseImmune1": "poison",
+  "AuracurseBonus1": "myc_sporerot"
+}

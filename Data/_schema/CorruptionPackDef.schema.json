@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CorruptionPackDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "PackName": {
+      "type": "string"
+    },
+    "PackClass": {
+      "type": "string",
+      "enum": [
+        "Warrior",
+        "Mage",
+        "Healer",
+        "Scout",
+        "MagicKnight",
+        "Monster",
+        "Injury",
+        "Boon",
+        "Item",
+        "Special",
+        "Enchantment",
+        "None"
+      ]
+    },
+    "PackTier": {
+      "type": "integer"
+    },
+    "LowPackCardIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "HighPackCardIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

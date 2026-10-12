@@ -1,0 +1,17 @@
+{
+  "CombatId": "emyc_15a",
+  "Description": "A massive root-creature blocks the path, flanked by scuttling shadows.",
+  "NpcIds": [
+    "myc_blightcaller",
+    "myc_lurker",
+    "myc_lurker"
+  ],
+  "CombatTier": "T3",
+  "Background": "Velkarath_Cave",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

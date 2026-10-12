@@ -1,17 +1,17 @@
 {
   "CombatId": "cmyc_3",
-  "Description": "A robed figure commands the fungal horde.",
+  "Description": "A massive root-creature blocks the path, flanked by scuttling shadows.",
   "NpcIds": [
     "myc_blightcaller",
-    "myc_shambler",
-    "myc_shambler"
+    "myc_lurker",
+    "myc_lurker"
   ],
   "CombatTier": "T3",
-  "Background": "Spider_Lair",
+  "Background": "Velkarath_Cave",
   "NpcRemoveInMadness0Index": -1,
   "HealHeroes": false,
   "IsRift": false,
   "NpcToSummonOnKilledId": "",
-  "EventDataId": "",
+  "EventDataId": "e_myc_36",
   "CombatEffects": []
 }

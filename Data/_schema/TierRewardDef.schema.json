@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TierRewardDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "Tier": {
+      "type": "integer"
+    },
+    "Common": {
+      "type": "integer"
+    },
+    "Uncommon": {
+      "type": "integer"
+    },
+    "Rare": {
+      "type": "integer"
+    },
+    "Epic": {
+      "type": "integer"
+    },
+    "Mythic": {
+      "type": "integer"
+    },
+    "Dust": {
+      "type": "integer"
+    }
+  }
+}

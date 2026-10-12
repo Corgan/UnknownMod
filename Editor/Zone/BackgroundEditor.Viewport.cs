@@ -57,7 +57,8 @@ namespace UnknownMod.Editor
             if (_spritePickerTargetIdx >= 0 && _spritePickerTargetIdx < def.Layers.Count)
                 DrawSpritePickerOverlay(vp, def);
 
-            HandleVpInput(vp, drawn, def);
+            if (_spritePickerTargetIdx < 0 || _spritePickerTargetIdx >= def.Layers.Count)
+                HandleVpInput(vp, drawn, def);
         }
 
         private void DrawVpEmpty(Rect vp, string msg)
@@ -230,7 +231,7 @@ namespace UnknownMod.Editor
                 {
                     if (!string.IsNullOrEmpty(layer.EffectName))
                     {
-                        var prefab = Globals.Instance?.GetResourceEffect(layer.EffectName);
+                        var prefab = GameResources.GetEffectPrefab(layer.EffectName);
                         if (prefab != null)
                         {
                             var clone = UnityEngine.Object.Instantiate(prefab, go.transform);
@@ -613,6 +614,9 @@ namespace UnknownMod.Editor
             // Allow input outside viewport during active drags
             if (!vp.Contains(mp) && _dragLayerIdx < 0 && _scaleLayerIdx < 0 && _rotateLayerIdx < 0)
                 return;
+
+            if (e.type == EventType.MouseDown && vp.Contains(mp)) GUIUtility.keyboardControl = 0;
+            if (e.type == EventType.KeyDown && GUIUtility.keyboardControl != 0) return;
 
             UpdateLayerHover(mp, drawn, def);
 

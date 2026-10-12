@@ -1,0 +1,27 @@
+{
+  "PackId": "myc_pack_blightbearer",
+  "PackName": "Blightbearer",
+  "RequiredClassId": "",
+  "PackClass": "Scout",
+  "CardIds": [
+    "mycsporeburst",
+    "mycrotharvest",
+    "mycsporestrike",
+    "impale",
+    "rampage",
+    "cleave",
+    "mycparasiticbite",
+    "mycbracket"
+  ],
+  "SpecialCardIds": [
+    "mycsporecloud",
+    "carnage",
+    "mycdevouringbloom"
+  ],
+  "PerkIds": [
+    "mainperkshadow0",
+    "mainperkshadow1",
+    "mainperkdark0",
+    "mainperkdark1"
+  ]
+}

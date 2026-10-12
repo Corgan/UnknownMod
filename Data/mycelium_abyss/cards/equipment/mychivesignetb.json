@@ -1,0 +1,21 @@
+{
+  "Id": "mychivesignetb",
+  "Name": "Hivemind Signet",
+  "Description": "Shadow damage <acb>+10%</acb>.<br2>Symbiosis charges <acb>+3</acb>.<br2>Spore Rot charges <acb>+1</acb>.",
+  "CardClass": "Item",
+  "CardType": "Jewelry",
+  "CardRarity": "Mythic",
+  "SpriteSource": "myc_art_signet",
+  "Item": {
+    "Activation": "PreBeginCombat",
+    "DamagePercentBonus": "Shadow",
+    "DamagePercentBonusValue": 10,
+    "AuracurseBonus1": "myc_symbiosis",
+    "AuracurseBonusValue1": 3,
+    "AuracurseBonus2": "myc_sporerot",
+    "AuracurseBonusValue2": 1,
+    "DropOnly": true
+  },
+  "CardUpgraded": "B",
+  "BaseCardId": "mychivesignet"
+}

@@ -1,0 +1,36 @@
+{
+  "Id": "myc_forage",
+  "NumItems": 2,
+  "GoldQuantity": 25,
+  "PercentUncommon": 20,
+  "Items": [
+    {
+      "CardId": "greaterhealthpotion",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "greatermanapotion",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "rejuvenationpotion",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    },
+    {
+      "CardId": "berserkpotion",
+      "Percent": 100,
+      "LootType": "None",
+      "LootRarity": "Common",
+      "LootMisc": ""
+    }
+  ]
+}

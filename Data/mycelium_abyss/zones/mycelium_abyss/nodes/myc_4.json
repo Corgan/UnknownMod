@@ -13,7 +13,8 @@
   "NodeGround": "None",
   "NodeRequirementId": "",
   "CombatIds": [
-    "cmyc_1"
+    "cmyc_4",
+    "cmyc_w3"
   ],
   "CombatTier": "T3",
   "CombatPercent": 100,

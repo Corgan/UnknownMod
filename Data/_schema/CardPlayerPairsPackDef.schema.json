@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CardPlayerPairsPackDef",
+  "type": "object",
+  "properties": {
+    "PackId": {
+      "type": "string"
+    },
+    "CardIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "RarityIfElementEmpty": {
+      "type": "string",
+      "enum": [
+        "Common",
+        "Uncommon",
+        "Rare",
+        "Epic",
+        "Mythic"
+      ]
+    }
+  }
+}

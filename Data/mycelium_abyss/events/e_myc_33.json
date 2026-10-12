@@ -1,0 +1,38 @@
+{
+  "EventId": "e_myc_33",
+  "EventName": "The Silent Shrine",
+  "Description": "A small shrine stands in a hollow, a stone idol with a smooth, faceless head. Every surface near it is covered with fungus except the idol itself, which remains scrupulously clean. The only sound is a slow dripping from somewhere deep in the rock.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Offer your blood to the shrine.",
+      "Action": 16,
+      "SsHealFlat": -15,
+      "SsUpgradeRandomCard": true,
+      "SsText": "The idol drinks the blood and a warm light travels across your gear. When it fades, one of your cards feels sharper."
+    },
+    {
+      "ReplyText": "Smash the idol.",
+      "Action": 23,
+      "SsGold": 60,
+      "SsXP": 20,
+      "FlCombatId": "emyc_33a",
+      "HasRoll": true,
+      "RollDC": 3,
+      "RollTarget": 3,
+      "RepeatForAllWarriors": true,
+      "SsText": "The idol cracks open and spills out a hoard of old offerings.",
+      "FlText": "The shrine's keepers rise from the fungus and descend on you."
+    },
+    {
+      "ReplyText": "Leave quietly.",
+      "Action": 11,
+      "SsXP": 15,
+      "SsText": "You step softly past the idol and leave it undisturbed. The silence follows you for a while."
+    }
+  ]
+}

@@ -1,8 +1,8 @@
 {
   "EventId": "e_myc_21",
   "EventName": "The Chorus of the Consumed",
-  "Description": "The tunnel opens into a cathedral-like chamber where phosphorescent tendrils hang from the ceiling like chandeliers. From the depths, whispered voices echo — not screams, but calm, measured words in a language older than the ruins above. They offer knowledge, freely given.",
-  "DescriptionAction": "How do you respond?",
+  "Description": "The tunnel opens into a cathedral-like chamber where phosphorescent tendrils hang from the ceiling like chandeliers. Thousands of faint voices hum in unison, the last echoes of everything the hive has consumed.",
+  "DescriptionAction": "What do you do?",
   "SpriteSource": "",
   "EventTier": "T0",
   "ReplyRandom": 0,
@@ -10,22 +10,23 @@
   "Replies": [
     {
       "ReplyText": "Listen to the voices.",
-      "Action": 29,
-      "SsText": "You open your minds to the whispered knowledge. Ancient secrets flood your consciousness — combat techniques, forgotten lore, tactical insights. But the knowledge comes laced with spores that settle deep in your lungs.",
+      "Action": 51,
+      "SsText": "The chorus swells and for a moment you understand them. They teach you something about your own gear before the vision fades.",
       "SsUpgradeRandomCard": true
     },
     {
       "ReplyText": "Resist the whispers and push through.",
-      "Action": 29,
-      "SsText": "You steel your minds against the seductive voices. The whispers turn hostile, and shapes detach from the fungal walls around you.",
-      "SsCombatId": "cmyc_6"
+      "Action": 56,
+      "SsText": "The chorus turns hostile. Shapes peel away from the walls.",
+      "SsCombatId": "emyc_21a"
     },
     {
       "ReplyText": "Burn the spore vents.",
-      "Action": 27,
-      "GoldCost": 100,
-      "SsText": "You pour oil into the spore vents and set them ablaze. The whispers shriek and fall silent as cleansing fire fills the chamber. The air clears, and you breathe easier.",
-      "SsXP": 40
+      "Action": 48,
+      "SsDust": 40,
+      "SsXP": 40,
+      "SsText": "You buy a scavenger's flame oil and torch the vents. The chorus dies screaming. The ash is worth something.",
+      "GoldCost": 100
     }
   ]
 }

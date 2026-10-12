@@ -30,11 +30,14 @@ namespace UnknownMod.Definitions
         public int ObeliskLevel = 0;
         public int SingularityLevel = 0;
         public bool PdxAccountRequired = false;
+        public bool HideInGame = false;
 
         // ── Subclass Reference ───────────────────────────────────
         public string CardbackSubclass = "";   // SubClassData ID
 
         // ── Sprite Source ────────────────────────────────────────
         public string SpriteSource = "";
+        /// <summary>Optional sprite name (game or mod image sprite) used instead of the source cardback's art.</summary>
+        public string SpriteOverride = "";
     }
 }

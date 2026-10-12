@@ -1,0 +1,153 @@
+{
+  "Id": "myc_shambler_sprite",
+  "BasePresentation": "treant",
+  "Nodes": [
+    {
+      "NodeId": "corazaespalda",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_5[0]/bone_6[0]"
+      },
+      "SourcePrefabRef": "bladebeetle",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "CorazaEspalda[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": -0.7,
+        "PositionY": -0.67,
+        "Rotation": -174.74,
+        "ScaleX": 1.0,
+        "ScaleY": 1.0
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "garraizk3",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_5[0]/bone_6[0]"
+      },
+      "SourcePrefabRef": "bladebeetle",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "GarraIzk3[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": -0.8,
+        "PositionY": 0.24,
+        "Rotation": 136.92,
+        "ScaleX": 1.05,
+        "ScaleY": 1.05
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    },
+    {
+      "NodeId": "garradrch3",
+      "AttachmentKind": "ExtractedSourceSubRig",
+      "HostSocketRef": {
+        "Path": "bone_1[0]/bone_2[0]/bone_5[0]/bone_6[0]"
+      },
+      "SourcePrefabRef": "bladebeetle",
+      "SourceAnchorRef": {
+        "Path": "[root]"
+      },
+      "SourceSubtreeRef": {
+        "Path": "[root]"
+      },
+      "Pivot": "SpriteCenter",
+      "RendererRefs": [
+        {
+          "Path": "GarraDrch3[0]"
+        }
+      ],
+      "LocalAttachmentTransform": {
+        "PositionX": -0.02,
+        "PositionY": -0.38,
+        "Rotation": 127.37,
+        "ScaleX": 1.05,
+        "ScaleY": 1.05
+      },
+      "FacingPolicy": "InheritHost",
+      "SortingPolicy": {
+        "Strategy": "HostLayer",
+        "Layer": 0,
+        "Order": 0,
+        "OrderOffset": 0,
+        "Placement": "Front",
+        "ReferencePath": ""
+      },
+      "AnimationPolicy": {
+        "Mode": "Static",
+        "ClipMap": {},
+        "Fallback": "None",
+        "AnchorPolicy": "LockedAnchor",
+        "ProceduralControllerRef": ""
+      },
+      "Overrides": {
+        "Visible": true,
+        "TintHex": "",
+        "Alpha": 1.0,
+        "Scale": 1.0
+      }
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -113,11 +113,22 @@ namespace UnknownMod.Editor
             if (EditorFields.Section("Visuals", ref _secVisual))
             {
                 var scIds = EditorFields.CachedIds("subclass", DataHelper.GetAllSubClassIds);
-                d.SpriteSource = EditorFields.IdDropdown("Sprite Src", d.SpriteSource, scIds, "hero_spritesrc", pickerMode: EntityPicker.Mode.Hero);
+                d.SpriteSource = EditorFields.IdDropdown("Sprite Src (self = use base skin)", d.SpriteSource, scIds, "hero_spritesrc", pickerMode: EntityPicker.Mode.Hero);
                 d.FluffOffsetX = EditorFields.FloatField("Fluff Offset X", d.FluffOffsetX);
                 d.FluffOffsetY = EditorFields.FloatField("Fluff Offset Y", d.FluffOffsetY);
                 d.Female = EditorFields.Toggle("Female", d.Female);
                 d.StickerOffsetX = EditorFields.FloatField("Sticker Offset X", d.StickerOffsetX);
+                EditorStyles.Separator();
+                GUILayout.Label("Overrides (blank = keep Sprite Src value)");
+                d.SpriteBorderLocked = EditorFields.TextField("Locked Border Sprite", d.SpriteBorderLocked);
+                d.StickerBase = EditorFields.TextField("Sticker: Base", d.StickerBase);
+                d.StickerLove = EditorFields.TextField("Sticker: Love", d.StickerLove);
+                d.StickerSurprise = EditorFields.TextField("Sticker: Surprise", d.StickerSurprise);
+                d.StickerAngry = EditorFields.TextField("Sticker: Angry", d.StickerAngry);
+                d.StickerIndifferent = EditorFields.TextField("Sticker: Indifferent", d.StickerIndifferent);
+                d.ActionSound = AssetFields.AudioField("Action Sound", d.ActionSound, "hero_actsnd");
+                d.HitSound = AssetFields.AudioField("Hit Sound", d.HitSound, "hero_hitsnd");
+                AssetFields.AudioListField("More hit sounds (cycled)", d.HitSounds, "hero_hitsnds");
             }
 
             //  Starting Item 
@@ -134,14 +145,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     d.MaxHp[i] = EditorFields.IntFieldMin($"Lv {i}", d.MaxHp[i], 1);
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.MaxHp.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, d.MaxHp.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.MaxHp, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Level", EditorStyles.MiniButton, GUILayout.Width(70)))
                 {
@@ -158,18 +164,12 @@ namespace UnknownMod.Editor
                 {
                     var hc = d.Cards[i];
                     GUILayout.BeginVertical(EditorStyles.CompactBox);
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label($"<b>#{i}</b>", EditorStyles.RichLabel, GUILayout.Width(30));
-                    GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
+                    var rowOp = EditorFields.RowHeader($"<b>#{i}</b>  {hc.CardId}", i, d.Cards.Count);
+                    if (EditorFields.ApplyRowOp(d.Cards, i, rowOp))
                     {
-                        d.Cards.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
                         GUILayout.EndVertical();
                         break;
                     }
-                    GUILayout.EndHorizontal();
                     hc.CardId = EditorFields.IdDropdown("Card", hc.CardId, cardIds, $"hero_card_{i}", pickerMode: EntityPicker.Mode.Card);
                     hc.UnitsInDeck = EditorFields.IntFieldMin("Copies", hc.UnitsInDeck, 1);
                     GUILayout.EndVertical();
@@ -190,14 +190,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     d.CardsSingularity[i] = EditorFields.IdDropdown("", d.CardsSingularity[i], cardIds, $"hero_sing_{i}", pickerMode: EntityPicker.Mode.Card);
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.CardsSingularity.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, d.CardsSingularity.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.CardsSingularity, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Singularity Card", EditorStyles.MiniButton, GUILayout.Width(130)))
                 {
@@ -209,7 +204,7 @@ namespace UnknownMod.Editor
             //  Trait Tree 
             if (EditorFields.Section("Trait Tree", ref _secTraits))
             {
-                var traitIds = DataHelper.GetAllTraitIds();
+                var traitIds = RefIds.Traits();
                 var cardIds = EditorFields.BuildCardIdList(proj);
 
                 GUILayout.Label("<color=#aaa>Tier 0 (starting):</color>", EditorStyles.RichLabel);
@@ -243,13 +238,13 @@ namespace UnknownMod.Editor
             //  Challenge Packs 
             if (EditorFields.Section("Challenge Packs", ref _secPacks))
             {
-                d.ChallengePack0 = EditorFields.TextField("Pack 0", d.ChallengePack0);
-                d.ChallengePack1 = EditorFields.TextField("Pack 1", d.ChallengePack1);
-                d.ChallengePack2 = EditorFields.TextField("Pack 2", d.ChallengePack2);
-                d.ChallengePack3 = EditorFields.TextField("Pack 3", d.ChallengePack3);
-                d.ChallengePack4 = EditorFields.TextField("Pack 4", d.ChallengePack4);
-                d.ChallengePack5 = EditorFields.TextField("Pack 5", d.ChallengePack5);
-                d.ChallengePack6 = EditorFields.TextField("Pack 6", d.ChallengePack6);
+                d.ChallengePack0 = EditorFields.IdDropdown("Pack 0", d.ChallengePack0, RefIds.Packs(proj), "hero_cpack0");
+                d.ChallengePack1 = EditorFields.IdDropdown("Pack 1", d.ChallengePack1, RefIds.Packs(proj), "hero_cpack1");
+                d.ChallengePack2 = EditorFields.IdDropdown("Pack 2", d.ChallengePack2, RefIds.Packs(proj), "hero_cpack2");
+                d.ChallengePack3 = EditorFields.IdDropdown("Pack 3", d.ChallengePack3, RefIds.Packs(proj), "hero_cpack3");
+                d.ChallengePack4 = EditorFields.IdDropdown("Pack 4", d.ChallengePack4, RefIds.Packs(proj), "hero_cpack4");
+                d.ChallengePack5 = EditorFields.IdDropdown("Pack 5", d.ChallengePack5, RefIds.Packs(proj), "hero_cpack5");
+                d.ChallengePack6 = EditorFields.IdDropdown("Pack 6", d.ChallengePack6, RefIds.Packs(proj), "hero_cpack6");
             }
 
             //  Character Replacement 
@@ -258,35 +253,35 @@ namespace UnknownMod.Editor
                 d.UseXpFromOriginal = EditorFields.Toggle("Use XP From Original", d.UseXpFromOriginal);
                 d.PerksOnReplace = EditorFields.TextField("Perks On Replace", d.PerksOnReplace);
 
-                GUILayout.Space(4);
-                GUILayout.Label($"<color=#aaa>Replacement Cards ({d.CardsOnReplaceCharacter.Count}):</color>", EditorStyles.RichLabel);
-                var cardIds = EditorFields.BuildCardIdList(proj);
-                for (int i = 0; i < d.CardsOnReplaceCharacter.Count; i++)
+                var cardIds = RefIds.Cards(proj);
+                DrawHeroCardList("Replacement Cards", d.CardsOnReplaceCharacter, cardIds, "hero_rcard");
+                DrawHeroCardList("Replacement Cards (Singularity)", d.CardsOnReplaceCharacterInSingularity, cardIds, "hero_rsingcard");
+            }
+        }
+
+        private static void DrawHeroCardList(string title, List<HeroCardDef> list, List<string> cardIds, string keyPrefix)
+        {
+            GUILayout.Space(4);
+            GUILayout.Label($"<color=#aaa>{title} ({list.Count}):</color>", EditorStyles.RichLabel);
+            for (int i = 0; i < list.Count; i++)
+            {
+                var hc = list[i];
+                GUILayout.BeginVertical(EditorStyles.CompactBox);
+                var rowOp = EditorFields.RowHeader($"<b>#{i}</b>  {hc.CardId}", i, list.Count);
+                if (EditorFields.ApplyRowOp(list, i, rowOp))
                 {
-                    var hc = d.CardsOnReplaceCharacter[i];
-                    GUILayout.BeginVertical(EditorStyles.CompactBox);
-                    GUILayout.BeginHorizontal();
-                    GUILayout.Label($"<b>#{i}</b>", EditorStyles.RichLabel, GUILayout.Width(30));
-                    GUILayout.FlexibleSpace();
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.CardsOnReplaceCharacter.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        GUILayout.EndVertical();
-                        break;
-                    }
-                    GUILayout.EndHorizontal();
-                    hc.CardId = EditorFields.IdDropdown("Card", hc.CardId, cardIds, $"hero_rcard_{i}", pickerMode: EntityPicker.Mode.Card);
-                    hc.UnitsInDeck = EditorFields.IntFieldMin("Copies", hc.UnitsInDeck, 1);
                     GUILayout.EndVertical();
-                    GUILayout.Space(2);
+                    break;
                 }
-                if (GUILayout.Button("+ Card", EditorStyles.MiniButton, GUILayout.Width(70)))
-                {
-                    d.CardsOnReplaceCharacter.Add(new HeroCardDef { UnitsInDeck = 1 });
-                    GUI.changed = true;
-                }
+                hc.CardId = EditorFields.IdDropdown("Card", hc.CardId, cardIds, $"{keyPrefix}_{i}", pickerMode: EntityPicker.Mode.Card);
+                hc.UnitsInDeck = EditorFields.IntFieldMin("Copies", hc.UnitsInDeck, 1);
+                GUILayout.EndVertical();
+                GUILayout.Space(2);
+            }
+            if (GUILayout.Button("+ Card", EditorStyles.MiniButton, GUILayout.Width(70)))
+            {
+                list.Add(new HeroCardDef { UnitsInDeck = 1 });
+                GUI.changed = true;
             }
         }
 

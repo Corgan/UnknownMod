@@ -46,7 +46,7 @@ namespace UnknownMod.Editor
             var prefab = EntityPreviewRenderer.GetBackgroundPrefab(bgName);
             if (prefab == null) return null;
 
-            // Instantiate at offscreen position (different from SpriteSkin thumbs)
+            // Instantiate at offscreen position (different from other thumbnail caches)
             var go = UnityEngine.Object.Instantiate(prefab, ThumbOrigin, Quaternion.identity);
             go.SetActive(true);
             go.name = $"[BgThumb] {bgName}";

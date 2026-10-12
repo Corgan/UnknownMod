@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -22,6 +22,9 @@ namespace UnknownMod.Core
         private static readonly Dictionary<string, Dictionary<string, Vector2>> _positionCache = new(StringComparer.OrdinalIgnoreCase);
         // Cache: zoneId  { roadKey  all road points[] (in Nodes-parent-relative coords) }
         private static readonly Dictionary<string, Dictionary<string, List<float[]>>> _roadCache = new(StringComparer.OrdinalIgnoreCase);
+        // Baseline JSON of every synthesized base-game node/road, so edits to any property are detected (not just position)
+        private static readonly Dictionary<string, Dictionary<string, string>> _baseNodeJson = new(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, Dictionary<string, string>> _baseRoadJson = new(StringComparer.OrdinalIgnoreCase);
         // Cache: synthesized ZoneDefs so we don't rebuild every frame
         private static readonly Dictionary<string, ZoneDef> _synthesizedCache = new(StringComparer.OrdinalIgnoreCase);
         // Cache: base-game zone background sprites
@@ -46,6 +49,7 @@ namespace UnknownMod.Core
         // Additive scene load state
         private static bool _sceneLoadRequested;
         private static bool _sceneLoadFailed;
+        private static int _sceneLoadRetries;
         /// <summary>
         /// Ref-counted flag checked by Harmony patches to suppress MapManager/MatchManager/SceneStatic
         /// during additive scene loads. Incremented when a scene load starts, decremented when unloaded.
@@ -111,6 +115,9 @@ namespace UnknownMod.Core
             // Get base zone metadata from Globals
             var zoneData = DataHelper.GetExistingZone(zoneId);
 
+            if (string.IsNullOrEmpty(patch.DetectedPrefix))
+                patch.DetectedPrefix = UnknownMod.Editor.Tabs.ZoneTabEditor.DetectZonePrefix(zoneId);
+
             var synth = new ZoneDef
             {
                 ZoneId = zoneId,
@@ -157,6 +164,9 @@ namespace UnknownMod.Core
             var nodeDict = Traverse.Create(Globals.Instance)
                 .Field<Dictionary<string, NodeData>>("_NodeDataSource").Value;
 
+            var nodeBaseline = _baseNodeJson[zoneId] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var roadBaseline = _baseRoadJson[zoneId] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
             if (nodeDict != null)
             {
                 foreach (var kvp in nodeDict)
@@ -179,6 +189,9 @@ namespace UnknownMod.Core
                         GoToTown = nd.GoToTown,
                         ExistsPercent = nd.ExistsPercent,
                         ExistsSku = nd.ExistsSku ?? "",
+                        ReplacementEventId = nd.ReplacementEventIfSkuMissing != null ? nd.ReplacementEventIfSkuMissing.EventId : "",
+                        ReplacementCombatId = nd.ReplacementCombatIfSkuMissing != null ? nd.ReplacementCombatIfSkuMissing.CombatId : "",
+                        NodeBackgroundSprite = nd.NodeBackgroundImg != null ? nd.NodeBackgroundImg.name : "",
                         DisableCorruption = nd.DisableCorruption,
                         DisableRandom = nd.DisableRandom,
                         NodeGround = nd.NodeGround,
@@ -255,6 +268,7 @@ namespace UnknownMod.Core
                     if (_mapPieceCache.TryGetValue(zoneId, out var mpCache) && mpCache.TryGetValue(nodeId, out var mps))
                         nodeDef.MapPieces = new List<MapPieceDef>(mps);
 
+                    nodeBaseline[nodeId] = JsonConvert.SerializeObject(nodeDef);
                     synth.Nodes[nodeId] = nodeDef;
                 }
             }
@@ -271,12 +285,14 @@ namespace UnknownMod.Core
                 if (dash < 0) continue;
                 string fromId = key.Substring(0, dash);
                 string toId = key.Substring(dash + 1);
-                synth.Roads[key] = new RoadDef
+                var roadDef = new RoadDef
                 {
                     FromNodeId = fromId,
                     ToNodeId = toId,
                     Waypoints = new List<float[]>(kvp.Value),
                 };
+                roadBaseline[key] = JsonConvert.SerializeObject(roadDef); // always the vanilla road, so IsBaseRoadInPatch holds after a reload
+                synth.Roads[key] = roadDef;
             }
 
             //  Merge in patch roads 
@@ -315,21 +331,16 @@ namespace UnknownMod.Core
                 }
             }
 
-            // Try mapList prefabs (serialized zone prefabs, available even before map loads)
-            if (mapMgr != null && mapMgr.mapList != null)
+            // Try the lazily loaded map prefab (Resources/Maps via ResourceCatalog, available even before map loads)
+            var mapPrefab = GameResources.GetMapPrefab(zoneId);
+            if (mapPrefab != null)
             {
-                foreach (var prefab in mapMgr.mapList)
-                {
-                    if (prefab == null) continue;
-                    if (!prefab.name.Equals(zoneId, StringComparison.OrdinalIgnoreCase)) continue;
-
-                    CacheZoneFromTransform(zoneId, prefab.transform);
-                    return true;
-                }
+                CacheZoneFromTransform(zoneId, mapPrefab.transform);
+                return true;
             }
 
             //  Async additive scene load: load the Map scene to access
-            // MapManager's serialized mapList, extract zone data, then unload.
+            // MapManager's worldTransform, extract zone data, then unload.
             // Harmony patches suppress MapManager.Awake/Start and SceneStatic.LoadByName.
             // Uses the same async pattern as EntityPreviewRenderer's Combat scene load.
             if (!_sceneLoadRequested && !_sceneLoadFailed)
@@ -383,28 +394,26 @@ namespace UnknownMod.Core
                 // Cache EventManager data (replyPrefab, layout template) from the Map scene
                 EntityPreviewRenderer.CacheEventDataFromScene(rootObjects);
 
-                // Find MapManager and scan its mapList + worldTransform
+                // Find MapManager and scan the map prefabs + worldTransform
                 foreach (var root in rootObjects)
                 {
                     var mm = root.GetComponentInChildren<MapManager>(true);
                     if (mm == null) continue;
 
-                    Plugin.Log.LogInfo($"[ZoneEditing]   Found MapManager, mapList={mm.mapList?.Count ?? 0}");
+                    var mapPrefabs = GameResources.GetAllMapPrefabs();
+                    Plugin.Log.LogInfo($"[ZoneEditing]   Found MapManager, map prefabs={mapPrefabs.Count}");
 
-                    if (mm.mapList != null)
+                    foreach (var prefab in mapPrefabs)
                     {
-                        foreach (var prefab in mm.mapList)
-                        {
-                            if (prefab == null) continue;
-                            string id = prefab.name;
-                            if (_positionCache.ContainsKey(id)) continue;
+                        if (prefab == null) continue;
+                        string id = prefab.name;
+                        if (_positionCache.ContainsKey(id)) continue;
 
-                            var nodesChild = prefab.transform.Find("Nodes");
-                            if (nodesChild == null || nodesChild.childCount == 0) continue;
+                        var nodesChild = prefab.transform.Find("Nodes");
+                        if (nodesChild == null || nodesChild.childCount == 0) continue;
 
-                            CacheZoneFromTransform(id, prefab.transform);
-                            scanned++;
-                        }
+                        CacheZoneFromTransform(id, prefab.transform);
+                        scanned++;
                     }
 
                     if (mm.worldTransform != null)

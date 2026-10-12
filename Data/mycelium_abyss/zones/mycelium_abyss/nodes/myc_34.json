@@ -1,0 +1,31 @@
+{
+  "NodeId": "myc_34",
+  "NodeName": "Morel's Hollow",
+  "Description": "",
+  "PosX": 2.609961,
+  "PosY": -2.13886714,
+  "TravelDestination": false,
+  "GoToTown": false,
+  "ExistsPercent": 100,
+  "DisableCorruption": true,
+  "DisableRandom": false,
+  "VisibleIfNotRequirement": false,
+  "NodeGround": "None",
+  "NodeRequirementId": "myc_morel_p3",
+  "CombatTier": "T0",
+  "CombatPercent": 0,
+  "EventIds": [
+    "e_myc_37"
+  ],
+  "EventPercent": 100,
+  "NodeEventTier": "T0",
+  "NodeEventPriority": [
+    0
+  ],
+  "NodeEventPercent": [
+    100
+  ],
+  "Connections": [
+    "myc_28"
+  ]
+}

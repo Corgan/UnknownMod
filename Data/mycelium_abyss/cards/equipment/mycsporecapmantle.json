@@ -1,0 +1,16 @@
+{
+  "Id": "mycsporecapmantle",
+  "Name": "Sporecap Mantle",
+  "Description": "Shadow and Mind resistance <acb>+10%</acb>. Max HP <acb>+12</acb>.",
+  "CardClass": "Item",
+  "CardType": "Armor",
+  "CardRarity": "Rare",
+  "SpriteSource": "myc_art_sporecapmantle",
+  "Item": {
+    "ResistModified1": "Shadow",
+    "ResistModifiedValue1": 10,
+    "ResistModified2": "Mind",
+    "ResistModifiedValue2": 10,
+    "MaxHealth": 12
+  }
+}

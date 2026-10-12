@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WeeklyChallengeDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "IdSteam": {
+      "type": "string"
+    },
+    "Week": {
+      "type": "integer"
+    },
+    "Seed": {
+      "type": "string"
+    },
+    "FromDay": {
+      "type": "string"
+    },
+    "FromHour": {
+      "type": "string"
+    },
+    "ToDay": {
+      "type": "string"
+    },
+    "ToHour": {
+      "type": "string"
+    },
+    "Hero1Id": {
+      "type": "string"
+    },
+    "Hero2Id": {
+      "type": "string"
+    },
+    "Hero3Id": {
+      "type": "string"
+    },
+    "Hero4Id": {
+      "type": "string"
+    },
+    "Boss1Id": {
+      "type": "string"
+    },
+    "Boss2Id": {
+      "type": "string"
+    },
+    "BossCombatId": {
+      "type": "string"
+    },
+    "LootId": {
+      "type": "string"
+    },
+    "TraitIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "CorruptionCardIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

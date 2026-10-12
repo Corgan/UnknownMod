@@ -15,10 +15,19 @@
   "CombatTier": "T0",
   "CombatPercent": 0,
   "EventIds": [
+    "e_myc_38",
     "e_myc_6"
   ],
   "EventPercent": 100,
   "NodeEventTier": "T0",
+  "NodeEventPriority": [
+    0,
+    1
+  ],
+  "NodeEventPercent": [
+    100,
+    100
+  ],
   "Connections": [
     "myc_8"
   ]

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using HarmonyLib;
 using UnityEngine;
 using UnknownMod.Definitions;
@@ -27,6 +27,8 @@ namespace UnknownMod.Core
         private static List<string> _traitIds;
         private static List<string> _perkIds;
         private static List<string> _perkNodeIds;
+        private static List<string> _keyNoteIds;
+        private static List<string> _cinematicIds;
         private static List<string> _skinIds;
         private static List<string> _cardbackIds;
         private static List<string> _zoneIds;
@@ -60,6 +62,11 @@ namespace UnknownMod.Core
             _traitIds = null;
             _perkIds = null;
             _perkNodeIds = null;
+            _keyNoteIds = null;
+            _cinematicIds = null;
+            _corruptionPackIds = null;
+            _challengeTraitIds = null;
+            _weeklyIds = null;
             _skinIds = null;
             _cardbackIds = null;
             _zoneIds = null;
@@ -75,14 +82,62 @@ namespace UnknownMod.Core
 
         // -- Shared Helpers --
 
+        private static readonly HashSet<string> _reportedMissingFields = new();
+
+        /// <summary>Globals dictionaries the Register* methods write into; verified at startup by <see cref="PreflightGlobals"/>.</summary>
+        private static readonly string[] RequiredGlobalsDicts =
+        {
+            "_CardsSource", "_Cards", "_NPCsSource", "_NPCs", "_CombatDataSource", "_Events", "_NodeDataSource",
+            "_ZoneDataSource", "_ItemDataSource", "_NPCsNamed", "_AurasCursesSource", "_AurasCurses", "_LootDataSource", "_SubClassSource",
+            "_SubClass", "_TraitsSource", "_Traits", "_SkinDataSource", "_PerksSource", "_PerksNodesSource",
+            "_Requirements", "_CardbackDataSource", "_PackDataSource", "_CardPlayerPackDataSource",
+            "_CardPlayerPairsPackDataSource", "_Heroes", "_TierRewardDataSource",
+            "_KeyNotes", "_Cinematics", "_CorruptionPackDataSource", "_ChallengeTraitsSource", "_WeeklyDataSource"
+        };
+
+        /// <summary>
+        /// Verifies every Globals field the mod writes to still exists and is a non-null dictionary.
+        /// A game update that renames one would otherwise make registration silently do nothing.
+        /// </summary>
+        public static bool PreflightGlobals()
+        {
+            var g = Globals.Instance;
+            if (g == null)
+            {
+                Plugin.Log.LogError("[Preflight] Globals.Instance is null - content cannot be registered");
+                return false;
+            }
+            bool ok = true;
+            foreach (var name in RequiredGlobalsDicts)
+            {
+                var field = AccessTools.Field(typeof(Globals), name);
+                if (field == null || !typeof(System.Collections.IDictionary).IsAssignableFrom(field.FieldType))
+                {
+                    Plugin.Log.LogError($"[Preflight] Globals.{name} missing or not a dictionary - the game was probably updated; content of that type will NOT load");
+                    ok = false;
+                }
+                else if (field.GetValue(g) == null)
+                {
+                    Plugin.Log.LogError($"[Preflight] Globals.{name} is null at mod load time");
+                    ok = false;
+                }
+            }
+            if (ok) Plugin.Log.LogInfo("[Preflight] Globals compatibility check passed");
+            return ok;
+        }
+
         private static void RegisterInDict<T>(string fieldName, string key, T value) where T : class
         {
-            var dict = Traverse.Create(Globals.Instance).Field<Dictionary<string, T>>(fieldName).Value;
-            if (dict != null)
+            var dict = Traverse.Create(Globals.Instance).Field(fieldName).GetValue() as IDictionary<string, T>;
+            if (dict == null)
             {
-                dict[key] = value;
-                ModRegistry.TrackRegistration(fieldName, key);
+                if (_reportedMissingFields.Add(fieldName))
+                    Plugin.Log.LogError($"[DataHelper] Globals.{fieldName} is missing or null - nothing will be registered into it (game update?)");
+                return;
             }
+            dict.TryGetValue(key, out var existing);
+            dict[key] = value;
+            ModRegistry.TrackRegistration(fieldName, key, existing);
         }
 
         private static SpecialValues MakeSV(SpecialValueDef sv)
@@ -98,6 +153,6 @@ namespace UnknownMod.Core
         }
 
         public static string GetACId(AuraCurseData ac) => ac != null ? ac.Id ?? "" : "";
-        public static string GetCardId(CardData c) => c != null ? c.Id ?? "" : "";
+        public static string GetCardId(Cards.CardRealtimeData c) => c != null ? c.Id ?? "" : "";
     }
 }

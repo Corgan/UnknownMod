@@ -1,0 +1,360 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TraitDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "TraitName": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "ActivateOnRuneTypeAdded": {
+      "type": "boolean"
+    },
+    "TryActivateOnEveryEvent": {
+      "type": "boolean"
+    },
+    "TimesPerTurn": {
+      "type": "integer"
+    },
+    "TimesPerRound": {
+      "type": "integer"
+    },
+    "TraitCard": {
+      "type": "string"
+    },
+    "TraitCardForAllHeroes": {
+      "type": "string"
+    },
+    "CharacterStatModified": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Hp",
+        "Speed",
+        "Energy",
+        "EnergyTurn"
+      ]
+    },
+    "CharacterStatModifiedValue": {
+      "type": "integer"
+    },
+    "ResistModified1": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "ResistModifiedValue1": {
+      "type": "integer"
+    },
+    "ResistModified2": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "ResistModifiedValue2": {
+      "type": "integer"
+    },
+    "ResistModified3": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "ResistModifiedValue3": {
+      "type": "integer"
+    },
+    "AuracurseImmune1": {
+      "type": "string"
+    },
+    "AuracurseImmune2": {
+      "type": "string"
+    },
+    "AuracurseImmune3": {
+      "type": "string"
+    },
+    "AuracurseBonus1": {
+      "type": "string"
+    },
+    "AuracurseBonusValue1": {
+      "type": "integer"
+    },
+    "AuracurseBonus2": {
+      "type": "string"
+    },
+    "AuracurseBonusValue2": {
+      "type": "integer"
+    },
+    "AuracurseBonus3": {
+      "type": "string"
+    },
+    "AuracurseBonusValue3": {
+      "type": "integer"
+    },
+    "HealFlatBonus": {
+      "type": "integer"
+    },
+    "HealPercentBonus": {
+      "type": "number"
+    },
+    "HealReceivedFlatBonus": {
+      "type": "integer"
+    },
+    "HealReceivedPercentBonus": {
+      "type": "number"
+    },
+    "DamageBonusFlat": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageBonusFlatValue": {
+      "type": "integer"
+    },
+    "DamageBonusFlat2": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageBonusFlatValue2": {
+      "type": "integer"
+    },
+    "DamageBonusFlat3": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageBonusFlatValue3": {
+      "type": "integer"
+    },
+    "DamageBonusPercent": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageBonusPercentValue": {
+      "type": "number"
+    },
+    "DamageBonusPercent2": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageBonusPercentValue2": {
+      "type": "number"
+    },
+    "DamageBonusPercent3": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Slashing",
+        "Blunt",
+        "Piercing",
+        "Fire",
+        "Cold",
+        "Lightning",
+        "Mind",
+        "Holy",
+        "Shadow",
+        "All",
+        "Bleed"
+      ]
+    },
+    "DamageBonusPercentValue3": {
+      "type": "number"
+    },
+    "MaxBleedDamagePerTurn": {
+      "type": "integer"
+    },
+    "HideTimesPerTurnText": {
+      "type": "boolean"
+    },
+    "TraitCardDisplayOnly": {
+      "type": "boolean"
+    },
+    "DamageFlatNecessaryAuraCurse": {
+      "type": "string"
+    },
+    "DamageFlatNecessaryAuraCurseCharges": {
+      "type": "integer"
+    },
+    "DamageBonusFlatPerAuraCurseStack": {
+      "type": "integer"
+    },
+    "KeyNotes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "Activations": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "None",
+          "BeginCombat",
+          "BeginRound",
+          "BeginTurn",
+          "EndTurn",
+          "EndRound",
+          "DrawCard",
+          "CastCard",
+          "Hit",
+          "Hitted",
+          "Block",
+          "Blocked",
+          "Evade",
+          "Evaded",
+          "Heal",
+          "Healed",
+          "FinishCast",
+          "BeginCombatEnd",
+          "CharacterAssign",
+          "Damage",
+          "Damaged",
+          "PreBeginCombat",
+          "BeginTurnCardsDealt",
+          "AuraCurseSet",
+          "BeginTurnAboutToDealCards",
+          "Killed",
+          "DestroyItem",
+          "CorruptionCombatStart",
+          "CorruptionBeginRound",
+          "DamagedSecondary",
+          "FinishFinishCast",
+          "PreFinishCast",
+          "Resurrect",
+          "ItemActivation",
+          "TraitActivation",
+          "CharacterKilled",
+          "FinishFinishCastCorruption",
+          "DamagedDueToACConsumption",
+          "BlockReachedZero",
+          "AfterDealCards",
+          "CastFightCard",
+          "OnLeechExplosion",
+          "AuraCurseRemoved",
+          "EnemyBeginTurnDelay",
+          "ResetDeck",
+          "PetActivatedByCard",
+          "PetActivatedAuto",
+          "CardMoved",
+          "DarkExploded",
+          "Manual",
+          "CurseRemoved",
+          "Overhealed",
+          "CurseSet",
+          "EchoSpellCastFinish",
+          "ResurgeCastFinish",
+          "CombatCorruptionCombatStart",
+          "CombatCorruptionBeginRound",
+          "CombatFinishFinishCastCorruption",
+          "PhysicalDamaged",
+          "ElementalDamaged",
+          "MysticalDamaged",
+          "OnKill"
+        ]
+      }
+    }
+  }
+}

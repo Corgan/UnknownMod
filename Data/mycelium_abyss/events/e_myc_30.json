@@ -1,0 +1,45 @@
+{
+  "EventId": "e_myc_30",
+  "EventName": "The Sporelit Cairn",
+  "Description": "A cairn of dwarven helmets rises from the cave floor, bound together by threads of glowing mycelium. Each helmet is stuffed with offerings: coins, amulets, teeth. The air around the cairn is clean and still, as though the spores themselves refuse to come closer.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Lay a coin on the cairn.",
+      "Action": 27,
+      "SsHealPercent": 35,
+      "SsXP": 15,
+      "GoldCost": 50,
+      "SsText": "The mycelium threads pulse softly as your coin sinks into the cairn. Warmth floods your limbs and the weariness of the tunnels lifts."
+    },
+    {
+      "ReplyText": "Pry the amulets from the stones.",
+      "Action": 12,
+      "SsGold": 70,
+      "FlCombatId": "emyc_30a",
+      "HasRoll": true,
+      "RollDC": 3,
+      "RollTarget": 3,
+      "RepeatForAllScouts": true,
+      "SsText": "You work the amulets free one by one. The threads do not stir.",
+      "FlText": "The threads snap tight. The cairn shudders and its guardians tear themselves free of the stones."
+    },
+    {
+      "ReplyText": "Dig beneath the cairn.",
+      "Action": 22,
+      "SsDust": 40,
+      "SsXP": 25,
+      "FlHealFlat": -15,
+      "HasRoll": true,
+      "RollDC": 2,
+      "RollTarget": 3,
+      "RepeatForAllWarriors": true,
+      "SsText": "Beneath the cairn you find a cache of crystallized spore dust that someone buried long ago.",
+      "FlText": "The ground gives way and you tumble into a pit of spore-laden roots."
+    }
+  ]
+}

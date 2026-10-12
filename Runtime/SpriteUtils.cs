@@ -8,8 +8,7 @@ using UnknownMod.Definitions;
 namespace UnknownMod.Runtime
 {
     /// <summary>
-    /// Shared sprite utilities used by both the editor (SpriteSkinEditor) and runtime
-    /// (NpcPrefabBuilder). Provides NPC sprite extraction, custom sprite loading,
+    /// Shared sprite utilities used by both the editor (VisualGraphEditor) and runtime. Provides NPC sprite extraction, custom sprite loading,
     /// shader material creation, and caching.
     /// </summary>
     public static class SpriteUtils
@@ -19,6 +18,98 @@ namespace UnknownMod.Runtime
         // ═══════════════════════════════════════════════════════════════
 
         private static readonly Dictionary<string, Dictionary<string, Sprite>> _graftSpriteCache = new();
+        private static readonly Dictionary<(Sprite, bool, float, float, float), Sprite> _portraitSprites = new();
+
+        /// <summary>A horizontally mirrored copy of a sprite (cached). Returns null for null input.</summary>
+        public static Sprite FlipHorizontal(Sprite source) => TransformPortrait(source, true, 1f, 0f, 0f);
+
+        /// <summary>
+        /// A re-framed copy of a sprite with the same pixel size (cached): optionally mirrored, content zoomed by <paramref name="scale"/>
+        /// about the centre (above 1 zooms in and crops, below 1 shrinks and pads with transparency), then shifted by
+        /// <paramref name="offsetX"/>/<paramref name="offsetY"/> as fractions of the sprite size (Y is up). The visible rect is copied through a
+        /// RenderTexture, so it works on non-readable and atlas textures. Returns the original sprite if nothing changes or the copy fails.
+        /// </summary>
+        public static Sprite TransformPortrait(Sprite source, bool flip, float scale, float offsetX, float offsetY)
+        {
+            if (source == null || source.texture == null) return source;
+            if (scale <= 0.01f) scale = 1f;
+            scale = Mathf.Clamp(scale, 0.1f, 4f);
+            if (!flip && Mathf.Approximately(scale, 1f) && Mathf.Approximately(offsetX, 0f) && Mathf.Approximately(offsetY, 0f)) return source;
+            var key = (source, flip, scale, offsetX, offsetY);
+            if (_portraitSprites.TryGetValue(key, out var cached) && cached != null) return cached;
+            RenderTexture rt = null;
+            var previous = RenderTexture.active;
+            try
+            {
+                // A tight-mesh sprite's textureRect is its trimmed opaque area; only atlas-packed sprites need it, the rest use the full rect.
+                var rect = source.packed ? source.textureRect : source.rect;
+                int w = Mathf.Max(1, (int)rect.width), h = Mathf.Max(1, (int)rect.height);
+                var tex = source.texture;
+                rt = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+                Graphics.Blit(tex, rt, new Vector2(w / (float)tex.width, h / (float)tex.height),
+                    new Vector2(rect.x / tex.width, rect.y / tex.height));
+                RenderTexture.active = rt;
+                var temp = new Texture2D(w, h, TextureFormat.RGBA32, false);
+                temp.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+                var src = temp.GetPixels32();
+                Object.Destroy(temp);
+
+                var dst = new Color32[w * h];
+                for (int y = 0; y < h; y++)
+                {
+                    float v = ((y + 0.5f) / h - 0.5f - offsetY) / scale + 0.5f;
+                    for (int x = 0; x < w; x++)
+                    {
+                        float u = ((x + 0.5f) / w - 0.5f - offsetX) / scale + 0.5f;
+                        if (flip) u = 1f - u;
+                        dst[y * w + x] = SampleBilinear(src, w, h, u * w - 0.5f, v * h - 0.5f, u, v);
+                    }
+                }
+
+                var outTex = new Texture2D(w, h, TextureFormat.RGBA32, false) { name = tex.name + "_portrait", filterMode = tex.filterMode, wrapMode = TextureWrapMode.Clamp };
+                outTex.SetPixels32(dst);
+                outTex.Apply(false, false);
+
+                float px = source.pivot.x / w, py = source.pivot.y / h;
+                if (flip) px = 1f - px;
+                px = 0.5f + offsetX + (px - 0.5f) * scale;
+                py = 0.5f + offsetY + (py - 0.5f) * scale;
+                var border = source.border;
+                bool plain = Mathf.Approximately(scale, 1f) && Mathf.Approximately(offsetX, 0f) && Mathf.Approximately(offsetY, 0f);
+                var newBorder = !plain ? Vector4.zero : flip ? new Vector4(border.z, border.y, border.x, border.w) : border;
+                var result = Sprite.Create(outTex, new Rect(0, 0, w, h), new Vector2(px, py), source.pixelsPerUnit, 0, SpriteMeshType.FullRect, newBorder);
+                result.name = source.name + (flip ? "_flipped" : "_framed");
+                _portraitSprites[key] = result;
+                return result;
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning($"[SpriteUtils] Could not reframe sprite '{source.name}': {e.Message}");
+                return source;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                if (rt != null) RenderTexture.ReleaseTemporary(rt);
+            }
+        }
+
+        // Bilinear sample at pixel coordinates (fx, fy); (u, v) are the normalised coordinates used for the out-of-bounds test.
+        private static Color32 SampleBilinear(Color32[] src, int w, int h, float fx, float fy, float u, float v)
+        {
+            if (u < 0f || u >= 1f || v < 0f || v >= 1f) return new Color32(0, 0, 0, 0);
+            int x0 = Mathf.Clamp(Mathf.FloorToInt(fx), 0, w - 1), y0 = Mathf.Clamp(Mathf.FloorToInt(fy), 0, h - 1);
+            int x1 = Mathf.Min(x0 + 1, w - 1), y1 = Mathf.Min(y0 + 1, h - 1);
+            float tx = Mathf.Clamp01(fx - x0), ty = Mathf.Clamp01(fy - y0);
+            var a = src[y0 * w + x0]; var b = src[y0 * w + x1]; var c = src[y1 * w + x0]; var d = src[y1 * w + x1];
+            // Weight colour by alpha so transparent texels don't bleed dark fringes.
+            float wa = (1 - tx) * (1 - ty) * a.a, wb = tx * (1 - ty) * b.a, wc = (1 - tx) * ty * c.a, wd = tx * ty * d.a;
+            float alpha = wa + wb + wc + wd;
+            if (alpha <= 0.0001f) return new Color32(0, 0, 0, 0);
+            byte R(float f) => (byte)Mathf.Clamp(Mathf.RoundToInt(f / alpha), 0, 255);
+            return new Color32(R(wa * a.r + wb * b.r + wc * c.r + wd * d.r), R(wa * a.g + wb * b.g + wc * c.g + wd * d.g),
+                R(wa * a.b + wb * b.b + wc * c.b + wd * d.b), (byte)Mathf.Clamp(Mathf.RoundToInt(alpha), 0, 255));
+        }
 
         /// <summary>
         /// Extract all bone sprites from an existing NPC's prefab (cached).
@@ -176,50 +267,6 @@ namespace UnknownMod.Runtime
 
             _textureCache[fullPath] = tex;
             return tex;
-        }
-
-        /// <summary>Build a Sprite from a SpriteDef. First tries to resolve ImagePath as a
-        /// sprite name (base game + mod sprites). Falls back to loading from disk.</summary>
-        public static Sprite CreateSpriteFromDef(SpriteDef def, string modId, string fallbackSheet, Sprite originalSprite)
-        {
-            string imagePath = !string.IsNullOrEmpty(def.ImagePath) ? def.ImagePath : fallbackSheet;
-            if (string.IsNullOrEmpty(imagePath)) return null;
-
-            // 1. Try resolving as a named sprite (returns the already-cropped Sprite)
-            var named = FindSpriteByName(imagePath);
-            if (named != null)
-            {
-                // If the SpriteDef has non-default properties, re-create the sprite
-                // with the requested parameters instead of returning the shared reference.
-                bool hasCustomRect = def.Rect != null && def.Rect.Length >= 4;
-                bool hasCustomPPU = def.PPU > 0 && Mathf.Abs(def.PPU - named.pixelsPerUnit) > 0.01f;
-                bool hasCustomPivot = Mathf.Abs(def.PivotX - 0.5f) > 0.001f || Mathf.Abs(def.PivotY - 0.5f) > 0.001f;
-                if (!hasCustomRect && !hasCustomPPU && !hasCustomPivot)
-                    return named;
-
-                Rect r = hasCustomRect
-                    ? ClampRect(def.Rect, named.texture.width, named.texture.height)
-                    : named.rect;
-                float namedPpu = def.PPU > 0 ? def.PPU : named.pixelsPerUnit;
-                return Sprite.Create(named.texture, r, new Vector2(def.PivotX, def.PivotY), namedPpu);
-            }
-
-            // 2. Fall back to loading texture from disk (requires a valid modId for folder lookup)
-            if (string.IsNullOrEmpty(modId)) return null;
-            string fullPath = Path.Combine(ModProjectLoader.ModFolder(modId), "sprites", imagePath);
-            var tex = LoadTexture(fullPath);
-            if (tex == null) return null;
-
-            Rect rect;
-            if (def.Rect != null && def.Rect.Length >= 4)
-                rect = ClampRect(def.Rect, tex.width, tex.height);
-            else
-                rect = new Rect(0, 0, tex.width, tex.height);
-
-            float ppu = def.PPU > 0 ? def.PPU : (originalSprite?.pixelsPerUnit ?? 100f);
-            var pivot = new Vector2(def.PivotX, def.PivotY);
-
-            return Sprite.Create(tex, rect, pivot, ppu);
         }
 
         /// <summary>Clamp a user-supplied rect to valid texture bounds.</summary>

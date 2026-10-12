@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "EventDef",
+  "type": "object",
+  "properties": {
+    "EventId": {
+      "type": "string"
+    },
+    "EventName": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "DescriptionAction": {
+      "type": "string"
+    },
+    "SpriteSource": {
+      "type": "string"
+    },
+    "SpriteMap": {
+      "type": "string"
+    },
+    "SpriteDecor": {
+      "type": "string"
+    },
+    "SpriteBook": {
+      "type": "string"
+    },
+    "EventTier": {
+      "type": "string",
+      "enum": [
+        "T0",
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5",
+        "T6",
+        "T7",
+        "T8",
+        "T9",
+        "T10",
+        "T11",
+        "T12",
+        "T13"
+      ]
+    },
+    "ReplyRandom": {
+      "type": "integer"
+    },
+    "RequirementId": {
+      "type": "string"
+    },
+    "RequiredClassId": {
+      "type": "string"
+    },
+    "EventIconShader": {
+      "type": "string",
+      "enum": [
+        "None",
+        "Green",
+        "Blue",
+        "Orange",
+        "Purple",
+        "Red",
+        "Black"
+      ]
+    },
+    "HistoryMode": {
+      "type": "boolean"
+    },
+    "EventUniqueId": {
+      "type": "string"
+    },
+    "AppendReplies": {
+      "type": "boolean"
+    },
+    "Replies": {
+      "type": "array",
+      "items": {}
+    }
+  }
+}

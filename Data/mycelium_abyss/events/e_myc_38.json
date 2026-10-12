@@ -1,0 +1,23 @@
+{
+  "EventId": "e_myc_38",
+  "EventName": "A Spore-Blaze Waymarker",
+  "Description": "A faint glow pulses on the cavern wall: a handprint in luminous spores, an arrow scratched beneath it. Morel's journal describes a marker just like this one.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "SpriteMap": "quest-loremaster",
+  "EventIconShader": "Orange",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "myc_morel_p1",
+  "Replies": [
+    {
+      "ReplyText": "Study the waymarker.",
+      "Action": 57,
+      "SsText": "The spores trace a spiral toward the cavern's heart. Morel copied part of his map into the stone, and you sketch it into the margins of his journal: the first half of his route.",
+      "SsXP": 40,
+      "RequirementId": "myc_morel_p1",
+      "SsRequirementUnlockId": "myc_morel_p2",
+      "SsRequirementLockId": "myc_morel_p1"
+    }
+  ]
+}

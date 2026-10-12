@@ -3,7 +3,7 @@
   "Name": "Cordyceps Thrall",
   "Description": "",
   "SpriteSource": "bonefighter",
-  "Hp": 110,
+  "Hp": 126,
   "Speed": 12,
   "Energy": 10,
   "EnergyTurn": 0,
@@ -19,7 +19,7 @@
   "ResShadow": 15,
   "AiCards": [
     {
-      "CardId": "myc_mindlesscharge",
+      "CardId": "mycmindlesscharge",
       "Priority": 6,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -34,7 +34,7 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_fungalburst",
+      "CardId": "mycfungalburst",
       "Priority": 3,
       "AddCardRound": 2,
       "OnlyCastIf": "Always",
@@ -49,8 +49,8 @@
       "SecondValueCastIf": 0.0
     }
   ],
-  "XpReward": 20,
-  "GoldReward": 14,
+  "XpReward": 33,
+  "GoldReward": 30,
   "TierReward": 3,
   "IsBoss": false,
   "IsNamed": false,

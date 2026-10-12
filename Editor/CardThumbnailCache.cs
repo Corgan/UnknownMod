@@ -29,6 +29,29 @@ namespace UnknownMod.Editor
             return tex;
         }
 
+        private const int RendersPerFrame = 2;
+        private static int _budgetFrame = -1;
+        private static int _budgetUsed;
+
+        /// <summary>
+        /// Like GetThumbnail, but renders at most a couple of thumbnails per frame (each one instantiates the
+        /// full card prefab). When over budget, returns null with pending=true so the caller retries next frame.
+        /// </summary>
+        public static Texture2D GetThumbnailBudgeted(string cardId, out bool pending)
+        {
+            pending = false;
+            if (string.IsNullOrEmpty(cardId)) return null;
+            if (_cache.TryGetValue(cardId, out var cached)) return cached;
+
+            if (_budgetFrame != Time.frameCount) { _budgetFrame = Time.frameCount; _budgetUsed = 0; }
+            if (_budgetUsed >= RendersPerFrame) { pending = true; return null; }
+            _budgetUsed++;
+
+            var tex = RenderThumbnail(cardId);
+            _cache[cardId] = tex;
+            return tex;
+        }
+
         /// <summary>Invalidate a specific thumbnail (e.g. after edits).</summary>
         public static void Invalidate(string cardId)
         {

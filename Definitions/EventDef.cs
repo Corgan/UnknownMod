@@ -23,6 +23,14 @@ namespace UnknownMod.Definitions
         /// <summary>Base-game event ID to borrow book/decor/map sprites from.</summary>
         public string SpriteSource = "";
 
+        /// <summary>Sprite names (game or mod sprites) that override the SpriteSource art: the map icon, the decoration behind it, and the event book image.</summary>
+        public string SpriteMap = "";
+        public string SpriteDecor = "";
+        public string SpriteBook = "";
+        public bool ShouldSerializeSpriteMap() => !string.IsNullOrEmpty(SpriteMap);
+        public bool ShouldSerializeSpriteDecor() => !string.IsNullOrEmpty(SpriteDecor);
+        public bool ShouldSerializeSpriteBook() => !string.IsNullOrEmpty(SpriteBook);
+
         [JsonConverter(typeof(StringEnumConverter))]
         public Enums.CombatTier EventTier = Enums.CombatTier.T0;
 
@@ -47,6 +55,13 @@ namespace UnknownMod.Definitions
         /// <summary>Unique identifier for this event instance.</summary>
         public string EventUniqueId = "";
         public bool ShouldSerializeEventUniqueId() => !string.IsNullOrEmpty(EventUniqueId);
+
+        /// <summary>
+        /// Patch mode: keep the target event as it is and add this def's Replies after its existing ones.
+        /// Replies from several mods stack. Name, description, requirement and the other fields are ignored.
+        /// </summary>
+        public bool AppendReplies = false;
+        public bool ShouldSerializeAppendReplies() => AppendReplies;
 
         public List<ReplyDef> Replies = new();
     }
@@ -156,6 +171,18 @@ namespace UnknownMod.Definitions
         /// <summary>Position index for character replacement (Ss-only).</summary>
         public int CharacterReplacementPosition = 0;
         public bool ShouldSerializeCharacterReplacementPosition() => !string.IsNullOrEmpty(CharacterReplacementId);
+
+        /// <summary>Open the card destruction UI (Ss and Fl only in game).</summary>
+        public bool CardDestruction = false;
+        public bool ShouldSerializeCardDestruction() => CardDestruction;
+
+        /// <summary>Number of cards the player may destroy.</summary>
+        public int CardDestructionAmount = 0;
+        public bool ShouldSerializeCardDestructionAmount() => CardDestruction;
+
+        /// <summary>Clear crafted cards (Ss-only in game).</summary>
+        public bool ClearCraftedCards = false;
+        public bool ShouldSerializeClearCraftedCards() => ClearCraftedCards;
     }
 
     [Serializable]
@@ -412,6 +439,9 @@ namespace UnknownMod.Definitions
             o.CardPlayerPairsGame = (bool?)jo[$"{p}CardPlayerPairsGame"] ?? false;
             o.CardPlayerPairsGamePackId = (string)jo[$"{p}CardPlayerPairsGamePackId"] ?? "";
             o.UnlockSteamAchievement = (string)jo[$"{p}UnlockSteamAchievement"] ?? "";
+            o.CardDestruction = (bool?)jo[$"{p}CardDestruction"] ?? false;
+            o.CardDestructionAmount = (int?)jo[$"{p}CardDestructionAmount"] ?? 0;
+            o.ClearCraftedCards = (bool?)jo[$"{p}ClearCraftedCards"] ?? false;
         }
 
         private static void WriteOutcome(JsonWriter writer, string p, OutcomeDef o, JsonSerializer serializer)
@@ -457,6 +487,9 @@ namespace UnknownMod.Definitions
             if (o.CardPlayerPairsGame) { writer.WritePropertyName($"{p}CardPlayerPairsGame"); writer.WriteValue(o.CardPlayerPairsGame); }
             if (!string.IsNullOrEmpty(o.CardPlayerPairsGamePackId)) { writer.WritePropertyName($"{p}CardPlayerPairsGamePackId"); writer.WriteValue(o.CardPlayerPairsGamePackId); }
             if (!string.IsNullOrEmpty(o.UnlockSteamAchievement)) { writer.WritePropertyName($"{p}UnlockSteamAchievement"); writer.WriteValue(o.UnlockSteamAchievement); }
+            if (o.CardDestruction) { writer.WritePropertyName($"{p}CardDestruction"); writer.WriteValue(o.CardDestruction); }
+            if (o.CardDestruction && o.CardDestructionAmount != 0) { writer.WritePropertyName($"{p}CardDestructionAmount"); writer.WriteValue(o.CardDestructionAmount); }
+            if (o.ClearCraftedCards) { writer.WritePropertyName($"{p}ClearCraftedCards"); writer.WriteValue(o.ClearCraftedCards); }
         }
     }
 }

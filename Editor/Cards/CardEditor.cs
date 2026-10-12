@@ -14,11 +14,12 @@ namespace UnknownMod.Editor
     /// Equipment cards (items, enchantments, pets) show additional ItemFields sections
     /// when cd.HasItemData is true.
     /// </summary>
-    public class CardEditor : ModProjectEditorBase<CardDef>
+    public partial class CardEditor : ModProjectEditorBase<CardDef>
     {
         protected override string TypeLabel => "Card";
         protected override string FolderName => "cards";
         protected override string NewIdSuffix => "newcard";
+        protected override string SanitizeNewId(string modId) => ModProjectLoader.IdPrefix(modId).Replace("_", "");
         protected override EntityPicker.Mode? PickerMode => EntityPicker.Mode.Card;
         protected override bool AutoSnapshotOnSelect => false;
 
@@ -65,6 +66,215 @@ namespace UnknownMod.Editor
         protected override void OnDeleteEntity(ModProject proj, string id, bool isPatch)
             => ModProjectLoader.DeleteCard(proj, id, isPatch);
 
+        // ── Undo / redo ──────────────────────────────────────────
+        // The undo unit is a card family: the base card plus its A / B / Rare upgrade variants. Variants are separate project
+        // entries, so a family snapshot lets one history step cover editing a variant, creating or deleting one, and deleting a card.
+
+        private sealed class EntryState { public bool Patch; public string Id; public string Json; }
+        private sealed class FamilyState
+        {
+            public EntryState Main;
+            public Dictionary<string, EntryState> Vars = new Dictionary<string, EntryState>();
+        }
+
+        private static readonly Enums.CardUpgraded[] VariantLevels = { Enums.CardUpgraded.A, Enums.CardUpgraded.B, Enums.CardUpgraded.Rare };
+
+        internal static string VariantSuffix(Enums.CardUpgraded level) => level switch
+        {
+            Enums.CardUpgraded.A => "a",
+            Enums.CardUpgraded.B => "b",
+            Enums.CardUpgraded.Rare => "rare",
+            _ => "",
+        };
+
+        private static bool IsPatchEntry(ModProject proj, CardDef def)
+            => !(proj.Cards.TryGetValue(def.Id, out var inNew) && ReferenceEquals(inNew, def));
+
+        private static EntryState EntryOf(ModProject proj, CardDef def)
+            => new EntryState { Patch = IsPatchEntry(proj, def), Id = def.Id, Json = Newtonsoft.Json.JsonConvert.SerializeObject(def) };
+
+        private static string CaptureFamily(ModProject proj, string baseId)
+        {
+            var st = new FamilyState();
+            var main = FindProjectCard(baseId, proj);
+            if (main != null) st.Main = EntryOf(proj, main);
+            foreach (var level in VariantLevels)
+            {
+                var v = FindVariant(baseId, proj, level);
+                if (v != null) st.Vars[level.ToString()] = EntryOf(proj, v);
+            }
+            return Newtonsoft.Json.JsonConvert.SerializeObject(st);
+        }
+
+        private static string FamilyKeyOf(CardDef d)
+            => d.CardUpgraded != Enums.CardUpgraded.No && !string.IsNullOrEmpty(d.BaseCardId) ? d.BaseCardId : d.Id;
+
+        private static void RemoveCardEntry(ModProject proj, CardDef def)
+        {
+            bool patch = IsPatchEntry(proj, def);
+            (patch ? proj.CardPatches : proj.Cards).Remove(def.Id);
+            ModProjectLoader.DeleteCard(proj, def.Id, patch);
+        }
+
+        private static void ApplyEntry(ModProject proj, CardDef current, EntryState want)
+        {
+            if (want == null)
+            {
+                if (current != null) RemoveCardEntry(proj, current);
+                return;
+            }
+            if (current != null && current.Id == want.Id && IsPatchEntry(proj, current) == want.Patch)
+            {
+                EntityHistory<CardDef>.RestoreInto(current, want.Json);
+                current.Id = want.Id;
+                ModProjectLoader.SaveCard(proj, current, want.Patch);
+                return;
+            }
+            if (current != null) RemoveCardEntry(proj, current);
+            var def = Newtonsoft.Json.JsonConvert.DeserializeObject<CardDef>(want.Json);
+            if (def == null) return;
+            def.Id = want.Id;
+            (want.Patch ? proj.CardPatches : proj.Cards)[want.Id] = def;
+            ModProjectLoader.SaveCard(proj, def, want.Patch);
+        }
+
+        private void ApplyFamily(string baseId, string json)
+        {
+            var proj = ModManagerPanel.ActiveProject;
+            var st = Newtonsoft.Json.JsonConvert.DeserializeObject<FamilyState>(json);
+            if (proj == null || st == null) return;
+
+            ApplyEntry(proj, FindProjectCard(baseId, proj), st.Main);
+            foreach (var level in VariantLevels)
+            {
+                st.Vars.TryGetValue(level.ToString(), out var want);
+                ApplyEntry(proj, FindVariant(baseId, proj, level), want);
+            }
+
+            bool any = st.Main != null || st.Vars.Count > 0;
+            if (any)
+            {
+                if (SelectedId != baseId && FamilyKeyOfId(proj, SelectedId) != baseId) SelectedId = baseId;
+            }
+            else if (SelectedId == baseId && DataHelper.GetCard(baseId) == null)
+                SelectedId = null;
+
+            _famBefore = null;
+            proj.IsDirty = true;
+            proj.LastChangeTime = Time.realtimeSinceStartup;
+            InlineIssues.Invalidate();
+            GUI.changed = true;
+        }
+
+        private static string FamilyKeyOfId(ModProject proj, string id)
+        {
+            var d = string.IsNullOrEmpty(id) ? null : FindProjectCard(id, proj);
+            return d != null ? FamilyKeyOf(d) : id;
+        }
+
+        private string _famBefore;
+        private string _famKey;
+
+        private void FamilyBegin(ModProject proj, string baseId)
+        {
+            var ev = Event.current.type;
+            if (_famBefore == null || _famKey != baseId || ev == EventType.MouseDown || ev == EventType.KeyDown)
+            {
+                _famBefore = CaptureFamily(proj, baseId);
+                _famKey = baseId;
+            }
+        }
+
+        private void FamilyEnd(ModProject proj, string baseId)
+        {
+            if (!GUI.changed || _famBefore == null || _famKey != baseId) return;
+            string after = CaptureFamily(proj, baseId);
+            if (after == _famBefore) return;
+            History.Stack.RecordEdit("fam:" + baseId, baseId, _famBefore, after, s => ApplyFamily(baseId, s));
+            _famBefore = after;
+        }
+
+        /// <summary>Runs a structural change to a card family and records it as one undo step.</summary>
+        private void RunFamilyOp(ModProject proj, string baseId, string label, Action op)
+        {
+            string before = CaptureFamily(proj, baseId);
+            op();
+            string after = CaptureFamily(proj, baseId);
+            _famBefore = null;
+            if (before == after) return;
+            History.Stack.RecordEdit(null, $"{label} {baseId}", before, after, s => ApplyFamily(baseId, s));
+            proj.IsDirty = true;
+            proj.LastChangeTime = Time.realtimeSinceStartup;
+            InlineIssues.Invalidate();
+        }
+
+        protected override void BeginTrack(ModProject proj, CardDef d, bool isPatch) => FamilyBegin(proj, FamilyKeyOf(d));
+        protected override void EndTrack(ModProject proj, CardDef d, bool isPatch) => FamilyEnd(proj, FamilyKeyOf(d));
+
+        protected override void RunCreate(ModProject proj, string id, bool isPatch, string label, Action op)
+            => RunFamilyOp(proj, id, label, op);
+
+        /// <summary>Deleting a new base card also removes its upgrade variants; reverting an override only removes that override.</summary>
+        protected override void DeleteEntry(ModProject proj, string id, bool isPatch, string label)
+        {
+            var dict = isPatch ? proj.CardPatches : proj.Cards;
+            if (!dict.ContainsKey(id)) return;
+            bool changed = GUI.changed;
+            RunFamilyOp(proj, id, label, () =>
+            {
+                dict.Remove(id);
+                ModProjectLoader.DeleteCard(proj, id, isPatch);
+                if (!isPatch)
+                {
+                    foreach (var (variantDict, variantIsPatch) in new[] { (proj.Cards, false), (proj.CardPatches, true) })
+                    {
+                        var orphanIds = variantDict
+                            .Where(kv => kv.Value.CardUpgraded != Enums.CardUpgraded.No && string.Equals(kv.Value.BaseCardId, id, StringComparison.OrdinalIgnoreCase))
+                            .Select(kv => kv.Key).ToList();
+                        foreach (var orphanId in orphanIds)
+                        {
+                            variantDict.Remove(orphanId);
+                            ModProjectLoader.DeleteCard(proj, orphanId, variantIsPatch);
+                        }
+                    }
+                }
+            });
+            GUI.changed = changed;
+        }
+
+        protected override bool IdCollides(string id, ModProject proj)
+        {
+            foreach (var suffix in new[] { "", "a", "b", "rare" })
+            {
+                string v = id + suffix;
+                if (proj.Cards.ContainsKey(v) || proj.CardPatches.ContainsKey(v) || DataHelper.GetCard(v) != null) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Duplicate also copies the upgrade variants (project overrides, or a snapshot of the game's variants).</summary>
+        protected override void OnDuplicated(CardDef copy, string newId, ModProject proj)
+        {
+            string srcId = SelectedId;
+            foreach (var level in VariantLevels)
+            {
+                CardDef source = FindVariant(srcId, proj, level);
+                if (source == null)
+                {
+                    string gameId = FindGameVariantId(srcId, level);
+                    if (gameId != null) source = SnapshotBaseEntity(gameId);
+                }
+                if (source == null) continue;
+                var v = Newtonsoft.Json.JsonConvert.DeserializeObject<CardDef>(Newtonsoft.Json.JsonConvert.SerializeObject(source));
+                if (v == null) continue;
+                v.Id = newId + VariantSuffix(level);
+                v.BaseCardId = newId;
+                v.CardUpgraded = level;
+                proj.Cards[v.Id] = v;
+                ModProjectLoader.SaveCard(proj, v, false);
+            }
+        }
+
         // ── Tab-based filtering ──────────────────────────────────
         protected override List<string> FilterEntityList(List<string> allIds, ModProject proj)
         {
@@ -105,6 +315,15 @@ namespace UnknownMod.Editor
             }).ToList();
         }
 
+        protected override string BaseIdsCacheKey
+        {
+            get
+            {
+                var t = Parent.CardsTab;
+                return t == null ? "" : $"{t.ActiveSubTab}|{t.ActiveHeroSub}|{t.ActiveEquipmentSub}|{t.ActiveMonsterSub}|{t.ActiveSpecialSub}";
+            }
+        }
+
         protected override List<string> GetAllBaseIds()
         {
             var tab = Parent.CardsTab;
@@ -127,7 +346,6 @@ namespace UnknownMod.Editor
         /// <summary>0=Base, 1=A, 2=B, 3=Rare (non-equipment) or 0=Base, 1=Rare (equipment)</summary>
         private int _upgradeTab = 0;
         private string _prevBaseId;
-        private string _prevVariantId;
         private static readonly string[] _cardUpgradeLabels = { "Base", "A", "B", "Rare" };
         private static readonly string[] _equipUpgradeLabels = { "Base", "Rare" };
         private bool IsEditingVariant => _upgradeTab != 0;
@@ -156,11 +374,16 @@ namespace UnknownMod.Editor
         private bool _secLook = false;
         private bool _secSummon = false;
         private bool _secAcEnergy = false;
-        private bool _secSpecialVal = false;
-        private bool _secSpecialFlags = false;
+        private bool _secEffectMods = false;
+        private bool _secExtraEffects = false;
+        private bool _secEnergyRecharge = false;
+        private bool _secAdvanced = false;
+        private bool _secHeroClass = false;
+        private bool _secExtraSummons = false;
+        private bool _secDescTemplate = false;
+        private readonly HashSet<string> _openSlots = new();
         private bool _secFx = false;
         private bool _secPet = false;
-        private bool _secUpgradeParams = false;
 
         // Item sections (only shown when HasItemData)
         private bool _secActivation = false;
@@ -222,7 +445,6 @@ namespace UnknownMod.Editor
                 DrawVariantRemoveButton(vDef, proj, isBase: false);
 
                 cd = vDef;
-                _prevVariantId = vDef.Id;
             }
             else if (!baseInProject)
             {
@@ -242,7 +464,9 @@ namespace UnknownMod.Editor
 
             if (EditorFields.Section("Identity", ref _secIdentity))
             {
-                cd.Id = EditorFields.TextField("ID", cd.Id).Replace("_", "");
+                // A variant's id is derived from its base card and tier, so only the base card's id can be edited
+                if (IsEditingVariant) EditorFields.ReadOnlyField("ID", cd.Id);
+                else cd.Id = EditorFields.TextField("ID", cd.Id).Replace("_", "");
                 cd.Name = EditorFields.TextField("Name", cd.Name);
                 cd.Description = EditorFields.TextArea("Description", cd.Description);
                 cd.Fluff = EditorFields.TextField("Fluff", cd.Fluff);
@@ -252,10 +476,17 @@ namespace UnknownMod.Editor
                     "card_sprsrc", pickerMode: EntityPicker.Mode.Sprite);
                 cd.SoundSource = EditorFields.IdDropdown("Sound Source", cd.SoundSource, EditorFields.CachedIds("card", DataHelper.GetAllCardIds), "card_sndsrc", pickerMode: EntityPicker.Mode.Card);
                 cd.PetModelSource = EditorFields.IdDropdown("Pet Model Source", cd.PetModelSource, GetPetModelSourceIds(proj), "card_petmdl");
+                var petGraphIds = proj.VisualGraphs.Keys.Concat(proj.VisualGraphPatches.Keys)
+                    .Distinct().OrderBy(k => k).ToList();
+                cd.PetVisualGraphId = EditorFields.IdDropdown("Pet Graft Sprite", cd.PetVisualGraphId, petGraphIds, "card_pet_visualgraph");
                 cd.EnergyCost = EditorFields.IntField("Energy Cost", cd.EnergyCost, 0, 10);
                 cd.IsUpgraded = EditorFields.Toggle("Is Upgraded", cd.IsUpgraded);
                 if (cd.IsUpgraded)
                     cd.BaseCardId = EditorFields.IdDropdown("Base Card", cd.BaseCardId, EditorFields.CachedIds("card", DataHelper.GetAllCardIds), "card_base", pickerMode: EntityPicker.Mode.Card);
+                var relatedIds = EditorFields.CachedIds("card", DataHelper.GetAllCardIds);
+                cd.RelatedCard = EditorFields.IdDropdown("Related Card 1", cd.RelatedCard, relatedIds, "card_rel1", pickerMode: EntityPicker.Mode.Card);
+                cd.RelatedCard2 = EditorFields.IdDropdown("Related Card 2", cd.RelatedCard2, relatedIds, "card_rel2", pickerMode: EntityPicker.Mode.Card);
+                cd.RelatedCard3 = EditorFields.IdDropdown("Related Card 3", cd.RelatedCard3, relatedIds, "card_rel3", pickerMode: EntityPicker.Mode.Card);
             }
 
             // ══════════════════════════════════════════════════════
@@ -279,16 +510,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     cd.CardTypeAux[i] = EditorFields.EnumField($"Aux {i + 1}", cd.CardTypeAux[i], $"card_ctaux_{i}");
-                    if (GUILayout.Button("X", EditorStyles.DangerButton, GUILayout.Width(22)))
-                    {
-                        var list = new List<Enums.CardType>(cd.CardTypeAux);
-                        list.RemoveAt(i);
-                        cd.CardTypeAux = list.ToArray();
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, cd.CardTypeAux.Length);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(ref cd.CardTypeAux, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Aux Type", EditorStyles.MiniButton, GUILayout.Width(80)))
                 {
@@ -304,7 +528,10 @@ namespace UnknownMod.Editor
             // ══════════════════════════════════════════════════════
 
             if (cd.HasItemData)
+            {
+                DrawItemPresets(cd);
                 DrawItemFieldsSections(cd.Item);
+            }
 
             // ══════════════════════════════════════════════════════
             //  CARD SECTIONS
@@ -324,14 +551,14 @@ namespace UnknownMod.Editor
             //  Flags 
             if (EditorFields.Section("Flags", ref _secFlags))
             {
-                var flagLabels = new[] { "Playable", "Visible", "Show Tome", "Autoplay Draw", "Autoplay EOT", "Vanish", "Innate", "Lazy", "Corrupted", "End Turn", "Starter", "Flip Sprite", "Mod by Trait", "Weekly Only" };
-                var flagVals = new[] { cd.Playable, cd.Visible, cd.ShowInTome, cd.AutoplayDraw, cd.AutoplayEndTurn, cd.Vanish, cd.Innate, cd.Lazy, cd.Corrupted, cd.EndTurn, cd.Starter, cd.FlipSprite, cd.ModifiedByTrait, cd.OnlyInWeekly };
+                var flagLabels = new[] { "Playable", "Visible", "Show Tome", "Autoplay Draw", "Autoplay EOT", "Vanish", "Innate", "Lazy", "Corrupted", "End Turn", "Starter", "Combat Based", "Flip Sprite", "Mod by Trait", "Weekly Only" };
+                var flagVals = new[] { cd.Playable, cd.Visible, cd.ShowInTome, cd.AutoplayDraw, cd.AutoplayEndTurn, cd.Vanish, cd.Innate, cd.Lazy, cd.Corrupted, cd.EndTurn, cd.Starter, cd.CombatBased, cd.FlipSprite, cd.ModifiedByTrait, cd.OnlyInWeekly };
                 EditorFields.ToggleGrid(flagLabels, flagVals, 3);
                 cd.Playable = flagVals[0]; cd.Visible = flagVals[1]; cd.ShowInTome = flagVals[2];
                 cd.AutoplayDraw = flagVals[3]; cd.AutoplayEndTurn = flagVals[4]; cd.Vanish = flagVals[5];
                 cd.Innate = flagVals[6]; cd.Lazy = flagVals[7]; cd.Corrupted = flagVals[8];
-                cd.EndTurn = flagVals[9]; cd.Starter = flagVals[10]; cd.FlipSprite = flagVals[11];
-                cd.ModifiedByTrait = flagVals[12]; cd.OnlyInWeekly = flagVals[13];
+                cd.EndTurn = flagVals[9]; cd.Starter = flagVals[10]; cd.CombatBased = flagVals[11]; cd.FlipSprite = flagVals[12];
+                cd.ModifiedByTrait = flagVals[13]; cd.OnlyInWeekly = flagVals[14];
             }
 
             //  Damage 
@@ -367,6 +594,10 @@ namespace UnknownMod.Editor
                 {
                     cd.DamageSelf = EditorFields.IntField("Damage Self", cd.DamageSelf);
                     cd.DamageSelf2 = EditorFields.IntField("Damage Self 2", cd.DamageSelf2);
+                    cd.DamageSelfType = EditorFields.NullableEnum("Self Type 1", cd.DamageSelfType, cd.DamageType, "card_dst1", "same as Damage 1");
+                    cd.DamageSelfType2 = EditorFields.NullableEnum("Self Type 2", cd.DamageSelfType2, cd.DamageType2, "card_dst2", "same as Damage 2");
+                    cd.IgnoreBlockSelf = EditorFields.NullableBool("Self ignores block 1", cd.IgnoreBlockSelf, "same as Damage 1");
+                    cd.IgnoreBlockSelf2 = EditorFields.NullableBool("Self ignores block 2", cd.IgnoreBlockSelf2, "same as Damage 2");
                     cd.SelfHealthLoss = EditorFields.IntField("Self HP Loss", cd.SelfHealthLoss);
                     cd.SelfKillHiddenSeconds = EditorFields.FloatField("SelfKill Delay", cd.SelfKillHiddenSeconds);
                 }
@@ -469,7 +700,6 @@ namespace UnknownMod.Editor
                 cd.PullTarget = EditorFields.IntField("Pull Target", cd.PullTarget, 0, 3);
                 cd.DrawCard = EditorFields.IntField("Draw Cards", cd.DrawCard, 0, 10);
                 cd.DiscardCard = EditorFields.IntFieldMin("Discard Cards", cd.DiscardCard, 0);
-                cd.EnergyRecharge = EditorFields.IntField("Energy Recharge", cd.EnergyRecharge, 0, 10);
                 cd.GoldGainQuantity = EditorFields.IntFieldMin("Gold Gain", cd.GoldGainQuantity, 0);
                 cd.ShardsGainQuantity = EditorFields.IntFieldMin("Shards Gain", cd.ShardsGainQuantity, 0);
                 cd.ExhaustCounter = EditorFields.IntFieldMin("Exhaust Counter", cd.ExhaustCounter, 0);
@@ -489,16 +719,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     cd.DiscardCardTypeAux[i] = EditorFields.EnumField($"Aux {i + 1}", cd.DiscardCardTypeAux[i], $"card_dctaux_{i}");
-                    if (GUILayout.Button("X", EditorStyles.DangerButton, GUILayout.Width(22)))
-                    {
-                        var list = new List<Enums.CardType>(cd.DiscardCardTypeAux);
-                        list.RemoveAt(i);
-                        cd.DiscardCardTypeAux = list.ToArray();
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, cd.DiscardCardTypeAux.Length);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(ref cd.DiscardCardTypeAux, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Aux Type", EditorStyles.MiniButton, GUILayout.Width(80)))
                 {
@@ -508,6 +731,8 @@ namespace UnknownMod.Editor
                     GUI.changed = true;
                 }
             }
+
+            DrawDiscoverTemplate(cd);
 
             //  Add Card 
             if (EditorFields.Section("Add Card", ref _secAddCard))
@@ -532,16 +757,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     cd.AddCardTypeAux[i] = EditorFields.EnumField($"Aux {i + 1}", cd.AddCardTypeAux[i], $"card_actaux_{i}");
-                    if (GUILayout.Button("X", EditorStyles.DangerButton, GUILayout.Width(22)))
-                    {
-                        var list = new List<Enums.CardType>(cd.AddCardTypeAux);
-                        list.RemoveAt(i);
-                        cd.AddCardTypeAux = list.ToArray();
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, cd.AddCardTypeAux.Length);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(ref cd.AddCardTypeAux, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Aux Type", EditorStyles.MiniButton, GUILayout.Width(80)))
                 {
@@ -565,14 +783,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     cd.AddCardList[i] = EditorFields.IdDropdown($"Card {i + 1}", cd.AddCardList[i], cardIds, $"card_acl_{i}", pickerMode: EntityPicker.Mode.Card);
-                    if (GUILayout.Button("X", EditorStyles.DangerButton, GUILayout.Width(22)))
-                    {
-                        cd.AddCardList.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, cd.AddCardList.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(cd.AddCardList, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Add to List", EditorStyles.MiniButton, GUILayout.Width(90)))
                 {
@@ -618,69 +831,45 @@ namespace UnknownMod.Editor
                 cd.AcEnergyBonus2 = EditorFields.ACChargesField("AC Bonus 2", cd.AcEnergyBonus2, ref cd.AcEnergyBonus2Quantity, acIds, "card_aceb2");
                 if (!string.IsNullOrEmpty(cd.AcEnergyBonus) || !string.IsNullOrEmpty(cd.AcEnergyBonus2))
                     GUILayout.Label("<color=#888>Each stack of the AC grants the listed amount as extra energy</color>", EditorStyles.RichLabel);
-                cd.ChooseOneOfAvailableAuras = EditorFields.Toggle("Choose Aura", cd.ChooseOneOfAvailableAuras);
             }
 
-            //  Special Value System 
-            if (EditorFields.Section("Special Values", ref _secSpecialVal))
-            {
-                var acIds = EditorFields.CachedIds("ac", DataHelper.GetAllAuraCurseIds);
-                GUILayout.Label("<color=#aaa>Global:</color>", EditorStyles.RichLabel);
-                cd.SpecialValueGlobal = EditorFields.EnumField("SV Global", cd.SpecialValueGlobal, "card_svg");
-                if (cd.SpecialValueGlobal != Enums.CardSpecialValue.None)
-                {
-                    cd.SpecialValueModifierGlobal = EditorFields.FloatField("  Scale %", cd.SpecialValueModifierGlobal);
-                    if (cd.SpecialValueGlobal == Enums.CardSpecialValue.AuraCurseYours || cd.SpecialValueGlobal == Enums.CardSpecialValue.AuraCurseTarget)
-                        cd.SpecialAuraCurseNameGlobal = EditorFields.IdDropdown("  AC Ref", cd.SpecialAuraCurseNameGlobal, acIds, "card_svacg", pickerMode: EntityPicker.Mode.AuraCurse);
-                }
-                GUILayout.Space(4);
-                GUILayout.Label("<color=#aaa>Slot 1:</color>", EditorStyles.RichLabel);
-                cd.SpecialValue1 = EditorFields.EnumField("SV 1", cd.SpecialValue1, "card_sv1");
-                if (cd.SpecialValue1 != Enums.CardSpecialValue.None)
-                {
-                    cd.SpecialValueModifier1 = EditorFields.FloatField("  Scale %", cd.SpecialValueModifier1);
-                    if (cd.SpecialValue1 == Enums.CardSpecialValue.AuraCurseYours || cd.SpecialValue1 == Enums.CardSpecialValue.AuraCurseTarget)
-                        cd.SpecialAuraCurseName1 = EditorFields.IdDropdown("  AC Ref", cd.SpecialAuraCurseName1, acIds, "card_svac1", pickerMode: EntityPicker.Mode.AuraCurse);
-                }
-                GUILayout.Space(4);
-                GUILayout.Label("<color=#aaa>Slot 2:</color>", EditorStyles.RichLabel);
-                cd.SpecialValue2 = EditorFields.EnumField("SV 2", cd.SpecialValue2, "card_sv2");
-                if (cd.SpecialValue2 != Enums.CardSpecialValue.None)
-                {
-                    cd.SpecialValueModifier2 = EditorFields.FloatField("  Scale %", cd.SpecialValueModifier2);
-                    if (cd.SpecialValue2 == Enums.CardSpecialValue.AuraCurseYours || cd.SpecialValue2 == Enums.CardSpecialValue.AuraCurseTarget)
-                        cd.SpecialAuraCurseName2 = EditorFields.IdDropdown("  AC Ref", cd.SpecialAuraCurseName2, acIds, "card_svac2", pickerMode: EntityPicker.Mode.AuraCurse);
-                }
-            }
+            //  Effect Modifiers (special values, conditions, stanza) 
+            if (EditorFields.Section("Effect Modifiers", ref _secEffectMods))
+                CardAdvancedUI.EffectModifiers(cd, _openSlots);
 
-            //  Special Value Scaling Flags 
-            if (EditorFields.Section("SV Scaling Flags", ref _secSpecialFlags))
-            {
-                EditorFields.SVFlagsGrid(
-                    ref cd.DamageSpecialValueGlobal, ref cd.DamageSpecialValue1, ref cd.DamageSpecialValue2,
-                    ref cd.Damage2SpecialValueGlobal, ref cd.Damage2SpecialValue1, ref cd.Damage2SpecialValue2,
-                    ref cd.HealSpecialValueGlobal, ref cd.HealSpecialValue1, ref cd.HealSpecialValue2,
-                    ref cd.HealSelfSpecialValueGlobal, ref cd.HealSelfSpecialValue1, ref cd.HealSelfSpecialValue2,
-                    ref cd.SelfHealthLossSpecialGlobal, ref cd.SelfHealthLossSpecialValue1, ref cd.SelfHealthLossSpecialValue2,
-                    ref cd.EnergyRechargeSpecialValueGlobal, ref cd.DrawCardSpecialValueGlobal,
-                    ref cd.AuraChargesSpecialValueGlobal, ref cd.AuraChargesSpecialValue1, ref cd.AuraChargesSpecialValue2,
-                    ref cd.AuraCharges2SpecialValueGlobal, ref cd.AuraCharges2SpecialValue1, ref cd.AuraCharges2SpecialValue2,
-                    ref cd.AuraCharges3SpecialValueGlobal, ref cd.AuraCharges3SpecialValue1, ref cd.AuraCharges3SpecialValue2,
-                    ref cd.CurseChargesSpecialValueGlobal, ref cd.CurseChargesSpecialValue1, ref cd.CurseChargesSpecialValue2,
-                    ref cd.CurseCharges2SpecialValueGlobal, ref cd.CurseCharges2SpecialValue1, ref cd.CurseCharges2SpecialValue2,
-                    ref cd.CurseCharges3SpecialValueGlobal, ref cd.CurseCharges3SpecialValue1, ref cd.CurseCharges3SpecialValue2);
-            }
+            //  Extra Effects 
+            if (EditorFields.Section($"Extra Effects ({cd.ExtraEffects?.Count ?? 0})", ref _secExtraEffects))
+                CardAdvancedUI.ExtraEffects(cd);
 
+            //  Energy Recharge 
+            if (EditorFields.Section($"Energy Recharge ({cd.EnergyRecharges?.Count ?? 0})", ref _secEnergyRecharge))
+                CardAdvancedUI.EnergyRecharges(cd);
+
+            //  Echo / Parody / Copy / Special Values 
+            if (EditorFields.Section("Advanced Mechanics", ref _secAdvanced))
+                CardAdvancedUI.AdvancedMechanics(cd);
+
+            //  Hero-class gains 
+            if (EditorFields.Section("Hero Class Card Gains", ref _secHeroClass))
+                CardAdvancedUI.HeroClassGains(cd);
+
+            //  Extra Summons 
+            if (EditorFields.Section($"Extra Summons ({cd.ExtraSummons?.Count ?? 0})", ref _secExtraSummons))
+                CardAdvancedUI.ExtraSummons(cd);
+
+            //  Description Template / Key Notes 
+            if (EditorFields.Section("Description Template", ref _secDescTemplate))
+                CardAdvancedUI.DescriptionTemplate(cd, RefIds.KeyNotes());
             //  FX / Effects 
             if (EditorFields.Section("Effects / FX", ref _secFx))
             {
-                cd.EffectCaster = EditorFields.TextField("FX Caster", cd.EffectCaster);
-                cd.EffectTarget = EditorFields.TextField("FX Target", cd.EffectTarget);
-                cd.EffectPreAction = EditorFields.TextField("FX PreAction", cd.EffectPreAction);
+                cd.EffectCaster = AssetFields.VfxField("FX Caster", cd.EffectCaster, "card_fxcaster");
+                cd.EffectTarget = AssetFields.VfxField("FX Target", cd.EffectTarget, "card_fxtarget");
+                cd.EffectPreAction = AssetFields.VfxField("FX PreAction", cd.EffectPreAction, "card_fxpre");
                 cd.EffectPostCastDelay = EditorFields.FloatField("Post Cast Delay", cd.EffectPostCastDelay);
                 cd.EffectCasterRepeat = EditorFields.Toggle("Caster Repeat", cd.EffectCasterRepeat);
                 cd.EffectCastCenter = EditorFields.Toggle("Cast Center", cd.EffectCastCenter);
-                cd.EffectTrail = EditorFields.TextField("Trail", cd.EffectTrail);
+                cd.EffectTrail = AssetFields.VfxField("Trail", cd.EffectTrail, "card_fxtrail");
                 cd.EffectTrailRepeat = EditorFields.Toggle("Trail Repeat", cd.EffectTrailRepeat);
                 cd.EffectTrailSpeed = EditorFields.FloatField("Trail Speed", cd.EffectTrailSpeed);
                 cd.EffectTrailAngle = EditorFields.EnumField("Trail Angle", cd.EffectTrailAngle, "card_eta");
@@ -712,27 +901,13 @@ namespace UnknownMod.Editor
                 cd.PetSizeY = EditorFields.FloatField("Size Y", cd.PetSizeY);
             }
 
-            //  Upgrade Params 
-            if (EditorFields.Section("Upgrade Params", ref _secUpgradeParams))
-            {
-                GUILayout.Label("<color=#888>Used when auto-generating upgraded (A) variants</color>", EditorStyles.RichLabel);
-                cd.UpgDamageMult = EditorFields.FloatField("Dmg Mult", cd.UpgDamageMult);
-                cd.UpgBonusCurseCharges = EditorFields.IntField("+ Curse Chg", cd.UpgBonusCurseCharges);
-                cd.UpgBonusAuraCharges = EditorFields.IntField("+ Aura Chg", cd.UpgBonusAuraCharges);
-                cd.UpgBonusHeal = EditorFields.IntField("+ Heal", cd.UpgBonusHeal);
-            }
+            //  Variant generator (base card only)
+            if (!IsEditingVariant)
+                DrawGeneratorSection(cd, proj, isEquipment);
 
             // ── Variant auto-save (for upgrade variants) ───
             if (IsEditingVariant && GUI.changed)
             {
-                if (cd.Id != _prevVariantId && !string.IsNullOrEmpty(cd.Id))
-                {
-                    bool wasPatch = proj.CardPatches.ContainsKey(_prevVariantId);
-                    var dict = wasPatch ? proj.CardPatches : proj.Cards;
-                    dict.Remove(_prevVariantId);
-                    dict[cd.Id] = cd;
-                    ModProjectLoader.DeleteCard(proj, _prevVariantId, wasPatch);
-                }
                 bool isPatch = proj.CardPatches.ContainsKey(cd.Id);
                 ModProjectLoader.SaveCard(proj, cd, isPatch);
                 proj.IsDirty = true;
@@ -867,6 +1042,35 @@ namespace UnknownMod.Editor
                 DrawSpecialValue("SV 3", ref d.AuracurseGain3SpecialValue);
                 d.Acg3MultiplyByEnergyUsed = EditorFields.Toggle("\u00d7 Energy 3", d.Acg3MultiplyByEnergyUsed);
                 d.ChooseOneACToGain = EditorFields.Toggle("Choose One AC", d.ChooseOneACToGain);
+                d.ActivationSelf = EditorFields.EnumField("Activation (Self)", d.ActivationSelf);
+                d.HealPercentQuantitySelfBase = EditorFields.EnumField("Heal % Self Base", d.HealPercentQuantitySelfBase);
+                d.ResurgeChoose = EditorFields.Toggle("Resurge: Player Chooses", d.ResurgeChoose);
+                d.CombatCorruption = EditorFields.Toggle("Combat Corruption", d.CombatCorruption);
+                d.ShiftElementalResistance = EditorFields.Toggle("Shift Elemental Resist (unimplemented in game)", d.ShiftElementalResistance);
+                d.SpriteBossDrop = EditorFields.IdDropdown("Boss Drop Sprite", d.SpriteBossDrop,
+                    EditorFields.CachedIds("spriteName", () => MapEditor.GetAllSpriteNames()), "it_bossdrop", pickerMode: EntityPicker.Mode.Sprite);
+
+                int echoCount = d.EchoAdaptationValues != null ? d.EchoAdaptationValues.Count : 0;
+                GUILayout.Label($"Echo Adaptation Tables ({echoCount})  \u2014 per-stack resist % from player damage / curse purge % from player casts");
+                if (d.EchoAdaptationValues != null)
+                {
+                    for (int ei = 0; ei < d.EchoAdaptationValues.Count; ei++)
+                    {
+                        var echo = d.EchoAdaptationValues[ei];
+                        var eop = EditorFields.RowHeader($"Stack table {ei + 1}", ei, d.EchoAdaptationValues.Count);
+                        if (EditorFields.ApplyRowOp(d.EchoAdaptationValues, ei, eop)) break;
+                        string resText = EditorFields.TextField("Resist % per stack (csv)", string.Join(",", echo.ResistanceFromPlayerDamagePercentBonuses ?? new int[0]));
+                        string purgeText = EditorFields.TextField("Curse purge % (csv)", string.Join(",", echo.CursesPurgeFromPlayerCastsPercent ?? new int[0]));
+                        echo.ResistanceFromPlayerDamagePercentBonuses = ParseIntCsv(resText);
+                        echo.CursesPurgeFromPlayerCastsPercent = ParseIntCsv(purgeText);
+                    }
+                }
+                if (GUILayout.Button("+ Echo table", EditorStyles.MiniButton, GUILayout.Width(100)))
+                {
+                    if (d.EchoAdaptationValues == null) d.EchoAdaptationValues = new List<EchoAdaptationDef>();
+                    d.EchoAdaptationValues.Add(new EchoAdaptationDef());
+                    GUI.changed = true;
+                }
             }
 
             //  AC Gain (self) 
@@ -934,14 +1138,9 @@ namespace UnknownMod.Editor
                 {
                     GUILayout.BeginHorizontal();
                     d.CardToGainList[i] = EditorFields.IdDropdown($"[{i}]", d.CardToGainList[i], cardIds, $"it_cgl{i}", pickerMode: EntityPicker.Mode.Card);
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.CardToGainList.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    var rowOp = EditorFields.InlineRowOps(i, d.CardToGainList.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.CardToGainList, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Add Card", EditorStyles.MiniButton, GUILayout.Width(80)))
                 {
@@ -1008,8 +1207,9 @@ namespace UnknownMod.Editor
                 d.IsEnchantment = EditorFields.Toggle("Is Enchantment", d.IsEnchantment);
                 d.UseTheNextInsteadWhenYouPlay = EditorFields.Toggle("Use Next Instead", d.UseTheNextInsteadWhenYouPlay);
                 d.DestroyAfterUses = EditorFields.IntField("Destroy After Uses", d.DestroyAfterUses);
-                d.DestroyStartOfTurn = EditorFields.Toggle("Destroy Start Of Turn", d.DestroyStartOfTurn);
-                d.DestroyEndOfTurn = EditorFields.Toggle("Destroy End Of Turn", d.DestroyEndOfTurn);
+                GUILayout.Label("<color=#aaa>Turns before destroy: 0 = never, 1 = at that turn boundary, N = lasts N turns.</color>", EditorStyles.RichLabel);
+                d.DestroyStartOfTurn = EditorFields.IntField("Destroy Start Of Turn", d.DestroyStartOfTurn, 0, 99);
+                d.DestroyEndOfTurn = EditorFields.IntField("Destroy End Of Turn", d.DestroyEndOfTurn, 0, 99);
                 d.CastEnchantmentOnFinishSelfCast = EditorFields.Toggle("Cast On Self Finish", d.CastEnchantmentOnFinishSelfCast);
             }
 
@@ -1034,9 +1234,9 @@ namespace UnknownMod.Editor
             if (EditorFields.Section("Item: FX / Effects", ref _secItemFx))
             {
                 d.EffectItemOwner = EditorFields.TextField("Effect Owner", d.EffectItemOwner);
-                d.EffectCaster = EditorFields.TextField("Effect Caster", d.EffectCaster);
+                d.EffectCaster = AssetFields.VfxField("Effect Caster", d.EffectCaster, "item_fxcaster");
                 d.EffectCasterDelay = EditorFields.FloatField("Caster Delay", d.EffectCasterDelay);
-                d.EffectTarget = EditorFields.TextField("Effect Target", d.EffectTarget);
+                d.EffectTarget = AssetFields.VfxField("Effect Target", d.EffectTarget, "item_fxtarget");
                 d.EffectTargetDelay = EditorFields.FloatField("Target Delay", d.EffectTargetDelay);
             }
 
@@ -1067,7 +1267,10 @@ namespace UnknownMod.Editor
             }
             if (existingDef != null)
             {
+                string familyKey = FamilyKeyOf(existingDef);
+                FamilyBegin(proj, familyKey);
                 DrawAllSections(existingDef, proj);
+                FamilyEnd(proj, familyKey);
                 return;
             }
 
@@ -1112,12 +1315,11 @@ namespace UnknownMod.Editor
                     {
                         var snapshot = SnapshotBaseEntity(variantId);
                         if (snapshot != null)
-                        {
-                            proj.CardPatches[snapshot.Id] = snapshot;
-                            ModProjectLoader.SaveCard(proj, snapshot, true);
-                            proj.IsDirty = true;
-                            proj.LastChangeTime = Time.realtimeSinceStartup;
-                        }
+                            RunFamilyOp(proj, id, "override", () =>
+                            {
+                                proj.CardPatches[snapshot.Id] = snapshot;
+                                ModProjectLoader.SaveCard(proj, snapshot, true);
+                            });
                     }
                 }
             }
@@ -1244,38 +1446,27 @@ namespace UnknownMod.Editor
             var btnStyle = EditorStyles.DangerButton;
             if (GUILayout.Button(btnLabel, btnStyle, GUILayout.Width(130)))
             {
-                if (isPatch)
-                    proj.CardPatches.Remove(vDef.Id);
-                else
-                    proj.Cards.Remove(vDef.Id);
-                ModProjectLoader.DeleteCard(proj, vDef.Id, isPatch);
-
-                // Deleting a new base card also removes all its variants
-                if (isBase && isNew)
+                // Structural change: run at the next Layout so the controls being drawn are not removed mid-pass.
+                string removedId = vDef.Id;
+                string familyId = isBase ? vDef.Id : (string.IsNullOrEmpty(vDef.BaseCardId) ? vDef.Id : vDef.BaseCardId);
+                EditorActions.PendingAction = () =>
                 {
-                    var orphans = new List<string>();
-                    foreach (var kvp in proj.Cards)
-                        if (string.Equals(kvp.Value.BaseCardId, vDef.Id, StringComparison.OrdinalIgnoreCase)) orphans.Add(kvp.Key);
-                    foreach (var id in orphans)
+                    RenameFlush.FlushAll();
+                    if (isBase)
                     {
-                        proj.Cards.Remove(id);
-                        ModProjectLoader.DeleteCard(proj, id, false);
+                        DeleteEntry(proj, removedId, isPatch, isPatch ? "revert" : "delete");
+                        if (!isPatch && SelectedId == removedId) SelectedId = null;
                     }
-                    var patchOrphans = new List<string>();
-                    foreach (var kvp in proj.CardPatches)
-                        if (string.Equals(kvp.Value.BaseCardId, vDef.Id, StringComparison.OrdinalIgnoreCase)) patchOrphans.Add(kvp.Key);
-                    foreach (var id in patchOrphans)
+                    else
                     {
-                        proj.CardPatches.Remove(id);
-                        ModProjectLoader.DeleteCard(proj, id, true);
+                        RunFamilyOp(proj, familyId, "delete variant", () =>
+                        {
+                            var live = FindProjectCard(removedId, proj);
+                            if (live != null) RemoveCardEntry(proj, live);
+                        });
                     }
-                }
-
-                proj.IsDirty = true;
-                proj.LastChangeTime = Time.realtimeSinceStartup;
-                _prevVariantId = null;
-                // Only clear selection when deleting a new base card entirely
-                if (isBase && isNew) SelectedId = null;
+                    EditorStatus.Toast($"{(isPatch ? "Reverted" : "Deleted")} {removedId} (Ctrl+Z to undo)");
+                };
             }
             GUILayout.EndHorizontal();
         }
@@ -1321,12 +1512,11 @@ namespace UnknownMod.Editor
                 {
                     var variant = SnapshotBaseEntity(gameVariantId);
                     if (variant != null)
-                    {
-                        proj.CardPatches[variant.Id] = variant;
-                        ModProjectLoader.SaveCard(proj, variant, true);
-                        proj.IsDirty = true;
-                        proj.LastChangeTime = Time.realtimeSinceStartup;
-                    }
+                        RunFamilyOp(proj, baseDef.Id, "override", () =>
+                        {
+                            proj.CardPatches[variant.Id] = variant;
+                            ModProjectLoader.SaveCard(proj, variant, true);
+                        });
                 }
             }
             else
@@ -1356,14 +1546,14 @@ namespace UnknownMod.Editor
                     variant.IsUpgraded = true;
 
                     bool isPatch = DataHelper.GetCard(variantId) != null;
-                    if (isPatch)
-                        proj.CardPatches[variantId] = variant;
-                    else
-                        proj.Cards[variantId] = variant;
-
-                    ModProjectLoader.SaveCard(proj, variant, isPatch);
-                    proj.IsDirty = true;
-                    proj.LastChangeTime = Time.realtimeSinceStartup;
+                    RunFamilyOp(proj, baseDef.Id, $"create {label} variant of", () =>
+                    {
+                        if (isPatch)
+                            proj.CardPatches[variantId] = variant;
+                        else
+                            proj.Cards[variantId] = variant;
+                        ModProjectLoader.SaveCard(proj, variant, isPatch);
+                    });
                 }
             }
         }
@@ -1400,18 +1590,16 @@ namespace UnknownMod.Editor
         //  SPECIAL VALUE WIDGET
         // ══════════════════════════════════════════════════════════
 
-        /// <summary>Build combined list of pet model sources: project pet SpriteSkins + game cards with pet models.</summary>
-        private static List<string> GetPetModelSourceIds(ModProject proj)
+        /// <summary>Game cards that already have a pet model.</summary>
+        private static int[] ParseIntCsv(string s)
         {
-            var ids = new List<string>();
-            foreach (var kvp in proj.SpriteSkins)
-                if (kvp.Value.SkinTarget == SkinTargetType.Item) ids.Add(kvp.Key);
-            foreach (var kvp in proj.SpriteSkinPatches)
-                if (kvp.Value.SkinTarget == SkinTargetType.Item && !ids.Contains(kvp.Key)) ids.Add(kvp.Key);
-            foreach (var id in DataHelper.GetAllPetModelCardIds())
-                if (!ids.Contains(id)) ids.Add(id);
-            return ids;
+            var list = new List<int>();
+            foreach (var part in (s ?? "").Split(',', ';', ' '))
+                if (int.TryParse(part.Trim(), out int v)) list.Add(v);
+            return list.ToArray();
         }
+
+        private static List<string> GetPetModelSourceIds(ModProject proj) => new List<string>(DataHelper.GetAllPetModelCardIds());
 
         private void DrawSpecialValue(string label, ref SpecialValueDef sv)
         {

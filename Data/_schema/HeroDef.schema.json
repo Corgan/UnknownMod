@@ -1,0 +1,269 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HeroDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "SubClassName": {
+      "type": "string"
+    },
+    "CharacterName": {
+      "type": "string"
+    },
+    "CharacterDescription": {
+      "type": "string"
+    },
+    "CharacterDescriptionStrength": {
+      "type": "string"
+    },
+    "MainCharacter": {
+      "type": "boolean"
+    },
+    "InitialUnlock": {
+      "type": "boolean"
+    },
+    "Sku": {
+      "type": "string"
+    },
+    "SpriteSource": {
+      "type": "string"
+    },
+    "FluffOffsetX": {
+      "type": "number"
+    },
+    "FluffOffsetY": {
+      "type": "number"
+    },
+    "Female": {
+      "type": "boolean"
+    },
+    "StickerOffsetX": {
+      "type": "number"
+    },
+    "SpriteBorderLocked": {
+      "type": "string"
+    },
+    "StickerBase": {
+      "type": "string"
+    },
+    "StickerLove": {
+      "type": "string"
+    },
+    "StickerSurprise": {
+      "type": "string"
+    },
+    "StickerAngry": {
+      "type": "string"
+    },
+    "StickerIndifferent": {
+      "type": "string"
+    },
+    "ActionSound": {
+      "type": "string"
+    },
+    "HitSound": {
+      "type": "string"
+    },
+    "HitSounds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "HeroClass": {
+      "type": "string",
+      "enum": [
+        "Warrior",
+        "Mage",
+        "Healer",
+        "Scout",
+        "MagicKnight",
+        "Monster",
+        "None"
+      ]
+    },
+    "HeroClassSecondary": {
+      "type": "string",
+      "enum": [
+        "Warrior",
+        "Mage",
+        "Healer",
+        "Scout",
+        "MagicKnight",
+        "Monster",
+        "None"
+      ]
+    },
+    "HeroClassThird": {
+      "type": "string",
+      "enum": [
+        "Warrior",
+        "Mage",
+        "Healer",
+        "Scout",
+        "MagicKnight",
+        "Monster",
+        "None"
+      ]
+    },
+    "OrderInList": {
+      "type": "integer"
+    },
+    "Blocked": {
+      "type": "boolean"
+    },
+    "Speed": {
+      "type": "integer"
+    },
+    "Hp": {
+      "type": "integer"
+    },
+    "Energy": {
+      "type": "integer"
+    },
+    "EnergyTurn": {
+      "type": "integer"
+    },
+    "ResSlash": {
+      "type": "integer"
+    },
+    "ResBlunt": {
+      "type": "integer"
+    },
+    "ResPierce": {
+      "type": "integer"
+    },
+    "ResFire": {
+      "type": "integer"
+    },
+    "ResCold": {
+      "type": "integer"
+    },
+    "ResLight": {
+      "type": "integer"
+    },
+    "ResMind": {
+      "type": "integer"
+    },
+    "ResHoly": {
+      "type": "integer"
+    },
+    "ResShadow": {
+      "type": "integer"
+    },
+    "ItemId": {
+      "type": "string"
+    },
+    "MaxHp": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "Cards": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/HeroCardDef"
+      }
+    },
+    "CardsSingularity": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "Trait0": {
+      "type": "string"
+    },
+    "Trait1A": {
+      "type": "string"
+    },
+    "Trait1ACard": {
+      "type": "string"
+    },
+    "Trait1B": {
+      "type": "string"
+    },
+    "Trait1BCard": {
+      "type": "string"
+    },
+    "Trait2A": {
+      "type": "string"
+    },
+    "Trait2B": {
+      "type": "string"
+    },
+    "Trait3A": {
+      "type": "string"
+    },
+    "Trait3ACard": {
+      "type": "string"
+    },
+    "Trait3B": {
+      "type": "string"
+    },
+    "Trait3BCard": {
+      "type": "string"
+    },
+    "Trait4A": {
+      "type": "string"
+    },
+    "Trait4B": {
+      "type": "string"
+    },
+    "CardsOnReplaceCharacter": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/HeroCardDef"
+      }
+    },
+    "CardsOnReplaceCharacterInSingularity": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/HeroCardDef"
+      }
+    },
+    "PerksOnReplace": {
+      "type": "string"
+    },
+    "UseXpFromOriginal": {
+      "type": "boolean"
+    },
+    "ChallengePack0": {
+      "type": "string"
+    },
+    "ChallengePack1": {
+      "type": "string"
+    },
+    "ChallengePack2": {
+      "type": "string"
+    },
+    "ChallengePack3": {
+      "type": "string"
+    },
+    "ChallengePack4": {
+      "type": "string"
+    },
+    "ChallengePack5": {
+      "type": "string"
+    },
+    "ChallengePack6": {
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "HeroCardDef": {
+      "type": "object",
+      "properties": {
+        "CardId": {
+          "type": "string"
+        },
+        "UnitsInDeck": {
+          "type": "integer"
+        }
+      }
+    }
+  }
+}

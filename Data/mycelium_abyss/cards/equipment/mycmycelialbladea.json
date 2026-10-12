@@ -1,0 +1,20 @@
+{
+  "Id": "mycmycelialbladea",
+  "Name": "Mycelial Blade",
+  "Description": "Piercing and Shadow damage <acb>+4</acb>.<br2>Spore Rot charges <acb>+1</acb>.",
+  "CardClass": "Item",
+  "CardType": "Weapon",
+  "CardRarity": "Epic",
+  "SpriteSource": "myc_art_mycelialblade",
+  "Item": {
+    "Activation": "PreBeginCombat",
+    "DamageFlatBonus": "Piercing",
+    "DamageFlatBonusValue": 4,
+    "DamageFlatBonus2": "Shadow",
+    "DamageFlatBonusValue2": 4,
+    "AuracurseBonus1": "myc_sporerot",
+    "AuracurseBonusValue1": 1
+  },
+  "CardUpgraded": "A",
+  "BaseCardId": "mycmycelialblade"
+}

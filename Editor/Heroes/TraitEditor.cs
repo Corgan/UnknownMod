@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -75,7 +75,20 @@ namespace UnknownMod.Editor
             //  Activation 
             if (EditorFields.Section("Activation", ref _secActivation))
             {
-                d.Activation = EditorFields.EnumField("Activation", d.Activation, "tr_activation");
+                if (d.Activations == null) d.Activations = new List<Enums.EventActivation>();
+                for (int i = 0; i < d.Activations.Count; i++)
+                {
+                    GUILayout.BeginHorizontal();
+                    d.Activations[i] = EditorFields.EnumField($"Activation {i + 1}", d.Activations[i], $"tr_activation_{i}");
+                    var rowOp = EditorFields.InlineRowOps(i, d.Activations.Count);
+                    GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.Activations, i, rowOp)) break;
+                }
+                if (GUILayout.Button("+ Activation", EditorStyles.MiniButton, GUILayout.Width(90)))
+                {
+                    d.Activations.Add(Enums.EventActivation.None);
+                    GUI.changed = true;
+                }
                 d.ActivateOnRuneTypeAdded = EditorFields.Toggle("On Rune Added", d.ActivateOnRuneTypeAdded);
                 d.TryActivateOnEveryEvent = EditorFields.Toggle("Try Every Event", d.TryActivateOnEveryEvent);
                 d.TimesPerTurn = EditorFields.IntField("Times / Turn", d.TimesPerTurn);
@@ -88,6 +101,7 @@ namespace UnknownMod.Editor
                 var cardIds = EditorFields.BuildCardIdList(proj);
                 d.TraitCard = EditorFields.IdDropdown("Trait Card", d.TraitCard, cardIds, "tr_card", pickerMode: EntityPicker.Mode.Card);
                 d.TraitCardForAllHeroes = EditorFields.IdDropdown("Card (All Heroes)", d.TraitCardForAllHeroes, cardIds, "tr_cardall", pickerMode: EntityPicker.Mode.Card);
+                d.TraitCardDisplayOnly = EditorFields.Toggle("Card Display Only", d.TraitCardDisplayOnly);
             }
 
             //  Character Stat 
@@ -153,6 +167,11 @@ namespace UnknownMod.Editor
                 GUILayout.Space(4);
                 d.DamageBonusFlat3 = EditorFields.EnumField("Type 3", d.DamageBonusFlat3, "tr_df3");
                 d.DamageBonusFlatValue3 = EditorFields.IntField("Value 3", d.DamageBonusFlatValue3);
+                GUILayout.Space(4);
+                GUILayout.Label("<color=#aaa>Aura/curse scaling</color>", EditorStyles.RichLabel);
+                d.DamageFlatNecessaryAuraCurse = EditorFields.IdDropdown("Required AC", d.DamageFlatNecessaryAuraCurse, EditorFields.CachedIds("ac", DataHelper.GetAllAuraCurseIds), "tr_dfnac", pickerMode: EntityPicker.Mode.AuraCurse);
+                d.DamageFlatNecessaryAuraCurseCharges = EditorFields.IntField("Required Charges", d.DamageFlatNecessaryAuraCurseCharges);
+                d.DamageBonusFlatPerAuraCurseStack = EditorFields.IntField("Bonus / Stack", d.DamageBonusFlatPerAuraCurseStack);
             }
 
             //  Damage Percent Bonus (3 slots) 
@@ -181,15 +200,10 @@ namespace UnknownMod.Editor
                 for (int i = 0; i < d.KeyNotes.Count; i++)
                 {
                     GUILayout.BeginHorizontal();
-                    d.KeyNotes[i] = EditorFields.TextField($"Note {i + 1}", d.KeyNotes[i]);
-                    if (GUILayout.Button("\u00d7", GUILayout.Width(22)))
-                    {
-                        d.KeyNotes.RemoveAt(i);
-                        GUI.changed = true;
-                        GUILayout.EndHorizontal();
-                        break;
-                    }
+                    d.KeyNotes[i] = EditorFields.IdDropdown($"Note {i + 1}", d.KeyNotes[i], RefIds.KeyNotes(), $"tr_kn_{i}");
+                    var rowOp = EditorFields.InlineRowOps(i, d.KeyNotes.Count);
                     GUILayout.EndHorizontal();
+                    if (EditorFields.ApplyRowOp(d.KeyNotes, i, rowOp)) break;
                 }
                 if (GUILayout.Button("+ Key Note", EditorStyles.MiniButton, GUILayout.Width(80)))
                 {
@@ -206,7 +220,10 @@ namespace UnknownMod.Editor
         public static string BuildTraitDescription(TraitDef d)
         {
             var sb = new StringBuilder();
-            sb.Append($"<b>{d.TraitName}</b>  <color=#aaa>{d.Activation}</color>");
+            string activations = d.Activations != null && d.Activations.Count > 0
+                ? string.Join(", ", d.Activations.Select(a => a.ToString()))
+                : Enums.EventActivation.None.ToString();
+            sb.Append($"<b>{d.TraitName}</b>  <color=#aaa>{activations}</color>");
 
             // Activation limits
             var limits = new List<string>();

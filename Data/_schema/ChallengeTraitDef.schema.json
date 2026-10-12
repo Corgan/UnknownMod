@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ChallengeTraitDef",
+  "type": "object",
+  "properties": {
+    "Id": {
+      "type": "string"
+    },
+    "Name": {
+      "type": "string"
+    },
+    "Description": {
+      "type": "string"
+    },
+    "IsMadnessTrait": {
+      "type": "boolean"
+    },
+    "Order": {
+      "type": "integer"
+    },
+    "IsSingularityTrait": {
+      "type": "boolean"
+    },
+    "OrderSingularity": {
+      "type": "integer"
+    },
+    "IconSource": {
+      "type": "string"
+    }
+  }
+}

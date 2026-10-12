@@ -1,0 +1,19 @@
+{
+  "Id": "mycsymbioticidolb",
+  "Name": "Symbiotic Idol",
+  "Description": "At the start of combat, gain <acb>2</acb> Symbiosis and <acb>3</acb> Thorns.",
+  "CardClass": "Item",
+  "CardType": "Jewelry",
+  "CardRarity": "Rare",
+  "SpriteSource": "myc_art_symbioticidol",
+  "Item": {
+    "Activation": "BeginCombat",
+    "ItemTarget": "Self",
+    "AuracurseGainSelf1": "myc_symbiosis",
+    "AuracurseGainSelfValue1": 2,
+    "AuracurseGainSelf2": "thorns",
+    "AuracurseGainSelfValue2": 3
+  },
+  "CardUpgraded": "B",
+  "BaseCardId": "mycsymbioticidol"
+}

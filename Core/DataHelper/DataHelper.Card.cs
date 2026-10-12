@@ -1,504 +1,371 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using Cards;
+using Cards.Data;
 using HarmonyLib;
-using UnknownMod.Definitions;
 using UnityEngine;
+using UnknownMod.Definitions;
 
 namespace UnknownMod.Core
 {
-    // ═══════════════════════════════════════════════════════════════
-    //  DataHelper — Card Builders (MakeCard, ApplyCardExtras, etc.)
-    // ═══════════════════════════════════════════════════════════════
-
     public static partial class DataHelper
     {
-        /// <summary>Create a monster NPC ability card.</summary>
-        public static CardData MakeCard(
-            string id, string name,
-            int damage = 0, Enums.DamageType dmgType = Enums.DamageType.None,
-            int damage2 = 0, Enums.DamageType dmgType2 = Enums.DamageType.None,
-            string curse = null, int curseCharges = 0,
-            string curse2 = null, int curse2Charges = 0,
-            string aura = null, int auraCharges = 0,
-            string auraSelf = null, int auraSelfCharges = 0,
-            string curseSelf = null, int curseSelfCharges = 0,
-            int heal = 0, int healSelf = 0,
-            Enums.CardTargetSide targetSide = Enums.CardTargetSide.Enemy,
-            Enums.CardTargetType targetType = Enums.CardTargetType.Single,
-            Enums.CardTargetPosition targetPos = Enums.CardTargetPosition.Anywhere,
-            int effectRepeat = 1,
-            bool moveToCenter = false,
-            string summonUnit = null, int summonNum = 0,
-            int selfHealthLoss = 0,
-            int healCurses = 0, int dispelAuras = 0,
-            Enums.CardUpgraded upgraded = Enums.CardUpgraded.No,
-            string effectCaster = "", string effectTarget = "",
-            int energyCost = 0)
+        public static CardDataNew MakeCard(string id, string name, int damage = 0, Enums.DamageType dmgType = Enums.DamageType.None,
+            int damage2 = 0, Enums.DamageType dmgType2 = Enums.DamageType.None, string curse = null, int curseCharges = 0,
+            string curse2 = null, int curse2Charges = 0, string aura = null, int auraCharges = 0, string auraSelf = null,
+            int auraSelfCharges = 0, string curseSelf = null, int curseSelfCharges = 0, int heal = 0, int healSelf = 0,
+            Enums.CardTargetSide targetSide = Enums.CardTargetSide.Enemy, Enums.CardTargetType targetType = Enums.CardTargetType.Single,
+            Enums.CardTargetPosition targetPos = Enums.CardTargetPosition.Anywhere, int effectRepeat = 1, bool moveToCenter = false,
+            string summonUnit = null, int summonNum = 0, int selfHealthLoss = 0, int healCurses = 0, int dispelAuras = 0,
+            Enums.CardUpgraded upgraded = Enums.CardUpgraded.No, string effectCaster = "", string effectTarget = "", int energyCost = 0)
         {
-            var card = ScriptableObject.CreateInstance<CardData>();
-            var t = Traverse.Create(card);
-
-            t.Field("id").SetValue(id);
-            t.Field("cardName").SetValue(name);
-            t.Field("cardClass").SetValue(Enums.CardClass.Monster);
-            t.Field("cardRarity").SetValue(Enums.CardRarity.Common);
-            t.Field("cardType").SetValue(Enums.CardType.None);
-            t.Field("cardUpgraded").SetValue(upgraded);
-            t.Field("playable").SetValue(false);
-            t.Field("visible").SetValue(false);
-            t.Field("showInTome").SetValue(false);
-            t.Field("energyCost").SetValue(energyCost);
-
-            // Initialize all nullable arrays/strings to prevent NREs
-            t.Field("internalId").SetValue(id);
-            t.Field("sku").SetValue("");
-            t.Field("relatedCard").SetValue("");
-            t.Field("relatedCard2").SetValue("");
-            t.Field("relatedCard3").SetValue("");
-            t.Field("cardTypeAux").SetValue(new Enums.CardType[0]);
-            t.Field("discardCardTypeAux").SetValue(new Enums.CardType[0]);
-            t.Field("addCardTypeAux").SetValue(new Enums.CardType[0]);
-            t.Field("addCardList").SetValue(new CardData[0]);
-            t.Field("preDescriptionArgs").SetValue(new string[0]);
-            t.Field("descriptionArgs").SetValue(new string[0]);
-            t.Field("postDescriptionArgs").SetValue(new string[0]);
-
-            // Targeting
-            t.Field("targetSide").SetValue(targetSide);
-            t.Field("targetType").SetValue(targetType);
-            t.Field("targetPosition").SetValue(targetPos);
-
-            // Damage
-            if (damage > 0 || dmgType != Enums.DamageType.None)
+            return BuildCard(new CardDef
             {
-                t.Field("damage").SetValue(damage);
-                t.Field("damageType").SetValue(dmgType);
-            }
-            if (damage2 > 0 || dmgType2 != Enums.DamageType.None)
-            {
-                t.Field("damage2").SetValue(damage2);
-                t.Field("damageType2").SetValue(dmgType2);
-            }
+                Id = id, Name = name, Damage = damage, DamageType = dmgType, Damage2 = damage2, DamageType2 = dmgType2,
+                Curse = curse ?? "", CurseCharges = curseCharges, Curse2 = curse2 ?? "", Curse2Charges = curse2Charges,
+                Aura = aura ?? "", AuraCharges = auraCharges, AuraSelf = auraSelf ?? "", AuraSelfCharges = auraSelfCharges,
+                CurseSelf = curseSelf ?? "", CurseSelfCharges = curseSelfCharges, Heal = heal, HealSelf = healSelf,
+                TargetSide = targetSide, TargetType = targetType, TargetPos = targetPos, EffectRepeat = effectRepeat,
+                MoveToCenter = moveToCenter, SummonUnitId = summonUnit ?? "", SummonNum = summonNum,
+                SelfHealthLoss = selfHealthLoss, HealCurses = healCurses, DispelAuras = dispelAuras,
+                CardUpgraded = upgraded, EnergyCost = energyCost, EffectCaster = effectCaster ?? "", EffectTarget = effectTarget ?? ""
+            });
+        }
 
-            // Curses (applied to target)
-            if (!string.IsNullOrEmpty(curse))
-            {
-                t.Field("curse").SetValue(GetAuraCurse(curse));
-                t.Field("curseCharges").SetValue(curseCharges);
-            }
-            if (!string.IsNullOrEmpty(curse2))
-            {
-                t.Field("curse2").SetValue(GetAuraCurse(curse2));
-                t.Field("curseCharges2").SetValue(curse2Charges);
-            }
-
-            // Auras (applied to target)
-            if (!string.IsNullOrEmpty(aura))
-            {
-                t.Field("aura").SetValue(GetAuraCurse(aura));
-                t.Field("auraCharges").SetValue(auraCharges);
-            }
-
-            // Self auras/curses
-            if (!string.IsNullOrEmpty(auraSelf))
-            {
-                t.Field("auraSelf").SetValue(GetAuraCurse(auraSelf));
-                if (auraSelfCharges > 0 && auraCharges == 0)
-                    t.Field("auraCharges").SetValue(auraSelfCharges);
-            }
-            if (!string.IsNullOrEmpty(curseSelf))
-            {
-                t.Field("curseSelf").SetValue(GetAuraCurse(curseSelf));
-                if (curseSelfCharges > 0 && curseCharges == 0)
-                    t.Field("curseCharges").SetValue(curseSelfCharges);
-            }
-
-            // Heal
-            if (heal > 0) t.Field("heal").SetValue(heal);
-            if (healSelf > 0) t.Field("healSelf").SetValue(healSelf);
-
-            // Dispels
-            if (healCurses > 0) t.Field("healCurses").SetValue(healCurses);
-            if (dispelAuras > 0) t.Field("dispelAuras").SetValue(dispelAuras);
-
-            // Effects
-            t.Field("effectRepeat").SetValue(effectRepeat);
-            t.Field("moveToCenter").SetValue(moveToCenter);
-            t.Field("selfHealthLoss").SetValue(selfHealthLoss);
-
-            // Summon
-            if (!string.IsNullOrEmpty(summonUnit))
-                t.Field("summonUnitNum").SetValue(summonNum > 0 ? summonNum : 1);
-
-            // FX
-            if (!string.IsNullOrEmpty(effectCaster)) t.Field("effectCaster").SetValue(effectCaster);
-            if (!string.IsNullOrEmpty(effectTarget)) t.Field("effectTarget").SetValue(effectTarget);
-
+        public static CardDataNew BuildCard(CardDef d)
+        {
+            if (d == null) throw new ArgumentNullException(nameof(d));
+            var card = ScriptableObject.CreateInstance<CardDataNew>();
+            var fields = Traverse.Create(card);
+            fields.Field("id").SetValue(d.Id ?? "");
+            fields.Field("internalId").SetValue(d.Id ?? "");
+            fields.Field("cardName").SetValue(d.Name ?? "");
+            fields.Field("sku").SetValue(d.Sku ?? "");
+            fields.Field("baseCard").SetValue(d.BaseCard ?? d.BaseCardId ?? "");
+            fields.Field("specialCardEnum").SetValue(d.SpecialCardEnum);
+            fields.Field("cardClass").SetValue(d.CardClass);
+            fields.Field("cardRarity").SetValue(d.CardRarity);
+            fields.Field("cardType").SetValue(d.CardType);
+            fields.Field("cardTypeAux").SetValue(d.CardTypeAux ?? Array.Empty<Enums.CardType>());
+            fields.Field("maxInDeck").SetValue(d.MaxInDeck);
+            fields.Field("energyCost").SetValue(d.EnergyCost);
+            fields.Field("playable").SetValue(d.Playable);
+            fields.Field("autoplayDraw").SetValue(d.AutoplayDraw);
+            fields.Field("autoplayEndTurn").SetValue(d.AutoplayEndTurn);
+            fields.Field("effectRequired").SetValue(d.EffectRequired ?? "");
+            fields.Field("selfKillHiddenSeconds").SetValue(d.SelfKillHiddenSeconds);
+            fields.Field("customFlags").SetValue(Flags(d));
+            var description = Traverse.Create(card.Description);
+            description.Field("description").SetValue(d.Description ?? "");
+            description.Field("fluff").SetValue(d.Fluff ?? "");
+            description.Field("fluffPercent").SetValue(d.FluffPercent);
+            description.Field("flipSprite").SetValue(d.FlipSprite);
+            description.Field("showInTome").SetValue(d.ShowInTome);
+            // The game treats any entry as a related card, so empty ids must be left out
+            var related = new List<string>();
+            foreach (var id in new[] { d.RelatedCard, d.RelatedCard2, d.RelatedCard3 })
+                if (!string.IsNullOrWhiteSpace(id)) related.Add(id);
+            card.Description.RelatedCards = related;
+            fields.Field("upgrade").SetValue(new UpgradeData(d.UpgradesTo1 ?? "", d.UpgradesTo2 ?? "", d.CardUpgraded, d.UpgradedFrom ?? "", null));
+            fields.Field("targetData").SetValue(new CardTargetData(d.TargetSide, d.TargetType, d.TargetPos));
+            card.RepeatCast.EffectRepeat = Math.Max(1, d.EffectRepeat);
+            card.RepeatCast.EffectRepeatDelay = d.EffectRepeatDelay;
+            card.RepeatCast.EffectRepeatEnergyBonus = d.EffectRepeatEnergyBonus;
+            card.RepeatCast.EffectRepeatMaxBonus = d.EffectRepeatMaxBonus;
+            card.RepeatCast.EffectRepeatModificator = d.EffectRepeatModificator;
+            card.RepeatCast.EffectRepeatTarget = d.EffectRepeatTarget;
+            card.Damage.Clear();
+            Damage(card, d, "Damage", d.Damage, d.DamageType, DamageTarget.Target, d.IgnoreBlock);
+            Damage(card, d, "Damage2", d.Damage2, d.DamageType2, DamageTarget.Target, d.IgnoreBlock2);
+            Damage(card, d, "DamageSelf", d.DamageSelf, d.DamageSelfType ?? d.DamageType, DamageTarget.Self, d.IgnoreBlockSelf ?? d.IgnoreBlock);
+            Damage(card, d, "DamageSelf2", d.DamageSelf2, d.DamageSelfType2 ?? d.DamageType2, DamageTarget.Self, d.IgnoreBlockSelf2 ?? d.IgnoreBlock2);
+            SideDamage(card, d.DamageSides, d.DamageType, d.IgnoreBlock);
+            SideDamage(card, d.DamageSides2, d.DamageType2, d.IgnoreBlock2);
+            fields.Field("damageEnergyBonus").SetValue(d.DamageEnergyBonus);
+            fields.Field("selfHealthLoss").SetValue(new SelfHealthLossData(d.SelfHealthLoss, BuildSpecialValue(d, "SelfHealthLoss", d.SelfHealthLossSpecialValue)));
+            card.Heal.HealEffects = new List<HealEffectData>();
+            card.Heal.HealEnergyBonus = d.HealEnergyBonus;
+            Heal(card, d, "Heal", d.Heal, HealTarget.Target);
+            Heal(card, d, "HealSelf", d.HealSelf, HealTarget.Self);
+            if (d.HealSides != 0) card.Heal.HealEffects.Add(new HealEffectData { Heal = d.HealSides, HealTarget = HealTarget.Sides, HealType = HealType.Normal });
+            card.Auras.Auras = new List<AuraEffectData>();
+            Aura(card, d, "Aura", d.Aura, d.AuraCharges, AuraTarget.Target);
+            Aura(card, d, "Aura2", d.Aura2, d.Aura2Charges, AuraTarget.Target);
+            Aura(card, d, "Aura3", d.Aura3, d.Aura3Charges, AuraTarget.Target);
+            Aura(card, d, "AuraSelf", d.AuraSelf, d.AuraSelfCharges, AuraTarget.Self);
+            Aura(card, d, "AuraSelf2", d.AuraSelf2, d.AuraSelf2Charges, AuraTarget.Self);
+            Aura(card, d, "AuraSelf3", d.AuraSelf3, d.AuraSelf3Charges, AuraTarget.Self);
+            card.Curses.Clear();
+            Curse(card, d, "Curse", d.Curse, d.CurseCharges, CurseTarget.Target);
+            Curse(card, d, "Curse2", d.Curse2, d.Curse2Charges, CurseTarget.Target);
+            Curse(card, d, "Curse3", d.Curse3, d.Curse3Charges, CurseTarget.Target);
+            Curse(card, d, "CurseSelf", d.CurseSelf, d.CurseSelfCharges, CurseTarget.Self);
+            Curse(card, d, "CurseSelf2", d.CurseSelf2, d.CurseSelf2Charges, CurseTarget.Self);
+            Curse(card, d, "CurseSelf3", d.CurseSelf3, d.CurseSelf3Charges, CurseTarget.Self);
+            CurseSides(card, d);
+            fields.Field("auraCurseDispels").SetValue(Dispels(d));
+            card.CardManagement.DrawCard = d.DrawCard;
+            card.CardManagement.DrawCardSpecialValue = BuildSpecialValue(d, "DrawCard", d.DrawCardSpecialValue);
+            card.CardManagement.DiscardCard = d.DiscardCard;
+            card.CardManagement.DiscardCardType = d.DiscardCardType;
+            card.CardManagement.DiscardCardTypeAux = d.DiscardCardTypeAux ?? Array.Empty<Enums.CardType>();
+            card.CardManagement.DiscardCardAutomatic = d.DiscardCardAutomatic;
+            card.CardManagement.DiscardCardPlace = d.DiscardCardPlace;
+            card.CardManagement.AddCard = d.AddCard;
+            card.CardManagement.AddCardId = d.AddCardId ?? "";
+            card.CardManagement.AddCardType = d.AddCardType;
+            card.CardManagement.AddCardTypeAux = d.AddCardTypeAux ?? Array.Empty<Enums.CardType>();
+            card.CardManagement.AddCardChoose = d.AddCardChoose;
+            card.CardManagement.AddCardFrom = d.AddCardFrom;
+            card.CardManagement.AddCardPlace = d.AddCardPlace;
+            card.CardManagement.AddCardReducedCost = d.AddCardReducedCost;
+            card.CardManagement.AddCardCostTurn = d.AddCardCostTurn;
+            card.CardManagement.AddCardVanish = d.AddCardVanish;
+            card.CardManagement.AddCardOnlyCheckAuxTypes = d.AddCardOnlyCheckAuxTypes;
+            card.CardManagement.AddCardFromVanishPile = d.AddCardFromVanishPile;
+            card.CardManagement.AddVanishToDeck = d.AddVanishToDeck;
+            card.CardManagement.AddCardList = Array.Empty<CardDataNew>();
+            card.CardManagement.LookCards = d.LookCards;
+            card.CardManagement.LookCardsDiscardUpTo = d.LookCardsDiscardUpTo;
+            card.CardManagement.LookCardsVanishUpTo = d.LookCardsVanishUpTo;
+            fields.Field("pushTarget").SetValue(d.PushTarget);
+            fields.Field("pullTarget").SetValue(d.PullTarget);
+            card.InGameEffects.EffectCaster = d.EffectCaster ?? "";
+            card.InGameEffects.EffectTarget = d.EffectTarget ?? "";
+            card.InGameEffects.EffectPreAction = d.EffectPreAction ?? "";
+            card.InGameEffects.EffectCasterRepeat = d.EffectCasterRepeat;
+            card.InGameEffects.EffectPostCastDelay = d.EffectPostCastDelay;
+            card.InGameEffects.EffectCastCenter = d.EffectCastCenter;
+            card.InGameEffects.EffectTrail = d.EffectTrail ?? "";
+            card.InGameEffects.EffectTrailRepeat = d.EffectTrailRepeat;
+            card.InGameEffects.EffectTrailSpeed = d.EffectTrailSpeed;
+            card.InGameEffects.EffectTrailAngle = d.EffectTrailAngle;
+            card.InGameEffects.EffectPostTargetDelay = d.EffectPostTargetDelay;
+            card.InGameEffects.GoldGainQuantity = d.GoldGainQuantity;
+            card.InGameEffects.ShardsGainQuantity = d.ShardsGainQuantity;
+            card.PetData.PetActivation = d.PetActivation;
+            card.PetData.PetBonusDamageType = d.PetBonusDamageType;
+            card.PetData.PetBonusDamageAmount = d.PetBonusDamageAmount;
+            card.PetData.IsPetAttack = d.IsPetAttack;
+            card.PetData.IsPetCast = d.IsPetCast;
+            card.PetData.KillPet = d.KillPet;
+            card.PetData.PetTemporal = d.PetTemporal;
+            card.PetData.PetTemporalAttack = d.PetTemporalAttack;
+            card.PetData.PetTemporalCast = d.PetTemporalCast;
+            card.PetData.PetTemporalMoveToCenter = d.PetTemporalMoveToCenter;
+            card.PetData.PetTemporalMoveToBack = d.PetTemporalMoveToBack;
+            card.PetData.PetTemporalFadeOutDelay = d.PetTemporalFadeOutDelay;
+            card.PetData.PetFront = d.PetFront;
+            card.PetData.PetInvert = d.PetInvert;
+            card.PetData.PetOffset = new Vector2(d.PetOffsetX, d.PetOffsetY);
+            card.PetData.PetSize = new Vector2(d.PetSizeX, d.PetSizeY);
+            card.Summon.SummonUnit = string.IsNullOrEmpty(d.SummonUnitId) ? null : GetExistingNPC(d.SummonUnitId, false);
+            card.Summon.SummonUnitNum = d.SummonNum;
+            card.Summon.Metamorph = d.Metamorph;
+            card.Summon.Evolve = d.Evolve;
+            card.Summon.SummonAuras = new List<SummonAuraData>();
+            SummonAura(card, d.SummonAura, d.SummonAuraCharges);
+            SummonAura(card, d.SummonAura2, d.SummonAuraCharges2);
+            SummonAura(card, d.SummonAura3, d.SummonAuraCharges3);
+            fields.Field("acEnergyBonus").SetValue(GetAuraCurse(d.AcEnergyBonus));
+            fields.Field("acEnergyBonusQuantity").SetValue(d.AcEnergyBonusQuantity);
+            fields.Field("acEnergyBonus2").SetValue(GetAuraCurse(d.AcEnergyBonus2));
+            fields.Field("acEnergyBonus2Quantity").SetValue(d.AcEnergyBonus2Quantity);
+            ApplyAdvancedCardData(card, d);
+            CopyCardAssets(card, d);
             return card;
         }
 
-        /// <summary>Apply extended CardDef fields via Traverse (called after MakeCard).</summary>
-        public static void ApplyCardExtras(CardData card, CardDef d)
+        private static CustomFlags Flags(CardDef d)
         {
-            var t = Traverse.Create(card);
-
-            // ── Card classification (MakeCard hardcodes these; override from CardDef) ──
-            t.Field("cardClass").SetValue(d.CardClass);
-            t.Field("cardRarity").SetValue(d.CardRarity);
-            t.Field("cardType").SetValue(d.CardType);
-            if (d.CardTypeAux != null && d.CardTypeAux.Length > 0)
-                t.Field("cardTypeAux").SetValue(d.CardTypeAux);
-            if (d.CardNumber != 0) t.Field("cardNumber").SetValue(d.CardNumber);
-            if (d.MaxInDeck != 0) t.Field("maxInDeck").SetValue(d.MaxInDeck);
-
-            // ── Flags ──
-            t.Field("playable").SetValue(d.Playable);
-            t.Field("visible").SetValue(d.Visible);
-            t.Field("showInTome").SetValue(d.ShowInTome);
-            if (d.AutoplayDraw) t.Field("autoplayDraw").SetValue(true);
-            if (d.AutoplayEndTurn) t.Field("autoplayEndTurn").SetValue(true);
-            if (d.Vanish) t.Field("vanish").SetValue(true);
-            if (d.Innate) t.Field("innate").SetValue(true);
-            if (d.Lazy) t.Field("lazy").SetValue(true);
-            if (d.Corrupted) t.Field("corrupted").SetValue(true);
-            if (d.EndTurn) t.Field("endTurn").SetValue(true);
-            if (d.Starter) t.Field("starter").SetValue(true);
-            if (d.FlipSprite) t.Field("flipSprite").SetValue(true);
-            if (d.ModifiedByTrait) t.Field("modifiedByTrait").SetValue(true);
-            if (d.OnlyInWeekly) t.Field("onlyInWeekly").SetValue(true);
-            if (!string.IsNullOrEmpty(d.Sku)) t.Field("sku").SetValue(d.Sku);
-
-            // ── Cost / Economy extras ──
-            if (d.EnergyCost != 0) t.Field("energyCost").SetValue(d.EnergyCost);
-            if (d.EnergyCostOriginal != 0) t.Field("energyCostOriginal").SetValue(d.EnergyCostOriginal);
-            if (d.EnergyCostForShow != 0) t.Field("energyCostForShow").SetValue(d.EnergyCostForShow);
-            if (d.EnergyReductionPermanent != 0) t.Field("energyReductionPermanent").SetValue(d.EnergyReductionPermanent);
-            if (d.EnergyReductionTemporal != 0) t.Field("energyReductionTemporal").SetValue(d.EnergyReductionTemporal);
-            if (d.EnergyReductionToZeroPermanent) t.Field("energyReductionToZeroPermanent").SetValue(true);
-            if (d.EnergyReductionToZeroTemporal) t.Field("energyReductionToZeroTemporal").SetValue(true);
-
-            // ── Upgrade paths ──
-            if (!string.IsNullOrEmpty(d.UpgradesTo1)) t.Field("upgradesTo1").SetValue(d.UpgradesTo1);
-            if (!string.IsNullOrEmpty(d.UpgradesTo2)) t.Field("upgradesTo2").SetValue(d.UpgradesTo2);
-            if (!string.IsNullOrEmpty(d.UpgradedFrom)) t.Field("upgradedFrom").SetValue(d.UpgradedFrom);
-            if (!string.IsNullOrEmpty(d.BaseCard)) t.Field("baseCard").SetValue(d.BaseCard);
-            if (!string.IsNullOrEmpty(d.RelatedCard)) t.Field("relatedCard").SetValue(d.RelatedCard);
-            if (!string.IsNullOrEmpty(d.RelatedCard2)) t.Field("relatedCard2").SetValue(d.RelatedCard2);
-            if (!string.IsNullOrEmpty(d.RelatedCard3)) t.Field("relatedCard3").SetValue(d.RelatedCard3);
-
-            // ── Damage extras ──
-            if (d.DamageSides > 0) t.Field("damageSides").SetValue(d.DamageSides);
-            if (d.DamageSides2 > 0) t.Field("damageSides2").SetValue(d.DamageSides2);
-            if (d.DamageEnergyBonus != 0) t.Field("damageEnergyBonus").SetValue(d.DamageEnergyBonus);
-            if (d.IgnoreBlock) t.Field("ignoreBlock").SetValue(true);
-            if (d.IgnoreBlock2) t.Field("ignoreBlock2").SetValue(true);
-            if (d.DamageSelf != 0) t.Field("damageSelf").SetValue(d.DamageSelf);
-            if (d.DamageSelf2 != 0) t.Field("damageSelf2").SetValue(d.DamageSelf2);
-
-            // ── 3rd curse/aura slots ──
-            if (!string.IsNullOrEmpty(d.Curse3))
-            {
-                t.Field("curse3").SetValue(GetAuraCurse(d.Curse3));
-                t.Field("curseCharges3").SetValue(d.Curse3Charges);
-            }
-            if (!string.IsNullOrEmpty(d.Aura2))
-            {
-                t.Field("aura2").SetValue(GetAuraCurse(d.Aura2));
-                t.Field("auraCharges2").SetValue(d.Aura2Charges);
-            }
-            if (!string.IsNullOrEmpty(d.AuraSelf2))
-            {
-                t.Field("auraSelf2").SetValue(GetAuraCurse(d.AuraSelf2));
-                int charges2 = !string.IsNullOrEmpty(d.Aura2) ? System.Math.Max(d.Aura2Charges, d.AuraSelf2Charges) : d.AuraSelf2Charges;
-                t.Field("auraCharges2").SetValue(charges2);
-            }
-            if (!string.IsNullOrEmpty(d.Aura3))
-            {
-                t.Field("aura3").SetValue(GetAuraCurse(d.Aura3));
-                t.Field("auraCharges3").SetValue(d.Aura3Charges);
-            }
-            if (!string.IsNullOrEmpty(d.AuraSelf3))
-            {
-                t.Field("auraSelf3").SetValue(GetAuraCurse(d.AuraSelf3));
-                int charges3 = !string.IsNullOrEmpty(d.Aura3) ? System.Math.Max(d.Aura3Charges, d.AuraSelf3Charges) : d.AuraSelf3Charges;
-                t.Field("auraCharges3").SetValue(charges3);
-            }
-            if (!string.IsNullOrEmpty(d.CurseSelf2))
-            {
-                t.Field("curseSelf2").SetValue(GetAuraCurse(d.CurseSelf2));
-                int ccharges2 = !string.IsNullOrEmpty(d.Curse2) ? System.Math.Max(d.Curse2Charges, d.CurseSelf2Charges) : d.CurseSelf2Charges;
-                t.Field("curseCharges2").SetValue(ccharges2);
-            }
-            if (!string.IsNullOrEmpty(d.CurseSelf3))
-            {
-                t.Field("curseSelf3").SetValue(GetAuraCurse(d.CurseSelf3));
-                t.Field("curseCharges3").SetValue(System.Math.Max(d.Curse3Charges, d.CurseSelf3Charges));
-            }
-            if (d.CurseChargesSides != 0) t.Field("curseChargesSides").SetValue(d.CurseChargesSides);
-
-            // ── Heal extras ──
-            if (d.HealSides != 0) t.Field("healSides").SetValue(d.HealSides);
-            if (d.HealEnergyBonus != 0) t.Field("healEnergyBonus").SetValue(d.HealEnergyBonus);
-            if (!string.IsNullOrEmpty(d.HealAuraCurseSelf)) t.Field("healAuraCurseSelf").SetValue(GetAuraCurse(d.HealAuraCurseSelf));
-            if (!string.IsNullOrEmpty(d.HealAuraCurseName)) t.Field("healAuraCurseName").SetValue(GetAuraCurse(d.HealAuraCurseName));
-            if (!string.IsNullOrEmpty(d.HealAuraCurseName2)) t.Field("healAuraCurseName2").SetValue(GetAuraCurse(d.HealAuraCurseName2));
-            if (!string.IsNullOrEmpty(d.HealAuraCurseName3)) t.Field("healAuraCurseName3").SetValue(GetAuraCurse(d.HealAuraCurseName3));
-            if (!string.IsNullOrEmpty(d.HealAuraCurseName4)) t.Field("healAuraCurseName4").SetValue(GetAuraCurse(d.HealAuraCurseName4));
-
-            // ── Effect / targeting extras ──
-            if (d.EffectRepeatTarget != Enums.EffectRepeatTarget.NoRepeat)
-                t.Field("effectRepeatTarget").SetValue(d.EffectRepeatTarget);
-            if (d.EffectRepeatDelay != 0f) t.Field("effectRepeatDelay").SetValue(d.EffectRepeatDelay);
-            if (d.EffectRepeatEnergyBonus != 0) t.Field("effectRepeatEnergyBonus").SetValue(d.EffectRepeatEnergyBonus);
-            if (d.EffectRepeatMaxBonus != 0) t.Field("effectRepeatMaxBonus").SetValue(d.EffectRepeatMaxBonus);
-            if (d.EffectRepeatModificator != 0) t.Field("effectRepeatModificator").SetValue(d.EffectRepeatModificator);
-
-            // ── Push/pull/draw ──
-            if (d.PushTarget != 0) t.Field("pushTarget").SetValue(d.PushTarget);
-            if (d.PullTarget != 0) t.Field("pullTarget").SetValue(d.PullTarget);
-            if (d.DrawCard != 0) t.Field("drawCard").SetValue(d.DrawCard);
-            if (d.DiscardCard != 0) t.Field("discardCard").SetValue(d.DiscardCard);
-            if (d.EnergyRecharge != 0) t.Field("energyRecharge").SetValue(d.EnergyRecharge);
-            if (d.GoldGainQuantity != 0) t.Field("goldGainQuantity").SetValue(d.GoldGainQuantity);
-            if (d.ShardsGainQuantity != 0) t.Field("shardsGainQuantity").SetValue(d.ShardsGainQuantity);
-            if (d.ExhaustCounter != 0) t.Field("exhaustCounter").SetValue(d.ExhaustCounter);
-            if (!string.IsNullOrEmpty(d.EffectRequired)) t.Field("effectRequired").SetValue(d.EffectRequired);
-            if (d.SelfKillHiddenSeconds != 0f) t.Field("selfKillHiddenSeconds").SetValue(d.SelfKillHiddenSeconds);
-
-            // ── Lifesteal ──
-            if (d.HealSelfPerDamageDonePercent != 0f) t.Field("healSelfPerDamageDonePercent").SetValue(d.HealSelfPerDamageDonePercent);
-
-            // ── Debuff conversion ──
-            if (d.ConvertAllDebuffsIntoCurse) t.Field("convertAllDebuffsIntoCurse").SetValue(true);
-
-            // ── AC manipulation ──
-            if (d.TransferCurses != 0) t.Field("transferCurses").SetValue(d.TransferCurses);
-            if (d.StealAuras != 0) t.Field("stealAuras").SetValue(d.StealAuras);
-            if (d.ReduceCurses != 0) t.Field("reduceCurses").SetValue(d.ReduceCurses);
-            if (d.ReduceAuras != 0) t.Field("reduceAuras").SetValue(d.ReduceAuras);
-            if (d.IncreaseCurses != 0) t.Field("increaseCurses").SetValue(d.IncreaseCurses);
-            if (d.IncreaseAuras != 0) t.Field("increaseAuras").SetValue(d.IncreaseAuras);
-
-            // ── Discard options ──
-            if (d.DiscardCardType != Enums.CardType.None) t.Field("discardCardType").SetValue(d.DiscardCardType);
-            if (d.DiscardCardTypeAux != null && d.DiscardCardTypeAux.Length > 0) t.Field("discardCardTypeAux").SetValue(d.DiscardCardTypeAux);
-            if (d.DiscardCardAutomatic) t.Field("discardCardAutomatic").SetValue(true);
-            if (d.DiscardCardPlace != Enums.CardPlace.Discard) t.Field("discardCardPlace").SetValue(d.DiscardCardPlace);
-
-            // ── Add card ──
-            if (d.AddCard != 0) t.Field("addCard").SetValue(d.AddCard);
-            if (!string.IsNullOrEmpty(d.AddCardId)) t.Field("addCardId").SetValue(d.AddCardId);
-            if (d.AddCardType != Enums.CardType.None) t.Field("addCardType").SetValue(d.AddCardType);
-            if (d.AddCardTypeAux != null && d.AddCardTypeAux.Length > 0) t.Field("addCardTypeAux").SetValue(d.AddCardTypeAux);
-            if (d.AddCardChoose != 0) t.Field("addCardChoose").SetValue(d.AddCardChoose);
-            if (d.AddCardFrom != Enums.CardFrom.Game) t.Field("addCardFrom").SetValue(d.AddCardFrom);
-            if (d.AddCardPlace != Enums.CardPlace.Hand) t.Field("addCardPlace").SetValue(d.AddCardPlace);
-            if (d.AddCardReducedCost != 0) t.Field("addCardReducedCost").SetValue(d.AddCardReducedCost);
-            if (d.AddCardCostTurn) t.Field("addCardCostTurn").SetValue(true);
-            if (d.AddCardVanish) t.Field("addCardVanish").SetValue(true);
-            if (d.AddCardOnlyCheckAuxTypes) t.Field("addCardOnlyCheckAuxTypes").SetValue(true);
-            if (d.AddCardFromVanishPile) t.Field("addCardFromVanishPile").SetValue(true);
-            if (d.AddVanishToDeck) t.Field("addVanishToDeck").SetValue(true);
-            if (d.AddCardList != null && d.AddCardList.Count > 0)
-            {
-                var list = new CardData[d.AddCardList.Count];
-                for (int i = 0; i < d.AddCardList.Count; i++)
-                    list[i] = GetCard(d.AddCardList[i]);
-                t.Field("addCardList").SetValue(list);
-            }
-
-            // ── Look (Scry) ──
-            if (d.LookCards != 0) t.Field("lookCards").SetValue(d.LookCards);
-            if (d.LookCardsDiscardUpTo != 0) t.Field("lookCardsDiscardUpTo").SetValue(d.LookCardsDiscardUpTo);
-            if (d.LookCardsVanishUpTo != 0) t.Field("lookCardsVanishUpTo").SetValue(d.LookCardsVanishUpTo);
-
-            // ── Summon extras ──
-            if (!string.IsNullOrEmpty(d.SummonAura))
-            {
-                t.Field("summonAura").SetValue(GetAuraCurse(d.SummonAura));
-                t.Field("summonAuraCharges").SetValue(d.SummonAuraCharges);
-            }
-            if (!string.IsNullOrEmpty(d.SummonAura2))
-            {
-                t.Field("summonAura2").SetValue(GetAuraCurse(d.SummonAura2));
-                t.Field("summonAuraCharges2").SetValue(d.SummonAuraCharges2);
-            }
-            if (!string.IsNullOrEmpty(d.SummonAura3))
-            {
-                t.Field("summonAura3").SetValue(GetAuraCurse(d.SummonAura3));
-                t.Field("summonAuraCharges3").SetValue(d.SummonAuraCharges3);
-            }
-            if (d.Evolve) t.Field("evolve").SetValue(true);
-            if (d.Metamorph) t.Field("metamorph").SetValue(true);
-
-            // ── AC Energy Bonus ──
-            if (!string.IsNullOrEmpty(d.AcEnergyBonus))
-            {
-                t.Field("acEnergyBonus").SetValue(GetAuraCurse(d.AcEnergyBonus));
-                t.Field("acEnergyBonusQuantity").SetValue(d.AcEnergyBonusQuantity);
-            }
-            if (!string.IsNullOrEmpty(d.AcEnergyBonus2))
-            {
-                t.Field("acEnergyBonus2").SetValue(GetAuraCurse(d.AcEnergyBonus2));
-                t.Field("acEnergyBonus2Quantity").SetValue(d.AcEnergyBonus2Quantity);
-            }
-            if (d.ChooseOneOfAvailableAuras) t.Field("chooseOneOfAvailableAuras").SetValue(true);
-
-            // ── Special Value System ──
-            if (d.SpecialValueGlobal != Enums.CardSpecialValue.None)
-            {
-                t.Field("specialValueGlobal").SetValue(d.SpecialValueGlobal);
-                t.Field("specialValueModifierGlobal").SetValue(d.SpecialValueModifierGlobal);
-                if (!string.IsNullOrEmpty(d.SpecialAuraCurseNameGlobal))
-                    t.Field("specialAuraCurseNameGlobal").SetValue(GetAuraCurse(d.SpecialAuraCurseNameGlobal));
-            }
-            if (d.SpecialValue1 != Enums.CardSpecialValue.None)
-            {
-                t.Field("specialValue1").SetValue(d.SpecialValue1);
-                t.Field("specialValueModifier1").SetValue(d.SpecialValueModifier1);
-                if (!string.IsNullOrEmpty(d.SpecialAuraCurseName1))
-                    t.Field("specialAuraCurseName1").SetValue(GetAuraCurse(d.SpecialAuraCurseName1));
-            }
-            if (d.SpecialValue2 != Enums.CardSpecialValue.None)
-            {
-                t.Field("specialValue2").SetValue(d.SpecialValue2);
-                t.Field("specialValueModifier2").SetValue(d.SpecialValueModifier2);
-                if (!string.IsNullOrEmpty(d.SpecialAuraCurseName2))
-                    t.Field("specialAuraCurseName2").SetValue(GetAuraCurse(d.SpecialAuraCurseName2));
-            }
-
-            // ── Special Value Scaling Flags ──
-            if (d.DamageSpecialValueGlobal) t.Field("damageSpecialValueGlobal").SetValue(true);
-            if (d.DamageSpecialValue1) t.Field("damageSpecialValue1").SetValue(true);
-            if (d.DamageSpecialValue2) t.Field("damageSpecialValue2").SetValue(true);
-            if (d.Damage2SpecialValueGlobal) t.Field("damage2SpecialValueGlobal").SetValue(true);
-            if (d.Damage2SpecialValue1) t.Field("damage2SpecialValue1").SetValue(true);
-            if (d.Damage2SpecialValue2) t.Field("damage2SpecialValue2").SetValue(true);
-            if (d.HealSpecialValueGlobal) t.Field("healSpecialValueGlobal").SetValue(true);
-            if (d.HealSpecialValue1) t.Field("healSpecialValue1").SetValue(true);
-            if (d.HealSpecialValue2) t.Field("healSpecialValue2").SetValue(true);
-            if (d.HealSelfSpecialValueGlobal) t.Field("healSelfSpecialValueGlobal").SetValue(true);
-            if (d.HealSelfSpecialValue1) t.Field("healSelfSpecialValue1").SetValue(true);
-            if (d.HealSelfSpecialValue2) t.Field("healSelfSpecialValue2").SetValue(true);
-            if (d.SelfHealthLossSpecialGlobal) t.Field("selfHealthLossSpecialGlobal").SetValue(true);
-            if (d.SelfHealthLossSpecialValue1) t.Field("selfHealthLossSpecialValue1").SetValue(true);
-            if (d.SelfHealthLossSpecialValue2) t.Field("selfHealthLossSpecialValue2").SetValue(true);
-            if (d.EnergyRechargeSpecialValueGlobal) t.Field("energyRechargeSpecialValueGlobal").SetValue(true);
-            if (d.DrawCardSpecialValueGlobal) t.Field("drawCardSpecialValueGlobal").SetValue(true);
-            if (d.AuraChargesSpecialValueGlobal) t.Field("auraChargesSpecialValueGlobal").SetValue(true);
-            if (d.AuraChargesSpecialValue1) t.Field("auraChargesSpecialValue1").SetValue(true);
-            if (d.AuraChargesSpecialValue2) t.Field("auraChargesSpecialValue2").SetValue(true);
-            if (d.AuraCharges2SpecialValueGlobal) t.Field("auraCharges2SpecialValueGlobal").SetValue(true);
-            if (d.AuraCharges2SpecialValue1) t.Field("auraCharges2SpecialValue1").SetValue(true);
-            if (d.AuraCharges2SpecialValue2) t.Field("auraCharges2SpecialValue2").SetValue(true);
-            if (d.AuraCharges3SpecialValueGlobal) t.Field("auraCharges3SpecialValueGlobal").SetValue(true);
-            if (d.AuraCharges3SpecialValue1) t.Field("auraCharges3SpecialValue1").SetValue(true);
-            if (d.AuraCharges3SpecialValue2) t.Field("auraCharges3SpecialValue2").SetValue(true);
-            if (d.CurseChargesSpecialValueGlobal) t.Field("curseChargesSpecialValueGlobal").SetValue(true);
-            if (d.CurseChargesSpecialValue1) t.Field("curseChargesSpecialValue1").SetValue(true);
-            if (d.CurseChargesSpecialValue2) t.Field("curseChargesSpecialValue2").SetValue(true);
-            if (d.CurseCharges2SpecialValueGlobal) t.Field("curseCharges2SpecialValueGlobal").SetValue(true);
-            if (d.CurseCharges2SpecialValue1) t.Field("curseCharges2SpecialValue1").SetValue(true);
-            if (d.CurseCharges2SpecialValue2) t.Field("curseCharges2SpecialValue2").SetValue(true);
-            if (d.CurseCharges3SpecialValueGlobal) t.Field("curseCharges3SpecialValueGlobal").SetValue(true);
-            if (d.CurseCharges3SpecialValue1) t.Field("curseCharges3SpecialValue1").SetValue(true);
-            if (d.CurseCharges3SpecialValue2) t.Field("curseCharges3SpecialValue2").SetValue(true);
-
-            // ── FX / Effects ──
-            if (!string.IsNullOrEmpty(d.EffectPreAction)) t.Field("effectPreAction").SetValue(d.EffectPreAction);
-            if (d.EffectPostCastDelay != 0f) t.Field("effectPostCastDelay").SetValue(d.EffectPostCastDelay);
-            if (d.EffectCasterRepeat) t.Field("effectCasterRepeat").SetValue(true);
-            if (d.EffectCastCenter) t.Field("effectCastCenter").SetValue(true);
-            if (!string.IsNullOrEmpty(d.EffectTrail)) t.Field("effectTrail").SetValue(d.EffectTrail);
-            if (d.EffectTrailRepeat) t.Field("effectTrailRepeat").SetValue(true);
-            if (d.EffectTrailSpeed != 0f) t.Field("effectTrailSpeed").SetValue(d.EffectTrailSpeed);
-            if (d.EffectTrailAngle != Enums.EffectTrailAngle.Horizontal) t.Field("effectTrailAngle").SetValue(d.EffectTrailAngle);
-            if (d.EffectPostTargetDelay != 0f) t.Field("effectPostTargetDelay").SetValue(d.EffectPostTargetDelay);
-
-            // ── Pet System ──
-            if (d.PetActivation != Enums.ActivePets.None) t.Field("petActivation").SetValue(d.PetActivation);
-            if (d.PetBonusDamageType != Enums.DamageType.None) t.Field("petBonusDamageType").SetValue(d.PetBonusDamageType);
-            if (d.PetBonusDamageAmount != 0) t.Field("petBonusDamageAmount").SetValue(d.PetBonusDamageAmount);
-            if (d.IsPetAttack) t.Field("isPetAttack").SetValue(true);
-            if (d.IsPetCast) t.Field("isPetCast").SetValue(true);
-            if (d.KillPet) t.Field("killPet").SetValue(true);
-            if (d.PetTemporal) t.Field("petTemporal").SetValue(true);
-            if (d.PetTemporalAttack) t.Field("petTemporalAttack").SetValue(true);
-            if (d.PetTemporalCast) t.Field("petTemporalCast").SetValue(true);
-            if (d.PetTemporalMoveToCenter) t.Field("petTemporalMoveToCenter").SetValue(true);
-            if (d.PetTemporalMoveToBack) t.Field("petTemporalMoveToBack").SetValue(true);
-            if (d.PetTemporalFadeOutDelay != 0f) t.Field("petTemporalFadeOutDelay").SetValue(d.PetTemporalFadeOutDelay);
-
-            // ── Fluff / Description ──
-            if (!string.IsNullOrEmpty(d.Fluff)) t.Field("fluff").SetValue(d.Fluff);
-            if (d.FluffPercent != 0f) t.Field("fluffPercent").SetValue(d.FluffPercent);
+            var flags = CustomFlags.None;
+            if (d.Vanish) flags |= CustomFlags.Vanish;
+            if (d.Innate) flags |= CustomFlags.Innate;
+            if (d.Lazy) flags |= CustomFlags.Lazy;
+            if (d.EndTurn) flags |= CustomFlags.EndTurn;
+            if (d.MoveToCenter) flags |= CustomFlags.MoveToCenter;
+            if (d.Corrupted) flags |= CustomFlags.Corrupted;
+            if (d.Starter) flags |= CustomFlags.Starter;
+            if (d.OnlyInWeekly) flags |= CustomFlags.OnlyInWeekly;
+            if (d.CombatBased) flags |= CustomFlags.CombatBased;
+            return flags;
         }
 
-        /// <summary>Create an upgraded "A" variant of a base card with increased stats.</summary>
-        public static CardData MakeUpgradedCard(CardData baseCard, string newId, string newName,
-            float damageMult = 1.3f, int bonusCurseCharges = 1, int bonusAuraCharges = 1, int bonusHeal = 3)
+        private static void Damage(CardDataNew card, CardDef d, string slot, int amount, Enums.DamageType type, DamageTarget target, bool ignoreBlock)
         {
-            var card = Object.Instantiate(baseCard);
-            var t = Traverse.Create(card);
-
-            t.Field("id").SetValue(newId);
-            t.Field("cardName").SetValue(newName);
-            t.Field("cardUpgraded").SetValue(Enums.CardUpgraded.A);
-
-            int dmg = (int)(t.Field("damage").GetValue<int>() * damageMult);
-            if (dmg > 0) t.Field("damage").SetValue(dmg);
-            int dmg2 = (int)(t.Field("damage2").GetValue<int>() * damageMult);
-            if (dmg2 > 0) t.Field("damage2").SetValue(dmg2);
-
-            int cc = t.Field("curseCharges").GetValue<int>();
-            if (cc > 0) t.Field("curseCharges").SetValue(cc + bonusCurseCharges);
-            int cc2 = t.Field("curseCharges2").GetValue<int>();
-            if (cc2 > 0) t.Field("curseCharges2").SetValue(cc2 + bonusCurseCharges);
-            int ac = t.Field("auraCharges").GetValue<int>();
-            if (ac > 0) t.Field("auraCharges").SetValue(ac + bonusAuraCharges);
-
-            int h = t.Field("heal").GetValue<int>();
-            if (h > 0) t.Field("heal").SetValue(h + bonusHeal);
-
-            return card;
+            var extras = ExtrasFor(d, slot);
+            // An effect entry makes the game show and run it even at 0, so an empty slot must not create one.
+            // A 0 base is still real when special values or the per-energy bonus supply the amount.
+            if (amount == 0 && !HasExtras(extras) && (target == DamageTarget.Self || d.DamageEnergyBonus == 0)) return;
+            if (type == Enums.DamageType.None && amount == 0 && !HasExtras(extras)) return;
+            var effect = new DamageEffectData(amount, type, target, ignoreBlock);
+            ApplyEffectExtras(effect, d, slot, extras);
+            card.Damage.Add(effect);
         }
 
-        /// <summary>
-        /// Create the paired CardData (equipment card) for an ItemDef + ItemData.
-        /// Identity fields are synced from the ItemDef, then MakeFullCard builds
-        /// the complete CardData from the embedded CardDef.
-        /// </summary>
-        public static CardData MakeItemCard(ItemDef d, ItemData itemData)
+        /// <summary>Splash damage to both neighbours of the target (the game models it as a left + right effect pair).</summary>
+        private static void SideDamage(CardDataNew card, int amount, Enums.DamageType type, bool ignoreBlock)
         {
-            // Clone the paired CardDef so mutations don't corrupt the project's original
-            var cardJson = Newtonsoft.Json.JsonConvert.SerializeObject(d.Card);
-            var cardCopy = Newtonsoft.Json.JsonConvert.DeserializeObject<Definitions.CardDef>(cardJson);
+            if (amount == 0) return;
+            card.Damage.Add(new DamageEffectData(amount, type, DamageTarget.SideLeft, ignoreBlock));
+            card.Damage.Add(new DamageEffectData(amount, type, DamageTarget.SideRight, ignoreBlock));
+        }
 
-            // ── Sync identity fields from item → card copy ──────
-            cardCopy.Id = d.Id;
-            cardCopy.Name = d.Name;
-            cardCopy.CardClass = Enums.CardClass.Item;
-            cardCopy.CardRarity = d.Rarity;
-            cardCopy.CardType = d.CardType;
-            cardCopy.CardUpgraded = Enums.CardUpgraded.No;
-            cardCopy.SpriteSource = d.SpriteSource;
-            cardCopy.SoundSource = d.SoundSource;
-            cardCopy.PetModelSource = d.PetModelSource;
+        private static void CurseSides(CardDataNew card, CardDef d)
+        {
+            if (d.CurseChargesSides == 0 || string.IsNullOrEmpty(d.Curse)) return;
+            var curse = GetAuraCurse(d.Curse);
+            if (curse == null) { Plugin.Log.LogWarning($"[DataHelper] Card '{d.Id}' CurseChargesSides references missing curse '{d.Curse}'."); return; }
+            card.Curses.Add(new CurseEffectData { Curse = curse, Charges = d.CurseChargesSides, Target = CurseTarget.Sides });
+        }
 
-            // ── Build the full card from the synced copy ─────────
-            var card = ModProjectBuilder.MakeFullCard(cardCopy);
+        private static void Heal(CardDataNew card, CardDef d, string slot, int amount, HealTarget target)
+        {
+            var extras = ExtrasFor(d, slot);
+            if (amount == 0 && !HasExtras(extras) && d.HealEnergyBonus == 0) return;
+            var effect = new HealEffectData { Heal = amount, HealTarget = target, HealType = HealType.Normal };
+            ApplyEffectExtras(effect, d, slot, extras);
+            card.Heal.HealEffects.Add(effect);
+        }
 
-            // ── Set item reference ───────────────────────────────
-            Traverse.Create(card).Field("item").SetValue(itemData);
+        private static void Aura(CardDataNew card, CardDef d, string slot, string id, int charges, AuraTarget target)
+        {
+            var aura = string.IsNullOrEmpty(id) ? null : GetAuraCurse(id);
+            if (aura == null) return;
+            if (charges == 0 && !HasExtras(ExtrasFor(d, slot)) && !EnergyBonusFor(d, aura)) return;
+            var effect = new AuraEffectData(aura, charges, target);
+            ApplyEffectExtras(effect, d, slot, ExtrasFor(d, slot));
+            card.Auras.Auras.Add(effect);
+        }
 
-            // ── Re-init now that item is linked ──────────────────
-            // InitClone sets enchantDamagePreCalculated from item data.
-            // InitClone2 regenerates description with AppendItemDescription.
-            try { card.InitClone(d.Id); }
-            catch { /* KeyNotes/Globals not ready */ }
-            Globals.Instance?.CardsDescriptionNormalized?.Remove(d.Id);
-            try { card.InitClone2(); }
-            catch { /* Texts not ready */ }
+        private static void Curse(CardDataNew card, CardDef d, string slot, string id, int charges, CurseTarget target)
+        {
+            var curse = string.IsNullOrEmpty(id) ? null : GetAuraCurse(id);
+            if (curse == null) return;
+            if (charges == 0 && !HasExtras(ExtrasFor(d, slot)) && !EnergyBonusFor(d, curse)) return;
+            var effect = new CurseEffectData { Curse = curse, Charges = charges, Target = target };
+            ApplyEffectExtras(effect, d, slot, ExtrasFor(d, slot));
+            card.Curses.Add(effect);
+        }
+        private static bool EnergyBonusFor(CardDef d, AuraCurseData ac)
+            => ac != null && (string.Equals(d.AcEnergyBonus, ac.Id, StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(d.AcEnergyBonus2, ac.Id, StringComparison.OrdinalIgnoreCase));
 
+        private static void SummonAura(CardDataNew card, string id, int charges)
+        {
+            var aura = string.IsNullOrEmpty(id) ? null : GetAuraCurse(id);
+            if (aura != null) card.Summon.SummonAuras.Add(new SummonAuraData { Aura = aura, Charges = charges });
+        }
+
+        private static AuraCurseDispelData Dispels(CardDef d)
+        {
+            var dispels = new AuraCurseDispelData
+            {
+                HealCurses = d.HealCurses, DispelAuras = d.DispelAuras, TransferCurses = d.TransferCurses,
+                StealAuras = d.StealAuras, ReduceCurses = d.ReduceCurses, ReduceAuras = d.ReduceAuras,
+                IncreaseCurses = d.IncreaseCurses, IncreaseAuras = d.IncreaseAuras,
+                HealAuraCurses = new List<AuraCurseData>(),
+                AuraCurseReduceIncreaseDatas = new List<AuraCurseDispelData.AuraCurseReduceIncreaseData>(),
+                AuraCurseStealDatas = new List<AuraCurseDispelData.AuraCurseStealData>()
+            };
+            dispels.HealAuraCurseSelf = ResolveCardAuraCurse(d, nameof(d.HealAuraCurseSelf), d.HealAuraCurseSelf);
+            foreach (var reference in new[]
+            {
+                (nameof(d.HealAuraCurseName), d.HealAuraCurseName),
+                (nameof(d.HealAuraCurseName2), d.HealAuraCurseName2),
+                (nameof(d.HealAuraCurseName3), d.HealAuraCurseName3),
+                (nameof(d.HealAuraCurseName4), d.HealAuraCurseName4)
+            })
+            {
+                var auraCurse = ResolveCardAuraCurse(d, reference.Item1, reference.Item2);
+                if (auraCurse != null) dispels.HealAuraCurses.Add(auraCurse);
+            }
+            return dispels;
+        }
+
+        private static AuraCurseData ResolveCardAuraCurse(CardDef card, string fieldName, string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            var auraCurse = GetAuraCurse(id);
+            if (auraCurse == null)
+                Plugin.Log.LogWarning($"[DataHelper] Card '{card.Id}' field '{fieldName}' references missing aura/curse '{id}'.");
+            return auraCurse;
+        }
+
+        public static void ResolveCardLists(IEnumerable<CardDef> defs)
+        {
+            var finalDefinitions = new Dictionary<string, CardDef>();
+            foreach (var definition in defs ?? Enumerable.Empty<CardDef>())
+            {
+                if (definition != null)
+                    finalDefinitions[NormalizeKey(definition.Id)] = definition;
+            }
+
+            foreach (var definition in finalDefinitions.Values)
+            {
+                var source = GetCardSource(definition.Id);
+                var realtime = GetCard(definition.Id);
+                if (source == null || realtime == null) continue;
+
+                var rareUpgrade = string.IsNullOrEmpty(definition.UpgradesToRareId)
+                    ? null
+                    : GetCardSource(definition.UpgradesToRareId);
+                if (!string.IsNullOrEmpty(definition.UpgradesToRareId) && rareUpgrade == null)
+                    Plugin.Log.LogWarning($"[DataHelper] Card '{definition.Id}' rare upgrade reference '{definition.UpgradesToRareId}' was not found after card registration.");
+                Traverse.Create(source).Field("upgrade").SetValue(new UpgradeData(
+                    source.Upgrade.UpgradesTo1,
+                    source.Upgrade.UpgradesTo2,
+                    source.Upgrade.CardUpgraded,
+                    source.Upgrade.UpgradedFrom,
+                    rareUpgrade));
+                realtime.Upgrade = source.Upgrade.Clone();
+
+                var list = new List<CardDataNew>();
+                foreach (var id in definition.AddCardList ?? new List<string>())
+                {
+                    var target = GetCardSource(id);
+                    if (target == null)
+                    {
+                        Plugin.Log.LogWarning($"[DataHelper] Card '{definition.Id}' addCardList reference '{id}' was not found after card registration.");
+                        continue;
+                    }
+                    list.Add(target);
+                }
+                source.CardManagement.AddCardList = list.ToArray();
+                realtime.AddCardList = list.Select(card => card.Id).ToArray();
+                ResolveLateCardRefs(definition, source);
+                if (definition.HasItemData)
+                {
+                    var itemSo = GetItem(definition.Id);
+                    if (itemSo != null) WireItemCardRefs(definition.ToItemDef(), itemSo);
+                }
+            }
+        }
+
+        private static void CopyCardAssets(CardDataNew card, CardDef d)
+        {
+            if (!string.IsNullOrEmpty(d.SpriteSource)) CopyCardVisuals(card, d.SpriteSource);
+            if (!string.IsNullOrEmpty(d.SoundSource)) CopyCardSounds(card, d.SoundSource);
+            if (!string.IsNullOrEmpty(d.PetModelSource)) CopyPetModel(card, d.PetModelSource);
+        }
+
+        public static CardDataNew MakeItemCard(ItemDef d, ItemData item)
+        {
+            var copy = Newtonsoft.Json.JsonConvert.DeserializeObject<CardDef>(Newtonsoft.Json.JsonConvert.SerializeObject(d.Card));
+            copy.Id = d.Id;
+            copy.Name = d.Name;
+            bool isEnchantment = item != null && item.IsEnchantment;
+            // Enchantments are Special-class cards in the base game; only plain equipment is forced to Item.
+            if (!isEnchantment) copy.CardClass = Enums.CardClass.Item;
+            else if (copy.CardClass == Enums.CardClass.Item) copy.CardClass = Enums.CardClass.Special;
+            copy.CardRarity = d.Rarity;
+            copy.CardType = d.CardType;
+            copy.SpriteSource = d.SpriteSource;
+            copy.SoundSource = d.SoundSource;
+            copy.PetModelSource = d.PetModelSource;
+            var card = BuildCard(copy);
+            Traverse.Create(card).Field(item != null && item.IsEnchantment ? "itemEnchantment" : "item").SetValue(item);
             return card;
         }
     }

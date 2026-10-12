@@ -54,11 +54,15 @@ namespace UnknownMod.Core
             Register(new EntityTypeInfo { DefType = typeof(RequirementDef),          TypeLabel = "Requirement",          FolderName = "requirements",         GetAllBaseIds = DataHelper.GetAllEventRequirementIds });
             Register(new EntityTypeInfo { DefType = typeof(CardbackDef),             TypeLabel = "Cardback",             FolderName = "cardbacks",            GetAllBaseIds = DataHelper.GetAllCardbackIds });
             Register(new EntityTypeInfo { DefType = typeof(TierRewardDef),           TypeLabel = "TierReward",           FolderName = "tierrewards",          GetAllBaseIds = () => DataHelper.GetAllTierRewardTiers().ConvertAll(t => t.ToString()) });
+            Register(new EntityTypeInfo { DefType = typeof(KeyNoteDef),              TypeLabel = "KeyNote",              FolderName = "keynotes",             GetAllBaseIds = DataHelper.GetAllKeyNoteIds });
+            Register(new EntityTypeInfo { DefType = typeof(CinematicDef),           TypeLabel = "Cinematic",            FolderName = "cinematics",           GetAllBaseIds = DataHelper.GetAllCinematicIds });
+            Register(new EntityTypeInfo { DefType = typeof(CorruptionPackDef),      TypeLabel = "CorruptionPack",       FolderName = "corruptionpacks",      GetAllBaseIds = DataHelper.GetAllCorruptionPackIds });
+            Register(new EntityTypeInfo { DefType = typeof(ChallengeTraitDef),      TypeLabel = "ChallengeTrait",       FolderName = "challengetraits",      GetAllBaseIds = DataHelper.GetAllChallengeTraitIds });
+            Register(new EntityTypeInfo { DefType = typeof(WeeklyChallengeDef),     TypeLabel = "WeeklyChallenge",      FolderName = "weeklychallenges",     GetAllBaseIds = DataHelper.GetAllWeeklyIds });
             Register(new EntityTypeInfo { DefType = typeof(PackDef),                 TypeLabel = "Pack",                 FolderName = "packs",                GetAllBaseIds = DataHelper.GetAllPackIds });
             Register(new EntityTypeInfo { DefType = typeof(CardPlayerPackDef),       TypeLabel = "CardPlayerPack",       FolderName = "cardplayerpacks",      GetAllBaseIds = DataHelper.GetAllCardPlayerPackIds });
             Register(new EntityTypeInfo { DefType = typeof(CardPlayerPairsPackDef),  TypeLabel = "CardPlayerPairsPack",  FolderName = "cardplayerpairspacks", GetAllBaseIds = DataHelper.GetAllCardPlayerPairsPackIds });
             Register(new EntityTypeInfo { DefType = typeof(HeroDataDef),             TypeLabel = "HeroData",             FolderName = "herodata",             GetAllBaseIds = DataHelper.GetAllHeroDataIds });
-            Register(new EntityTypeInfo { DefType = typeof(CharacterOverrideDef),       TypeLabel = "SpriteSkin",           FolderName = "spriteskins",          GetAllBaseIds = null }); // no base-game IDs
         }
     }
 }

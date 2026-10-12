@@ -1,0 +1,18 @@
+{
+  "CombatId": "emyc_30a",
+  "Description": "The cairn crumbles and its fungal guardians rise.",
+  "NpcIds": [
+    "myc_thrall",
+    "myc_thrall",
+    "myc_shambler",
+    ""
+  ],
+  "CombatTier": "T3",
+  "Background": "Velkarath_Cave",
+  "NpcRemoveInMadness0Index": -1,
+  "HealHeroes": false,
+  "IsRift": false,
+  "NpcToSummonOnKilledId": "",
+  "EventDataId": "",
+  "CombatEffects": []
+}

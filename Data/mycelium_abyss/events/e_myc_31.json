@@ -1,0 +1,60 @@
+{
+  "EventId": "e_myc_31",
+  "EventName": "The Brood Chamber",
+  "Description": "The gallery opens into a warm, wet chamber lined with leathery eggs the size of a man. Each egg pulses with a faint light. Through the translucent shells, small shapes curl and twitch. The Broodmother is nowhere in sight, but the heat of her passing still lingers.",
+  "DescriptionAction": "What do you do?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Burn the clutch.",
+      "Action": 48,
+      "SsXP": 40,
+      "SsHealFlat": -10,
+      "SsText": "Fire races across the shells and the chamber fills with a thin, terrible shriek. The smoke stings, but the brood will never hatch."
+    },
+    {
+      "ReplyText": "Steal an egg.",
+      "Action": 9,
+      "SsGold": 90,
+      "SsXP": 20,
+      "FlCombatId": "emyc_31a",
+      "HasRoll": true,
+      "RollDC": 1,
+      "RollTarget": 3,
+      "RepeatForAllScouts": true,
+      "SsText": "You slip an egg into a padded sack. A collector in the next town will pay handsomely for it.",
+      "FlText": "The egg cracks in your hands and the shriek brings the whole brood running.",
+      "RollMode": 1
+    },
+    {
+      "ReplyText": "Sneak past the clutch.",
+      "Action": 10,
+      "SsXP": 25,
+      "FlHealFlat": -15,
+      "HasRoll": true,
+      "RollDC": 2,
+      "RollTarget": 3,
+      "RepeatForAllScouts": true,
+      "SsText": "You pick your way between the eggs without disturbing a single one.",
+      "FlText": "You slip on the wet floor and fall hard among the eggs, rattling the shells.",
+      "RollMode": 1
+    },
+    {
+      "ReplyText": "Coax a newly hatched pod to follow you.",
+      "Action": 45,
+      "SsXP": 30,
+      "SsLootId": "myc_podnest",
+      "FlHealFlat": -15,
+      "HasRoll": true,
+      "RollDC": 1,
+      "RollTarget": 3,
+      "RepeatForAllScouts": true,
+      "SsText": "It rolls into your pack, warm and humming. It does not seem to mind the dark.",
+      "FlText": "It bursts in a cloud of spores and you stagger back, coughing.",
+      "RollMode": 1
+    }
+  ]
+}

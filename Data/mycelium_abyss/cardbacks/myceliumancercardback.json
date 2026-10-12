@@ -1,0 +1,20 @@
+{
+  "Id": "myceliumancerCardback",
+  "CardbackName": "Default",
+  "CardbackTextId": "",
+  "CardbackOrder": 1000,
+  "BaseCardback": true,
+  "Locked": false,
+  "ShowIfLocked": false,
+  "RankLevel": 0,
+  "Sku": "",
+  "SteamStat": "",
+  "AdventureLevel": 0,
+  "ObeliskLevel": 0,
+  "SingularityLevel": 0,
+  "PdxAccountRequired": false,
+  "HideInGame": false,
+  "CardbackSubclass": "myceliumancer",
+  "SpriteSource": "",
+  "SpriteOverride": "myc_cardback"
+}

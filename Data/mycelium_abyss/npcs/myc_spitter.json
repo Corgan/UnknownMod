@@ -3,7 +3,7 @@
   "Name": "Gloom Spitter",
   "Description": "",
   "SpriteSource": "slime",
-  "Hp": 70,
+  "Hp": 80,
   "Speed": 16,
   "Energy": 10,
   "EnergyTurn": 0,
@@ -19,7 +19,7 @@
   "ResShadow": 25,
   "AiCards": [
     {
-      "CardId": "myc_acidglob",
+      "CardId": "mycacidglob",
       "Priority": 5,
       "AddCardRound": 0,
       "OnlyCastIf": "Always",
@@ -34,10 +34,10 @@
       "SecondValueCastIf": 0.0
     },
     {
-      "CardId": "myc_toxicpuddle",
+      "CardId": "myctoxicpuddle",
       "Priority": 4,
       "AddCardRound": 0,
-      "OnlyCastIf": "TargetHasNotAuraCurse",
+      "OnlyCastIf": "Always",
       "ValueCastIf": 0.0,
       "TargetCast": "Random",
       "UnitsInDeck": 1,
@@ -49,8 +49,8 @@
       "SecondValueCastIf": 0.0
     }
   ],
-  "XpReward": 14,
-  "GoldReward": 9,
+  "XpReward": 21,
+  "GoldReward": 19,
   "TierReward": 3,
   "IsBoss": false,
   "IsNamed": false,

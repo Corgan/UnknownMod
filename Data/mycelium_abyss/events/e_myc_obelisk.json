@@ -1,0 +1,62 @@
+{
+  "EventId": "e_myc_obelisk",
+  "EventName": "The Mycelium Obelisk",
+  "Description": "Beyond the throne, the roots part to reveal a cracked obelisk, its runes drowned in pale fungal light. Where the Mycelarch's hum fades, the stone sings in a purer note. You read the runes aloud, and the obelisk wall warps and ripples into a set of portals.\n\nThe party's wounds knit in the glow as the spores finally let go.",
+  "DescriptionAction": "Which portal do you want to cross?",
+  "SpriteSource": "",
+  "EventTier": "T0",
+  "ReplyRandom": 0,
+  "RequirementId": "",
+  "Replies": [
+    {
+      "ReplyText": "Cross the red portal, from which hot air comes out.",
+      "Action": 29,
+      "SsText": "You step through the shimmering wall. Spores fall away like ash, and the world rearranges itself around you.",
+      "SsHealPercent": 100.0,
+      "SsNodeTravelId": "velka_0",
+      "SsRequirementUnlockId": "_tier2"
+    },
+    {
+      "ReplyText": "Cross the green portal, from which a smell of stagnant water comes out.",
+      "Action": 29,
+      "SsText": "You step through the shimmering wall. Spores fall away like ash, and the world rearranges itself around you.",
+      "SsHealPercent": 100.0,
+      "SsNodeTravelId": "aqua_0",
+      "SsRequirementUnlockId": "_tier2"
+    },
+    {
+      "ReplyText": "Cross the blue portal, from which an icy draft comes out.",
+      "Action": 29,
+      "RequirementId": "zonahielo",
+      "SsText": "You step through the shimmering wall. Spores fall away like ash, and the world rearranges itself around you.",
+      "SsHealPercent": 100.0,
+      "SsNodeTravelId": "faen_0",
+      "SsRequirementUnlockId": "_tier2"
+    },
+    {
+      "ReplyText": "Cross the yellow portal, from which a dry and dusty air comes out.",
+      "Action": 29,
+      "SsText": "You step through the shimmering wall. Spores fall away like ash, and the world rearranges itself around you.",
+      "SsHealPercent": 100.0,
+      "SsNodeTravelId": "sahti_0",
+      "SsRequirementUnlockId": "_tier2",
+      "SsRequirementUnlock2Id": "sahtiup"
+    },
+    {
+      "ReplyText": "Cross the turquoise portal, from which a sea breeze comes out.",
+      "Action": 29,
+      "SsText": "You step through the shimmering wall. Spores fall away like ash, and the world rearranges itself around you.",
+      "SsHealPercent": 100.0,
+      "SsNodeTravelId": "sav_0",
+      "SsRequirementUnlockId": "_tier2"
+    },
+    {
+      "ReplyText": "Cross the orange portal, from which a dry air, smelling of grass, comes out.",
+      "Action": 29,
+      "SsText": "You step through the shimmering wall. Spores fall away like ash, and the world rearranges itself around you.",
+      "SsHealPercent": 100.0,
+      "SsNodeTravelId": "ulmin_0",
+      "SsRequirementUnlockId": "_tier2"
+    }
+  ]
+}

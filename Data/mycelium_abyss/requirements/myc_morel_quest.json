@@ -1,0 +1,13 @@
+{
+  "Id": "myc_morel_quest",
+  "RequirementName": "The Lost Myceliumancer",
+  "Description": "Morel, a myceliumancer, went down to answer the Mycelarch and never returned. Piece together his notes, defeat the Mycelarch and free him.",
+  "AssignToPlayerAtBegin": false,
+  "RequirementTrack": true,
+  "ItemTrack": false,
+  "RequirementZoneFinishTrack": "None",
+  "RequirementZoneFinishTrackAlternate": "None",
+  "WitheredValeUniqueCheck": false,
+  "TrackCard": "",
+  "SpriteSource": "lorequest"
+}
